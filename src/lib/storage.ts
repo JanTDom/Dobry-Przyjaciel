@@ -1,3 +1,14 @@
+
+function sanitizeName(name: string | undefined, email?: string): string {
+  const clean = (name || "").trim();
+  const lowerEmail = (email || "").toLowerCase();
+  const isJan = lowerEmail.includes("jan") || lowerEmail.includes("domaniewski");
+
+  if (!clean || clean === "A132a132!" || clean === "A132a132" || clean.toLowerCase().includes("a132")) {
+    return isJan ? "Janek" : "Przyjaciel";
+  }
+  return clean;
+}
 import { UserProfile, Message, PersonInLife, LifeMemoryFact, OvercomeCrisis, VictoryLetter } from "@/types";
 
 const STORAGE_KEY_AUTH_EMAIL = "przyjaciel_auth_email_v5";
@@ -70,7 +81,7 @@ export function createDefaultProfile(name: string = "", companionName: string = 
   return {
     id: email ? "user_" + btoa(email).replace(/=/g, "").slice(0, 12) : "user_" + Date.now(),
     email: email ? email.toLowerCase() : undefined,
-    name: name.trim() || "Przyjaciel",
+    name: sanitizeName(name, email),
     companionName: companionName.trim() || (companionGender === "male" ? "Maciej" : "Agata"),
     companionGender,
     companionVoice: companionGender === "male" ? "echo" : "nova",
@@ -99,6 +110,7 @@ export function getStoredProfile(): UserProfile | null {
       return {
         ...createDefaultProfile("", "Agata", "female", email),
         ...profiles[email],
+        name: sanitizeName(profiles[email].name, email),
       };
     }
     return null;

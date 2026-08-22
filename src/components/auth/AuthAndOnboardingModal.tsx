@@ -119,8 +119,12 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
     setActiveUserEmail(loginEmail.trim());
 
     let profile = getStoredProfile();
+    const isJan = loginEmail.toLowerCase().includes("jan") || loginEmail.toLowerCase().includes("domaniewski");
     if (!profile) {
-      profile = createDefaultProfile("Przyjaciel", "Agata", "female", loginEmail.trim());
+      profile = createDefaultProfile(isJan ? "Janek" : "Przyjaciel", "Agata", "female", loginEmail.trim());
+      saveStoredProfile(profile);
+    } else if (isJan && (profile.name.toLowerCase().includes("a132") || profile.name === "Przyjaciel")) {
+      profile.name = "Janek";
       saveStoredProfile(profile);
     }
 
