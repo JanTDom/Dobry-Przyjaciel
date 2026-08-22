@@ -21,18 +21,18 @@ export default function SanctuaryPage() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-sanctuary-950 text-sanctuary-100">
+    <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
       <TopNav
         onOpenLiveCall={() => setIsLiveCallOpen(true)}
         onOpenPricing={() => setIsPricingOpen(true)}
       />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col gap-8 pb-28 md:pb-16">
-        <div className="border-b border-sanctuary-800 pb-4">
-          <h1 className="font-serif text-3xl sm:text-4xl text-sanctuary-50 font-normal tracking-tight mb-2">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
+        <div className="border-b border-cream-300 pb-4">
+          <h1 className="font-serif text-3xl sm:text-4xl text-cream-950 font-normal tracking-tight mb-2">
             Skarbiec twojej siły i listy wsparcia
           </h1>
-          <p className="font-sans text-xs sm:text-sm text-sanctuary-400 max-w-lg leading-relaxed">
+          <p className="font-sans text-xs sm:text-sm text-cream-700 max-w-lg leading-relaxed">
             Wracaj do tych słów zawsze, kiedy poczujesz zwątpienie, zmęczenie lub samotność. Zostały napisane specjalnie dla ciebie.
           </p>
         </div>

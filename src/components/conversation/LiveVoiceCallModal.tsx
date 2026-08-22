@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, PhoneOff, Flame, CloudRain, Waves, Sparkles, Volume2, VolumeX, MessageSquare } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Flame, CloudRain, Waves, Sparkles, MessageSquare } from "lucide-react";
 import { LivingWarmHearth } from "@/components/presence/LivingWarmHearth";
 import { voiceEngine } from "@/lib/voice-engine";
 import { soundscapeEngine, SoundscapeType } from "@/lib/audio-synthesizer";
@@ -29,12 +29,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     `Cześć ${profile.name}. Jestem przy tobie. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`
   );
   const [activeSoundscape, setActiveSoundscape] = useState<SoundscapeType | null>("fireplace");
-  const [isMuted, setIsMuted] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
 
   const durationTimerRef = useRef<any>(null);
 
-  // Inicjalizacja połączenia głosowego
   useEffect(() => {
     if (!isOpen) {
       voiceEngine.stopLiveDialogue();
@@ -47,20 +45,17 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
-    // Włącz ciepły kominek w tle
     if (activeSoundscape) {
       soundscapeEngine.play(activeSoundscape);
       soundscapeEngine.setVolume(0.25);
     }
 
-    // Uruchomienie pierwszej powitalnej kwestii
     setTimeout(() => {
       voiceEngine.speak(
         `Cześć ${profile.name}. Jestem przy tobie. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`
       );
-    }, 500);
+    }, 400);
 
-    // Rejestracja callbacków ciągłego nasłuchu i generowania odpowiedzi
     voiceEngine.setCallbacks(
       (capturedUserText: string) => {
         if (!capturedUserText || capturedUserText.trim().length === 0) return;
@@ -76,7 +71,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         onNewMessage(userMsg);
         setLiveTranscript(capturedUserText);
 
-        // Generowanie empatycznej odpowiedzi Przyjaciela
         const reply = generateCompanionReply(capturedUserText, profile);
         setCompanionText(reply.text);
 
@@ -91,7 +85,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         };
         onNewMessage(companionMsg);
 
-        // Odtwarzanie głosu przyjaciela
         voiceEngine.speak(reply.text);
       },
       (state) => {
@@ -136,56 +129,56 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-sanctuary-950/98 backdrop-blur-2xl px-6 py-8 select-none text-sanctuary-100"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-gradient-to-b from-amber-50/98 via-cream-100/98 to-orange-50/95 backdrop-blur-2xl px-6 py-8 select-none text-cream-950"
       >
         {/* Górny pasek statusu */}
         <div className="w-full max-w-xl flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-2.5 w-2.5 rounded-full bg-hearth-500 animate-ping" />
-            <div className="text-xs text-sanctuary-400 font-sans tracking-wide">
+          <div className="flex items-center gap-3 bg-white/80 border border-cream-300 px-4 py-1.5 rounded-full shadow-warm-sm">
+            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="text-xs text-cream-700 font-sans tracking-wide font-medium">
               Rozmowa na żywo z {profile.companionName} • {formatDuration(callDuration)}
             </div>
           </div>
 
           {/* Dźwięki otoczenia w rozmowie */}
-          <div className="flex items-center gap-1.5 bg-sanctuary-900/80 border border-sanctuary-700/60 rounded-full px-3 py-1">
+          <div className="flex items-center gap-1.5 bg-white/80 border border-cream-300 rounded-full px-3 py-1 shadow-warm-sm">
             <button
               onClick={() => handleToggleSoundscape("fireplace")}
               className={`p-1.5 rounded-full transition-all ${
                 activeSoundscape === "fireplace"
-                  ? "bg-hearth-600/30 text-hearth-300 border border-hearth-500/40"
-                  : "text-sanctuary-500 hover:text-sanctuary-300"
+                  ? "bg-sun-100 text-sun-700 border border-sun-300"
+                  : "text-cream-400 hover:text-cream-700"
               }`}
               title="Trzaskający kominek"
             >
-              <Flame size={14} />
+              <Flame size={15} />
             </button>
             <button
               onClick={() => handleToggleSoundscape("rain")}
               className={`p-1.5 rounded-full transition-all ${
                 activeSoundscape === "rain"
-                  ? "bg-hearth-600/30 text-hearth-300 border border-hearth-500/40"
-                  : "text-sanctuary-500 hover:text-sanctuary-300"
+                  ? "bg-sky-100 text-sky-700 border border-sky-300"
+                  : "text-cream-400 hover:text-cream-700"
               }`}
               title="Kojący deszcz"
             >
-              <CloudRain size={14} />
+              <CloudRain size={15} />
             </button>
             <button
               onClick={() => handleToggleSoundscape("alpha_waves")}
               className={`p-1.5 rounded-full transition-all ${
                 activeSoundscape === "alpha_waves"
-                  ? "bg-hearth-600/30 text-hearth-300 border border-hearth-500/40"
-                  : "text-sanctuary-500 hover:text-sanctuary-300"
+                  ? "bg-amber-100 text-amber-700 border border-amber-300"
+                  : "text-cream-400 hover:text-cream-700"
               }`}
               title="Fale alfa 8Hz"
             >
-              <Waves size={14} />
+              <Waves size={15} />
             </button>
           </div>
         </div>
 
-        {/* Centralne żywe ognisko i status obecności */}
+        {/* Centralne słoneczne światło i status obecności */}
         <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg w-full">
           <div className="relative mb-6">
             <LivingWarmHearth
@@ -201,7 +194,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             key={isSpeaking ? "speaking" : isListening ? "listening" : "idle"}
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-xs font-medium tracking-wider uppercase text-hearth-400 mb-4"
+            className="text-xs font-semibold tracking-wider uppercase text-sun-700 mb-4 bg-sun-100/80 px-4 py-1 rounded-full border border-sun-300/60"
           >
             {isSpeaking
               ? `${profile.companionName} mówi...`
@@ -212,7 +205,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 
           {/* Tekst wypowiedzi / transkrypcja na żywo */}
           <div className="min-h-[100px] flex items-center justify-center px-4">
-            <p className="font-serif text-lg md:text-xl text-sanctuary-100 leading-relaxed max-w-md">
+            <p className="font-serif text-lg md:text-2xl text-cream-950 leading-relaxed max-w-md">
               {isSpeaking
                 ? companionText
                 : liveTranscript
@@ -223,7 +216,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         </div>
 
         {/* Dolny panel sterowania rozmową */}
-        <div className="w-full max-w-md flex items-center justify-center gap-6 pt-6 border-t border-sanctuary-800/60">
+        <div className="w-full max-w-md flex items-center justify-center gap-6 pt-6 border-t border-cream-300/80">
           {/* Wyciszenie mikrofonu */}
           <button
             onClick={() => {
@@ -235,10 +228,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 setIsListening(true);
               }
             }}
-            className={`p-4 rounded-full transition-all ${
+            className={`p-4 rounded-full transition-all shadow-warm-sm ${
               isListening
-                ? "bg-sanctuary-850 text-sanctuary-200 hover:bg-sanctuary-800 border border-sanctuary-700"
-                : "bg-rosewood-600/30 text-rosewood-400 border border-rosewood-500/50"
+                ? "bg-white text-cream-800 hover:bg-cream-100 border border-cream-300"
+                : "bg-rose-100 text-rose-700 border border-rose-300"
             }`}
             title={isListening ? "Wycisz mikrofon" : "Włącz mikrofon"}
           >
@@ -248,7 +241,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           {/* Zakończenie rozmowy */}
           <button
             onClick={onClose}
-            className="flex items-center gap-3 bg-rosewood-600 hover:bg-rosewood-500 text-white font-medium px-8 py-4 rounded-full shadow-lg shadow-rosewood-600/30 transition-all active:scale-95"
+            className="flex items-center gap-3 bg-rose-600 hover:bg-rose-700 text-white font-medium px-8 py-4 rounded-full shadow-lg shadow-rose-600/30 transition-all active:scale-95"
           >
             <PhoneOff size={20} />
             <span className="text-sm tracking-wide">Zakończ rozmowę</span>
@@ -257,7 +250,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           {/* Przełącz na pisanie */}
           <button
             onClick={onClose}
-            className="p-4 rounded-full bg-sanctuary-850 text-sanctuary-200 hover:bg-sanctuary-800 border border-sanctuary-700 transition-all"
+            className="p-4 rounded-full bg-white text-cream-800 hover:bg-cream-100 border border-cream-300 shadow-warm-sm transition-all"
             title="Przejdź do cichego pisania"
           >
             <MessageSquare size={22} />

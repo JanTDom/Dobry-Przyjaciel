@@ -5,7 +5,7 @@ import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { BreathingGuide } from "@/components/sos/BreathingGuide";
 import { GroundingExercise } from "@/components/sos/GroundingExercise";
-import { Phone, HeartHandshake, ShieldAlert } from "lucide-react";
+import { Phone, ShieldAlert } from "lucide-react";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { getStoredProfile } from "@/lib/storage";
 
@@ -14,19 +14,19 @@ export default function SOSPage() {
   const profile = getStoredProfile();
 
   return (
-    <div className="min-h-screen flex flex-col bg-sanctuary-950 text-sanctuary-100">
+    <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
       <TopNav onOpenLiveCall={() => setIsLiveCallOpen(true)} />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col gap-8 pb-28 md:pb-16">
-        <div className="border-b border-sanctuary-800 pb-4">
-          <div className="flex items-center gap-2 text-rosewood-400 text-xs font-sans uppercase tracking-wider mb-1">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
+        <div className="border-b border-cream-300 pb-4">
+          <div className="flex items-center gap-2 text-sun-700 text-xs font-sans uppercase tracking-wider mb-1 font-semibold">
             <ShieldAlert size={16} />
             <span>Strefa natychmiastowego ukojenia</span>
           </div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-sanctuary-50 font-normal tracking-tight mb-2">
+          <h1 className="font-serif text-3xl sm:text-4xl text-cream-950 font-normal tracking-tight mb-2">
             Oddychaj powoli. Jestem przy tobie
           </h1>
-          <p className="font-sans text-xs sm:text-sm text-sanctuary-400 max-w-lg leading-relaxed">
+          <p className="font-sans text-xs sm:text-sm text-cream-700 max-w-lg leading-relaxed">
             Kiedy lęk lub napięcie stają się przytłaczające, twoje ciało potrzebuje prostych, fizjologicznych sygnałów bezpieczeństwa.
           </p>
         </div>
@@ -35,36 +35,36 @@ export default function SOSPage() {
         <GroundingExercise />
 
         {/* Ważne numery wsparcia */}
-        <div className="sanctuary-card rounded-3xl p-6 border border-sanctuary-800 bg-sanctuary-900/50">
+        <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 rounded-xl bg-rosewood-600/20 text-rosewood-400">
-              <Phone size={18} />
+            <div className="p-2.5 rounded-2xl bg-rose-100 text-rose-700 border border-rose-200">
+              <Phone size={20} />
             </div>
             <div>
-              <h3 className="font-serif text-base text-sanctuary-100 font-medium">
+              <h3 className="font-serif text-lg text-cream-950 font-medium">
                 Bezpłatne całodobowe linie wsparcia psychologicznego
               </h3>
-              <p className="font-sans text-xs text-sanctuary-400">
+              <p className="font-sans text-xs text-cream-600">
                 Jeśli czujesz, że potrzebujesz natychmiastowej rozmowy z człowiekiem
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-sans mt-4">
-            <div className="p-3.5 rounded-xl bg-sanctuary-950 border border-sanctuary-800 flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-white border border-cream-300 flex items-center justify-between shadow-warm-sm">
               <div>
-                <span className="text-sanctuary-300 font-medium block">Kryzys emocjonalny (dorosli)</span>
-                <span className="text-hearth-300 font-serif text-base font-medium">116 123</span>
+                <span className="text-cream-800 font-medium block">Kryzys emocjonalny (dorośli)</span>
+                <span className="text-sun-700 font-serif text-lg font-bold">116 123</span>
               </div>
-              <span className="text-[10px] text-sanctuary-500">24/7 bezpłatnie</span>
+              <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-medium">24/7 bezpłatnie</span>
             </div>
 
-            <div className="p-3.5 rounded-xl bg-sanctuary-950 border border-sanctuary-800 flex items-center justify-between">
+            <div className="p-4 rounded-2xl bg-white border border-cream-300 flex items-center justify-between shadow-warm-sm">
               <div>
-                <span className="text-sanctuary-300 font-medium block">Dzieci i młodzież</span>
-                <span className="text-hearth-300 font-serif text-base font-medium">116 111</span>
+                <span className="text-cream-800 font-medium block">Dzieci i młodzież</span>
+                <span className="text-sun-700 font-serif text-lg font-bold">116 111</span>
               </div>
-              <span className="text-[10px] text-sanctuary-500">24/7 bezpłatnie</span>
+              <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-medium">24/7 bezpłatnie</span>
             </div>
           </div>
         </div>

@@ -13,7 +13,7 @@ import { getStoredProfile, getStoredMessages, saveStoredMessages, getInitialSeed
 import { generateCompanionReply } from "@/lib/companion-personality";
 import { voiceEngine } from "@/lib/voice-engine";
 import { UserProfile, Message } from "@/types";
-import { PhoneCall, Sparkles, Heart, Shield, MessageCircle } from "lucide-react";
+import { PhoneCall, Sparkles, MessageCircle } from "lucide-react";
 
 export default function HomePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -45,7 +45,6 @@ export default function HomePage() {
     setMessages(updatedWithUser);
     saveStoredMessages(updatedWithUser);
 
-    // Odpowiedź Przyjaciela
     setTimeout(() => {
       const reply = generateCompanionReply(text, profile, updatedWithUser);
       const companionMsg: Message = {
@@ -68,7 +67,7 @@ export default function HomePage() {
           setIsCompanionSpeaking(false);
         });
       }
-    }, 600);
+    }, 500);
   };
 
   const handleNewLiveCallMessage = (msg: Message) => {
@@ -82,7 +81,7 @@ export default function HomePage() {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-sanctuary-950 text-sanctuary-100">
+    <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
       {/* Górna nawigacja */}
       <TopNav
         onOpenLiveCall={() => setIsLiveCallOpen(true)}
@@ -90,33 +89,32 @@ export default function HomePage() {
       />
 
       {/* Główna przestrzeń przystani */}
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col gap-8 pb-28 md:pb-16">
-        {/* Centralne przywitanie i żywe światło obecności */}
-        <section className="flex flex-col items-center text-center pt-4 sm:pt-6">
-          <div className="relative mb-4 group">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
+        {/* Centralne przywitanie i żywe słoneczne światło obecności */}
+        <section className="flex flex-col items-center text-center pt-2 sm:pt-4">
+          <div className="relative mb-3 group cursor-pointer" onClick={() => setIsLiveCallOpen(true)}>
             <LivingWarmHearth
               size={240}
               isSpeaking={isCompanionSpeaking}
-              intensity={0.4}
-              onClick={() => setIsLiveCallOpen(true)}
+              intensity={0.45}
             />
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-sanctuary-900/90 border border-sanctuary-700 text-hearth-300 text-[11px] font-sans px-3 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/95 border border-sun-300 text-sun-800 text-[11px] font-sans px-3.5 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md font-medium">
               Dotknij, aby rozmawiać na żywo
             </div>
           </div>
 
-          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl text-sanctuary-50 font-normal tracking-tight mb-2">
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-cream-950 font-normal tracking-tight mb-2.5">
             Witaj, {profile.name}. Jak się dzisiaj czujesz?
           </h1>
-          <p className="font-sans text-xs sm:text-sm text-sanctuary-400 max-w-md mx-auto leading-relaxed mb-6">
+          <p className="font-sans text-sm sm:text-base text-cream-700 max-w-md mx-auto leading-relaxed mb-6">
             Jestem twoim osobistym przyjacielem. Uczę się ciebie każdego dnia, pamiętam to, co ważne i zawsze mam dla ciebie czas.
           </p>
 
           {/* Główny przycisk akcji: Rozmowa głosowa na żywo */}
-          <div className="flex flex-wrap items-center justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3.5">
             <button
               onClick={() => setIsLiveCallOpen(true)}
-              className="hearth-button flex items-center gap-2.5 text-sanctuary-950 font-sans font-medium text-sm px-7 py-3.5 rounded-full active:scale-95 transition-all shadow-xl shadow-hearth-500/20"
+              className="hearth-button flex items-center gap-2.5 font-sans font-semibold text-sm px-8 py-3.5 rounded-full active:scale-95 transition-all shadow-xl shadow-sun-500/25"
             >
               <PhoneCall size={18} className="animate-pulse" />
               <span>Porozmawiajmy na żywo</span>
@@ -124,9 +122,9 @@ export default function HomePage() {
 
             <button
               onClick={() => setIsPricingOpen(true)}
-              className="flex items-center gap-2 text-xs font-sans text-sanctuary-300 hover:text-sanctuary-100 bg-sanctuary-900/60 hover:bg-sanctuary-850 px-5 py-3 rounded-full border border-sanctuary-800 transition-all"
+              className="secondary-warm-button flex items-center gap-2 text-xs font-sans px-6 py-3.5 rounded-full font-medium"
             >
-              <Sparkles size={14} className="text-hearth-400" />
+              <Sparkles size={14} className="text-sun-500" />
               <span>Osobista opieka</span>
             </button>
           </div>
@@ -139,12 +137,12 @@ export default function HomePage() {
 
         {/* Cicha rozmowa i historia wiadomości */}
         <section className="flex flex-col gap-4 mt-2">
-          <div className="flex items-center justify-between border-b border-sanctuary-800/80 pb-2 px-1">
-            <div className="flex items-center gap-2 text-xs text-sanctuary-400 font-sans">
-              <MessageCircle size={15} className="text-hearth-400" />
+          <div className="flex items-center justify-between border-b border-cream-300 pb-2.5 px-1">
+            <div className="flex items-center gap-2 text-xs text-cream-700 font-sans font-medium">
+              <MessageCircle size={16} className="text-sun-600" />
               <span>Dziennik rozmów i przemyśleń</span>
             </div>
-            <span className="text-[11px] text-sanctuary-500 font-sans">
+            <span className="text-[11px] text-cream-500 font-sans">
               {messages.length} wiadomości
             </span>
           </div>

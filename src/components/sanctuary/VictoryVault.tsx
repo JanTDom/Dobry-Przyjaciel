@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { BookOpen, Sparkles, Heart, Play, Pause } from "lucide-react";
+import { BookOpen, Sparkles, Play, Pause } from "lucide-react";
 import { voiceEngine } from "@/lib/voice-engine";
 
 interface VictoryLetter {
@@ -60,46 +60,46 @@ export const VictoryVault: React.FC = () => {
         {letters.map((l) => (
           <div
             key={l.id}
-            className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-sanctuary-700/60 shadow-2xl flex flex-col justify-between hover:border-sanctuary-600 transition-all"
+            className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col justify-between hover:border-sun-300 transition-all"
           >
             <div>
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-sans px-3 py-1 rounded-full bg-hearth-500/15 text-hearth-300 border border-hearth-500/30 font-medium">
+                <span className="text-[11px] font-sans px-3 py-1 rounded-full bg-sun-100 text-sun-800 border border-sun-200 font-semibold">
                   {l.tag}
                 </span>
-                <span className="text-xs text-sanctuary-500 font-sans">
+                <span className="text-xs text-cream-500 font-sans">
                   {l.date}
                 </span>
               </div>
 
-              <h3 className="font-serif text-xl sm:text-2xl text-sanctuary-100 font-normal mb-4 leading-snug">
+              <h3 className="font-serif text-xl sm:text-2xl text-cream-950 font-normal mb-4 leading-snug">
                 {l.title}
               </h3>
 
-              <p className="font-serif text-base text-sanctuary-300 leading-relaxed italic bg-sanctuary-900/40 p-5 rounded-2xl border border-sanctuary-850 mb-6">
+              <p className="font-serif text-base text-cream-800 leading-relaxed italic bg-cream-50/70 p-5 rounded-2xl border border-cream-200 mb-6 shadow-inner">
                 „{l.content}”
               </p>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-sanctuary-800/80">
+            <div className="flex items-center justify-between pt-4 border-t border-cream-200">
               <button
                 onClick={() => handleToggleVoice(l)}
-                className="flex items-center gap-2 text-xs font-sans text-hearth-300 hover:text-hearth-200 bg-hearth-500/10 hover:bg-hearth-500/20 px-4 py-2 rounded-full border border-hearth-500/30 transition-all"
+                className="flex items-center gap-2 text-xs font-sans text-sun-900 bg-sun-100 hover:bg-sun-200 px-4 py-2 rounded-full border border-sun-300 transition-all font-medium"
               >
                 {playingId === l.id ? (
                   <>
-                    <Pause size={14} className="animate-pulse text-hearth-400" />
+                    <Pause size={14} className="animate-pulse text-sun-600" />
                     <span>Zatrzymaj czytanie</span>
                   </>
                 ) : (
                   <>
-                    <Play size={14} className="text-hearth-400" />
+                    <Play size={14} className="text-sun-600" />
                     <span>Odsłuchaj list głosem</span>
                   </>
                 )}
               </button>
 
-              <span className="text-xs font-serif text-sanctuary-400 italic">
+              <span className="text-xs font-serif text-cream-600 italic font-medium">
                 Z miłością, Mira
               </span>
             </div>

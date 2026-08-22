@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Users, Heart, AlertCircle, HelpCircle } from "lucide-react";
+import { Users } from "lucide-react";
 import { PersonInLife } from "@/types";
 
 interface PeopleGraphProps {
@@ -10,16 +10,16 @@ interface PeopleGraphProps {
 
 export const PeopleGraph: React.FC<PeopleGraphProps> = ({ people }) => {
   return (
-    <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-sanctuary-700/60 shadow-2xl">
+    <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md">
       <div className="flex items-center gap-3 mb-6">
-        <div className="p-2 rounded-xl bg-hearth-500/15 text-hearth-400 border border-hearth-500/30">
-          <Users size={20} />
+        <div className="p-2.5 rounded-2xl bg-sun-100 text-sun-600 border border-sun-200">
+          <Users size={22} />
         </div>
         <div>
-          <h2 className="font-serif text-xl sm:text-2xl text-sanctuary-100 font-normal">
+          <h2 className="font-serif text-2xl sm:text-3xl text-cream-950 font-normal">
             Ważne osoby w twoim życiu
           </h2>
-          <p className="font-sans text-xs text-sanctuary-400 mt-0.5">
+          <p className="font-sans text-xs text-cream-600 mt-0.5">
             Mapa relacji, które kształtują twoje emocje i codzienne samopoczucie
           </p>
         </div>
@@ -33,38 +33,38 @@ export const PeopleGraph: React.FC<PeopleGraphProps> = ({ people }) => {
           return (
             <div
               key={p.id}
-              className="bg-sanctuary-900/60 border border-sanctuary-800 p-5 rounded-2xl flex flex-col justify-between hover:border-sanctuary-700 transition-all"
+              className="bg-cream-50/70 border border-cream-300 p-5 rounded-2xl flex flex-col justify-between hover:border-sun-300 shadow-warm-sm transition-all"
             >
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h3 className="font-serif text-lg text-sanctuary-100 font-medium">
+                    <h3 className="font-serif text-lg text-cream-950 font-medium">
                       {p.name}
                     </h3>
-                    <span className="text-xs text-sanctuary-400 font-sans">
+                    <span className="text-xs text-cream-600 font-sans">
                       {p.relation}
                     </span>
                   </div>
 
                   <span
-                    className={`text-[10px] font-sans px-2.5 py-1 rounded-full border ${
+                    className={`text-[10px] font-sans font-medium px-2.5 py-1 rounded-full border ${
                       isSupport
-                        ? "bg-hearth-500/15 text-hearth-300 border-hearth-500/30"
+                        ? "bg-emerald-50 text-emerald-800 border-emerald-300"
                         : isStress
-                        ? "bg-rosewood-600/20 text-rosewood-400 border-rosewood-500/30"
-                        : "bg-sanctuary-800 text-sanctuary-400 border-sanctuary-700"
+                        ? "bg-rose-50 text-rose-800 border-rose-300"
+                        : "bg-cream-200 text-cream-800 border-cream-300"
                     }`}
                   >
                     {isSupport ? "Wsparcie" : isStress ? "Wymaga granic" : "Złożona"}
                   </span>
                 </div>
 
-                <p className="font-sans text-xs text-sanctuary-300 leading-relaxed mb-4">
+                <p className="font-sans text-xs text-cream-800 leading-relaxed mb-4">
                   {p.notes}
                 </p>
               </div>
 
-              <div className="text-[10px] text-sanctuary-500 font-sans border-t border-sanctuary-800/80 pt-2">
+              <div className="text-[11px] text-cream-500 font-sans border-t border-cream-200 pt-2">
                 Ostatnio wspomniane: {p.lastMentioned}
               </div>
             </div>

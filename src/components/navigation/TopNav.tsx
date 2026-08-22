@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Flame, BookOpen, ShieldAlert, HeartHandshake, PhoneCall, Sparkles } from "lucide-react";
+import { Sun, BookOpen, ShieldAlert, HeartHandshake, PhoneCall, Sparkles } from "lucide-react";
 
 interface TopNavProps {
   onOpenLiveCall?: () => void;
@@ -17,34 +17,34 @@ export const TopNav: React.FC<TopNavProps> = ({
   const pathname = usePathname();
 
   const links = [
-    { href: "/", label: "Przystań", icon: <Flame size={16} /> },
+    { href: "/", label: "Przystań", icon: <Sun size={16} /> },
     { href: "/memory", label: "Jak cię poznałem", icon: <HeartHandshake size={16} /> },
     { href: "/sanctuary", label: "Skarbiec siły", icon: <BookOpen size={16} /> },
     { href: "/sos", label: "Strefa spokoju SOS", icon: <ShieldAlert size={16} /> },
   ];
 
   return (
-    <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-sanctuary-950/85 border-b border-sanctuary-800/60">
+    <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-cream-50/90 border-b border-cream-300/80 shadow-warm-sm">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-        {/* Logo i nazwa z ciepłym akcentem */}
+        {/* Logo i nazwa ze słonecznym akcentem */}
         <Link href="/" className="flex items-center gap-3 group select-none">
-          <div className="h-9 w-9 rounded-full bg-gradient-to-tr from-hearth-700 via-hearth-500 to-hearth-300 p-[1.5px] shadow-lg shadow-hearth-600/20 group-hover:scale-105 transition-transform">
-            <div className="h-full w-full rounded-full bg-sanctuary-950 flex items-center justify-center">
-              <Flame size={18} className="text-hearth-400 fill-hearth-500/20" />
+          <div className="h-10 w-10 rounded-2xl bg-gradient-to-tr from-sun-500 via-amber-400 to-yellow-300 p-[2px] shadow-md shadow-sun-500/25 group-hover:scale-105 transition-transform">
+            <div className="h-full w-full rounded-[14px] bg-cream-50 flex items-center justify-center">
+              <Sun size={20} className="text-sun-600 animate-spin-slow" />
             </div>
           </div>
           <div className="flex flex-col">
-            <span className="font-serif text-lg font-medium text-sanctuary-100 tracking-tight leading-none">
+            <span className="font-serif text-xl font-medium text-cream-900 tracking-tight leading-none">
               Dobry Przyjaciel
             </span>
-            <span className="text-[11px] text-sanctuary-400 font-sans tracking-wide leading-tight mt-0.5">
+            <span className="text-[11px] text-cream-600 font-sans tracking-wide leading-tight mt-0.5">
               Twoja bezpieczna przystań
             </span>
           </div>
         </Link>
 
         {/* Główne linki nawigacyjne (Desktop) */}
-        <nav className="hidden md:flex items-center gap-1 bg-sanctuary-900/60 border border-sanctuary-800/80 rounded-full px-2 py-1">
+        <nav className="hidden md:flex items-center gap-1 bg-cream-200/70 border border-cream-300/80 rounded-full px-2 py-1 shadow-inner">
           {links.map((link) => {
             const isActive = pathname === link.href;
             return (
@@ -53,11 +53,11 @@ export const TopNav: React.FC<TopNavProps> = ({
                 href={link.href}
                 className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-sans transition-all ${
                   isActive
-                    ? "bg-hearth-500/20 text-hearth-200 font-medium border border-hearth-500/30 shadow-sm"
-                    : "text-sanctuary-400 hover:text-sanctuary-200 hover:bg-sanctuary-800/40"
+                    ? "bg-white text-cream-950 font-medium shadow-sm border border-cream-300/90"
+                    : "text-cream-700 hover:text-cream-950 hover:bg-cream-100/80"
                 }`}
               >
-                <span className={isActive ? "text-hearth-400" : "text-sanctuary-500"}>
+                <span className={isActive ? "text-sun-600" : "text-cream-500"}>
                   {link.icon}
                 </span>
                 <span>{link.label}</span>
@@ -71,7 +71,7 @@ export const TopNav: React.FC<TopNavProps> = ({
           {onOpenLiveCall && (
             <button
               onClick={onOpenLiveCall}
-              className="hearth-button flex items-center gap-2 text-sanctuary-950 font-sans font-medium text-xs px-4 py-2 rounded-full active:scale-95 transition-all"
+              className="hearth-button flex items-center gap-2 font-sans font-medium text-xs px-4 py-2 rounded-full active:scale-95 transition-all"
             >
               <PhoneCall size={14} className="animate-pulse" />
               <span className="hidden sm:inline">Rozmawiaj na żywo</span>
@@ -82,9 +82,9 @@ export const TopNav: React.FC<TopNavProps> = ({
           {onOpenPricing && (
             <button
               onClick={onOpenPricing}
-              className="hidden sm:flex items-center gap-1.5 text-xs text-hearth-300 hover:text-hearth-200 bg-sanctuary-900/80 hover:bg-sanctuary-850 px-3 py-1.5 rounded-full border border-hearth-500/30 transition-all"
+              className="hidden sm:flex items-center gap-1.5 text-xs text-cream-800 hover:text-cream-950 bg-white/90 hover:bg-white px-3.5 py-1.5 rounded-full border border-cream-300 shadow-sm transition-all"
             >
-              <Sparkles size={13} className="text-hearth-400" />
+              <Sparkles size={13} className="text-sun-500" />
               <span>Opieka</span>
             </button>
           )}

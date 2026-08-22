@@ -17,7 +17,6 @@ export const BreathingGuide: React.FC = () => {
       setSecondsLeft((prev) => {
         if (prev > 1) return prev - 1;
 
-        // Przejście do kolejnej fazy (4s na fazę)
         if (phase === "Wdech") {
           setPhase("Zatrzymaj");
           return 4;
@@ -54,52 +53,50 @@ export const BreathingGuide: React.FC = () => {
   };
 
   return (
-    <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-sanctuary-700/60 shadow-2xl flex flex-col items-center text-center">
+    <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col items-center text-center">
       <div className="flex items-center gap-2 mb-2">
-        <div className="p-1.5 rounded-lg bg-hearth-500/15 text-hearth-400">
-          <Wind size={16} />
+        <div className="p-2 rounded-xl bg-sun-100 text-sun-600">
+          <Wind size={18} />
         </div>
-        <h2 className="font-serif text-xl sm:text-2xl text-sanctuary-100 font-normal">
+        <h2 className="font-serif text-2xl sm:text-3xl text-cream-950 font-normal">
           Oddech pudełkowy na obniżenie kortyzolu
         </h2>
       </div>
-      <p className="font-sans text-xs text-sanctuary-400 max-w-sm mb-8">
+      <p className="font-sans text-xs sm:text-sm text-cream-700 max-w-sm mb-8">
         Spokojny, 4-fazowy rytm oddechu fizjologicznie uspokaja twój układ nerwowy
       </p>
 
-      {/* Wizualizacja pulsującego okręgu oddechu */}
       <div className="relative w-64 h-64 flex items-center justify-center mb-8">
         <motion.div
           animate={{
             scale:
               phase === "Wdech"
-                ? [1, 1.4]
+                ? [1, 1.35]
                 : phase === "Zatrzymaj"
-                ? 1.4
+                ? 1.35
                 : phase === "Wydech"
-                ? [1.4, 1]
+                ? [1.35, 1]
                 : 1,
-            opacity: phase === "Zatrzymaj" || phase === "Wdech" ? 0.9 : 0.6,
+            opacity: phase === "Zatrzymaj" || phase === "Wdech" ? 0.85 : 0.45,
           }}
           transition={{ duration: 4, ease: "easeInOut" }}
-          className="absolute inset-0 rounded-full bg-gradient-to-tr from-hearth-600/20 via-hearth-500/30 to-hearth-300/10 blur-xl"
+          className="absolute inset-0 rounded-full bg-gradient-to-tr from-sun-400/30 via-amber-300/40 to-yellow-200/30 blur-2xl"
         />
 
-        <div className="relative z-10 flex flex-col items-center justify-center rounded-full w-48 h-48 bg-sanctuary-900/90 border border-hearth-500/40 shadow-inner">
-          <span className="font-serif text-2xl text-hearth-200 font-medium tracking-wide mb-1">
+        <div className="relative z-10 flex flex-col items-center justify-center rounded-full w-48 h-48 bg-white border border-sun-300 shadow-warm-md">
+          <span className="font-serif text-2xl text-sun-900 font-medium tracking-wide mb-1">
             {phase}
           </span>
-          <span className="font-sans text-3xl font-light text-sanctuary-100">
+          <span className="font-sans text-3xl font-light text-cream-900">
             {secondsLeft}s
           </span>
         </div>
       </div>
 
-      {/* Przyciski sterowania */}
       <div className="flex items-center gap-3">
         <button
           onClick={handleToggle}
-          className="hearth-button flex items-center gap-2 text-sanctuary-950 font-sans font-medium text-xs px-6 py-3 rounded-full active:scale-95 transition-all"
+          className="hearth-button flex items-center gap-2 font-sans font-semibold text-xs px-7 py-3 rounded-full active:scale-95 transition-all shadow-md shadow-sun-500/20"
         >
           <Play size={14} className={isActive ? "rotate-90" : ""} />
           <span>{isActive ? "Wstrzymaj ćwiczenie" : "Rozpocznij oddech"}</span>
@@ -108,16 +105,16 @@ export const BreathingGuide: React.FC = () => {
         {completedCycles > 0 && (
           <button
             onClick={handleReset}
-            className="p-3 rounded-full bg-sanctuary-900 border border-sanctuary-800 text-sanctuary-400 hover:text-sanctuary-200 transition-all"
+            className="p-3 rounded-full bg-cream-100 border border-cream-300 text-cream-700 hover:text-cream-900 transition-all"
             title="Zresetuj licznik"
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={15} />
           </button>
         )}
       </div>
 
       {completedCycles > 0 && (
-        <span className="text-xs text-sanctuary-400 font-sans mt-4">
+        <span className="text-xs text-cream-600 font-sans mt-4 font-medium">
           Ukończone cykle: {completedCycles}
         </span>
       )}

@@ -13,31 +13,31 @@ export const AmbientSoundscape: React.FC = () => {
     {
       type: "fireplace",
       label: "Ciepły kominek",
-      icon: <Flame size={16} className="text-hearth-400" />,
+      icon: <Flame size={18} className="text-sun-500" />,
       desc: "Trzaskające drewno i kojące ciepło",
     },
     {
       type: "rain",
       label: "Kojący deszcz",
-      icon: <CloudRain size={16} className="text-hearth-300" />,
+      icon: <CloudRain size={18} className="text-sky-500" />,
       desc: "Miękki szum letniego deszczu za oknem",
     },
     {
       type: "ocean",
       label: "Fale oceanu",
-      icon: <Waves size={16} className="text-hearth-400" />,
+      icon: <Waves size={18} className="text-teal-500" />,
       desc: "Spokojny, miarowy oddech wody",
     },
     {
       type: "alpha_waves",
       label: "Fale alfa 8Hz",
-      icon: <Sparkles size={16} className="text-hearth-300" />,
+      icon: <Sparkles size={18} className="text-amber-500" />,
       desc: "Dźwięk wyciszający gonitwę myśli",
     },
     {
       type: "forest",
       label: "Nocny las",
-      icon: <Trees size={16} className="text-hearth-400" />,
+      icon: <Trees size={18} className="text-emerald-500" />,
       desc: "Cichy szum drzew i świerszcze pod gwiazdami",
     },
   ];
@@ -65,27 +65,27 @@ export const AmbientSoundscape: React.FC = () => {
   };
 
   return (
-    <div className="sanctuary-card rounded-2xl p-5 border border-sanctuary-700/60 shadow-xl">
+    <div className="sanctuary-card rounded-3xl p-5 sm:p-6 border border-cream-300 shadow-warm-md">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-hearth-500/10 text-hearth-400">
-            <Flame size={16} />
+        <div className="flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-sun-100 text-sun-600 border border-sun-200">
+            <Sparkles size={18} />
           </div>
           <div>
-            <h3 className="text-sm font-medium text-sanctuary-100 font-sans">Kojące tło dźwiękowe</h3>
-            <p className="text-xs text-sanctuary-400 font-sans">Wybierz dźwięk, który pomoże ci się wyciszyć</p>
+            <h3 className="text-sm font-semibold text-cream-900 font-sans">Kojące tło dźwiękowe</h3>
+            <p className="text-xs text-cream-600 font-sans">Wybierz dźwięk, który pomoże ci się wyciszyć i zrelaksować</p>
           </div>
         </div>
 
         {/* Sterowanie głośnością */}
         {active && (
-          <div className="flex items-center gap-2 bg-sanctuary-900/90 px-3 py-1.5 rounded-full border border-sanctuary-700/50">
+          <div className="flex items-center gap-2 bg-cream-100 px-3 py-1.5 rounded-full border border-cream-300">
             <button
               onClick={handleToggleMute}
-              className="text-sanctuary-400 hover:text-hearth-300 transition-colors"
+              className="text-cream-600 hover:text-cream-900 transition-colors"
               title={isMuted ? "Włącz dźwięk" : "Wycisz"}
             >
-              {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+              {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
             </button>
             <input
               type="range"
@@ -94,34 +94,34 @@ export const AmbientSoundscape: React.FC = () => {
               step="0.05"
               value={volume}
               onChange={handleVolumeChange}
-              className="w-16 h-1 bg-sanctuary-700 rounded-lg appearance-none cursor-pointer accent-hearth-500"
+              className="w-18 h-1.5 bg-cream-300 rounded-lg appearance-none cursor-pointer accent-sun-500"
             />
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
         {soundscapes.map((s) => {
           const isSelected = active === s.type;
           return (
             <button
               key={s.type}
               onClick={() => handleSelect(s.type)}
-              className={`flex flex-col text-left p-3 rounded-xl transition-all border ${
+              className={`flex flex-col text-left p-3.5 rounded-2xl transition-all border ${
                 isSelected
-                  ? "bg-hearth-500/15 border-hearth-500/50 shadow-md shadow-hearth-500/10"
-                  : "bg-sanctuary-900/40 border-sanctuary-800 hover:border-sanctuary-700 hover:bg-sanctuary-850/60"
+                  ? "bg-sun-50 border-sun-400 shadow-md shadow-sun-500/10 ring-2 ring-sun-400/30"
+                  : "bg-white hover:bg-cream-50 border-cream-300 hover:border-cream-400 shadow-warm-sm"
               }`}
             >
-              <div className="flex items-center gap-2 mb-1.5">
-                <div className={`p-1.5 rounded-lg ${isSelected ? "bg-hearth-500/20" : "bg-sanctuary-800"}`}>
+              <div className="flex items-center gap-2.5 mb-2">
+                <div className={`p-2 rounded-xl ${isSelected ? "bg-sun-100" : "bg-cream-100"}`}>
                   {s.icon}
                 </div>
-                <span className={`text-xs font-medium font-sans ${isSelected ? "text-hearth-200" : "text-sanctuary-200"}`}>
+                <span className={`text-xs font-semibold font-sans ${isSelected ? "text-sun-900" : "text-cream-900"}`}>
                   {s.label}
                 </span>
               </div>
-              <span className="text-[11px] text-sanctuary-400 font-sans line-clamp-1">
+              <span className="text-[11px] text-cream-600 font-sans line-clamp-1">
                 {s.desc}
               </span>
             </button>

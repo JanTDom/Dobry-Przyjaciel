@@ -3,22 +3,23 @@
 @tailwind utilities;
 
 :root {
-  --bg-sanctuary: #090706;
-  --color-hearth: #F59E0B;
-  --color-warm-velvet: #1C1410;
+  --bg-sanctuary: #FAF7F2;
+  --color-sun: #F59E0B;
+  --color-text-main: #2A1D15;
   --font-serif: "Newsreader", "Playfair Display", "Georgia", serif;
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @layer base {
   body {
-    @apply bg-sanctuary-950 text-sanctuary-200 antialiased selection:bg-hearth-500/30 selection:text-hearth-100;
+    @apply bg-cream-100 text-cream-900 antialiased selection:bg-sun-200 selection:text-cream-950;
     font-family: var(--font-sans);
-    background-color: #090706;
+    background-color: #FAF7F2;
     background-image: 
-      radial-gradient(at 50% 0%, rgba(245, 158, 11, 0.07) 0px, transparent 60%),
-      radial-gradient(at 100% 100%, rgba(180, 83, 9, 0.05) 0px, transparent 50%),
-      radial-gradient(at 0% 100%, rgba(38, 28, 22, 0.4) 0px, transparent 50%);
+      radial-gradient(at 50% -10%, rgba(251, 191, 36, 0.22) 0px, transparent 65%),
+      radial-gradient(at 90% 20%, rgba(253, 230, 138, 0.25) 0px, transparent 50%),
+      radial-gradient(at 10% 80%, rgba(254, 215, 170, 0.2) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.08) 0px, transparent 60%);
     min-height: 100vh;
     overflow-x: hidden;
   }
@@ -36,23 +37,23 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #090706;
+  background: #FAF7F2;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #261C16;
+  background: #DFCBB3;
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #3D2E25;
+  background: #C6AC90;
 }
 
-/* Glass & Sanctuary Card utilities */
+/* Jasne, przytulne karty (Sunlit Cream Cards) */
 .sanctuary-card {
-  background: linear-gradient(180deg, rgba(28, 20, 16, 0.85) 0%, rgba(19, 14, 11, 0.95) 100%);
-  border: 1px solid rgba(61, 46, 37, 0.5);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 253, 249, 0.98) 100%);
+  border: 1px solid rgba(223, 203, 179, 0.7);
+  box-shadow: 0 8px 30px -4px rgba(74, 55, 40, 0.06), 0 2px 8px -2px rgba(74, 55, 40, 0.04);
   backdrop-filter: blur(12px);
 }
 
@@ -61,27 +62,38 @@
 }
 
 .sanctuary-card-hover:hover {
-  border-color: rgba(245, 158, 11, 0.4);
-  box-shadow: 0 12px 40px 0 rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 16px 36px -6px rgba(245, 158, 11, 0.12), 0 4px 12px -2px rgba(74, 55, 40, 0.06);
   transform: translateY(-2px);
 }
 
 .hearth-button {
-  background: linear-gradient(135deg, #F59E0B 0%, #D97706 60%, #B45309 100%);
-  box-shadow: 0 4px 20px -2px rgba(245, 158, 11, 0.4);
-  transition: all 0.25s ease;
+  background: linear-gradient(135deg, #F59E0B 0%, #EA580C 100%);
+  color: #FFFFFF;
+  box-shadow: 0 6px 20px -2px rgba(245, 158, 11, 0.35);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hearth-button:hover {
-  box-shadow: 0 6px 28px 0 rgba(245, 158, 11, 0.6);
-  transform: translateY(-1px) scale(1.01);
+  box-shadow: 0 10px 28px -2px rgba(245, 158, 11, 0.5);
+  transform: translateY(-1.5px) scale(1.01);
 }
 
 .hearth-button:active {
   transform: translateY(1px) scale(0.99);
 }
 
-/* Soft text glow */
-.text-hearth-glow {
-  text-shadow: 0 0 24px rgba(245, 158, 11, 0.4);
+.secondary-warm-button {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(223, 203, 179, 0.8);
+  color: #4A3728;
+  box-shadow: 0 2px 8px rgba(74, 55, 40, 0.04);
+  transition: all 0.2s ease;
+}
+
+.secondary-warm-button:hover {
+  background: #FFFFFF;
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #2A1D15;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.1);
 }
