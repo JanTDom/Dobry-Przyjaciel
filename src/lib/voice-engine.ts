@@ -1,222 +1,333 @@
 "use client";
 
-export interface VoiceState {
-  isSupported: boolean;
+export interface VoiceEngineState {
   isListening: boolean;
-  isRecordingAudio: boolean;
+  isRecording: boolean;
   isSpeaking: boolean;
   isProcessing: boolean;
+  userVolume: number; // 0.0 do 1.0
   transcript: string;
   interimTranscript: string;
-  errorMessage?: string;
+  errorMessage?: string | null;
 }
 
 class VoiceEngine {
-  private recognition: any = null;
-  private currentAudio: HTMLAudioElement | null = null;
-  private isContinuousMode: boolean = false;
-  private silenceTimer: any = null;
-  private onMessageCaptured: ((text: string) => void) | null = null;
-  private onStateChange: ((state: { isListening: boolean; isSpeaking: boolean; isRecordingAudio?: boolean; transcript: string; errorMessage?: string }) => void) | null = null;
-  private isUnlocked: boolean = false;
-
-  // MediaRecorder do bezpośredniego nagrywania na iOS Safari / fallback
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private mediaStream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
-  private mediaStream: MediaStream | null = null;
-  private isRecording: boolean = false;
+  private currentAudio: HTMLAudioElement | null = null;
+  private speechRecognition: any = null;
+
+  private isContinuousMode: boolean = false;
+  private isCurrentlyRecording: boolean = false;
+  private isCurrentlySpeaking: boolean = false;
+  private isProcessingTranscript: boolean = false;
+
+  private volumeCheckAnimationId: number | null = null;
+  private silenceTimer: any = null;
+  private speechStartTime: number = 0;
+  private hasSpokenInCurrentChunk: boolean = false;
+
+  private onMessageCaptured: ((text: string) => void) | null = null;
+  private onStateChange: ((state: VoiceEngineState) => void) | null = null;
+  private currentTranscript: string = "";
 
   constructor() {
     if (typeof window !== "undefined") {
       this.currentAudio = new Audio();
-      this.initSpeechRecognition();
+      this.initWebSpeechRecognition();
     }
   }
 
-  private initSpeechRecognition() {
+  private initWebSpeechRecognition() {
     if (typeof window === "undefined") return;
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       try {
-        this.recognition = new SpeechRecognition();
-        this.recognition.continuous = true;
-        this.recognition.interimResults = true;
-        this.recognition.lang = "pl-PL";
-        this.setupRecognitionListeners();
+        this.speechRecognition = new SpeechRecognition();
+        this.speechRecognition.continuous = true;
+        this.speechRecognition.interimResults = true;
+        this.speechRecognition.lang = "pl-PL";
+
+        this.speechRecognition.onresult = (event: any) => {
+          let interim = "";
+          let final = "";
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) {
+              final += event.results[i][0].transcript;
+            } else {
+              interim += event.results[i][0].transcript;
+            }
+          }
+          const text = (final || interim).trim();
+          if (text) {
+            this.currentTranscript = text;
+            this.notifyState();
+          }
+        };
+
+        this.speechRecognition.onerror = (e: any) => {
+          console.warn("WebSpeech warning:", e.error);
+        };
       } catch (e) {
-        console.warn("SpeechRecognition init warning:", e);
+        console.warn("SpeechRecognition init error:", e);
       }
     }
   }
 
-  // Odblokowuje audio i żąda uprawnień do mikrofonu synchronicznie w geście użytkownika
+  private notifyState(errorMessage: string | null = null) {
+    if (!this.onStateChange) return;
+    this.onStateChange({
+      isListening: this.isContinuousMode && !this.isCurrentlySpeaking,
+      isRecording: this.isCurrentlyRecording,
+      isSpeaking: this.isCurrentlySpeaking,
+      isProcessing: this.isProcessingTranscript,
+      userVolume: 0,
+      transcript: this.currentTranscript,
+      interimTranscript: "",
+      errorMessage,
+    });
+  }
+
+  // Odblokowuje AudioContext i element Audio w geście użytkownika (Safari / Chrome)
   public async unlock(): Promise<boolean> {
     if (typeof window === "undefined") return false;
     try {
+      if (!this.audioContext || this.audioContext.state === "closed") {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          this.audioContext = new AudioCtx();
+        }
+      }
+      if (this.audioContext && this.audioContext.state === "suspended") {
+        await this.audioContext.resume();
+      }
+
       if (!this.currentAudio) {
         this.currentAudio = new Audio();
       }
       this.currentAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
       await this.currentAudio.play().catch(() => {});
-      this.isUnlocked = true;
-
-      // Poproś o uprawnienia do mikrofonu jeśli jeszcze ich nie ma (kluczowe na iOS Safari)
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        if (!this.mediaStream) {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch((err) => {
-            console.warn("Microphone access prompt error:", err);
-            return null;
-          });
-          if (stream) {
-            this.mediaStream = stream;
-          }
-        }
-      }
       return true;
     } catch {
       return false;
     }
   }
 
-  private setupRecognitionListeners() {
-    if (!this.recognition) return;
+  // Uzyskuje strumień mikrofonu
+  private async getOrCreateMediaStream(): Promise<MediaStream | null> {
+    if (this.mediaStream && this.mediaStream.active) {
+      return this.mediaStream;
+    }
 
-    this.recognition.onresult = (event: any) => {
-      let finalTranscript = "";
-      let interimTranscript = "";
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+      this.mediaStream = stream;
 
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
+      // Podłącz do AudioContext i AnalyserNode do badania poziomu głośności w czasie rzeczywistym
+      if (this.audioContext) {
+        try {
+          const source = this.audioContext.createMediaStreamSource(stream);
+          this.analyser = this.audioContext.createAnalyser();
+          this.analyser.fftSize = 512;
+          this.analyser.smoothingTimeConstant = 0.4;
+          source.connect(this.analyser);
+        } catch (err) {
+          console.warn("Analyser connection error:", err);
         }
       }
 
-      const activeText = (finalTranscript || interimTranscript).trim();
-      if (this.onStateChange) {
-        this.onStateChange({
-          isListening: true,
-          isSpeaking: false,
-          isRecordingAudio: false,
-          transcript: activeText,
-        });
-      }
-
-      if (activeText.length > 1) {
-        if (this.silenceTimer) clearTimeout(this.silenceTimer);
-        this.silenceTimer = setTimeout(() => {
-          if (activeText.length > 0 && this.onMessageCaptured) {
-            const captured = activeText;
-            this.onMessageCaptured(captured);
-          }
-        }, 1300);
-      }
-    };
-
-    this.recognition.onerror = (event: any) => {
-      console.warn("Speech recognition error:", event.error);
-      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
-        if (this.onStateChange) {
-          this.onStateChange({
-            isListening: false,
-            isSpeaking: false,
-            transcript: "",
-            errorMessage: "Zezwól na dostęp do mikrofonu w przeglądarce.",
-          });
-        }
-      }
-    };
-
-    this.recognition.onend = () => {
-      if (this.isContinuousMode && !this.isSpeakingNow() && !this.isRecording) {
-        setTimeout(() => {
-          try {
-            if (this.isContinuousMode && !this.isSpeakingNow() && this.recognition) {
-              this.recognition.start();
-            }
-          } catch {
-            // Ignored
-          }
-        }, 300);
-      }
-    };
-  }
-
-  private isSpeakingNow(): boolean {
-    if (this.currentAudio && !this.currentAudio.paused) return true;
-    return false;
+      return stream;
+    } catch (err) {
+      console.error("Microphone access error:", err);
+      this.notifyState("Brak dostępu do mikrofonu. Zezwól w ustawieniach przeglądarki.");
+      return null;
+    }
   }
 
   public setCallbacks(
     onMessage: (text: string) => void,
-    onState: (state: { isListening: boolean; isSpeaking: boolean; isRecordingAudio?: boolean; transcript: string; errorMessage?: string }) => void
+    onState: (state: VoiceEngineState) => void
   ) {
     this.onMessageCaptured = onMessage;
     this.onStateChange = onState;
   }
 
-  // Rozpoczyna ciągły dialog głosowy
+  // Rozpoczyna automatyczny tryb dialogu na żywo (VAD + Whisper)
   public async startLiveDialogue() {
     await this.unlock();
     this.isContinuousMode = true;
+    this.currentTranscript = "";
     this.stopSpeaking();
 
-    // 1. Spróbuj Web Speech API
-    if (this.recognition) {
-      try {
-        this.recognition.start();
-        if (this.onStateChange) {
-          this.onStateChange({ isListening: true, isSpeaking: false, isRecordingAudio: false, transcript: "" });
+    const stream = await this.getOrCreateMediaStream();
+    if (!stream) return;
+
+    // Rozpocznij pętlę badania głosu (Voice Activity Detection)
+    this.startVoiceActivityDetection();
+    this.notifyState();
+  }
+
+  // Pętla monitorowania poziomu dźwięku z mikrofonu
+  private startVoiceActivityDetection() {
+    if (this.volumeCheckAnimationId) {
+      cancelAnimationFrame(this.volumeCheckAnimationId);
+    }
+
+    const checkVolume = () => {
+      if (!this.isContinuousMode) return;
+
+      if (this.analyser && !this.isCurrentlySpeaking && !this.isProcessingTranscript) {
+        const buffer = new Uint8Array(this.analyser.frequencyBinCount);
+        this.analyser.getByteFrequencyData(buffer);
+
+        let sum = 0;
+        for (let i = 0; i < buffer.length; i++) {
+          sum += buffer[i];
         }
-        return;
-      } catch (e) {
-        console.warn("Recognition start fallback:", e);
-      }
-    }
+        const average = sum / buffer.length;
+        const normalizedVolume = Math.min(1, average / 60);
 
-    // 2. Jeśli Web Speech API niedostępne lub zablokowane na iOS, włącz stan nasłuchu MediaRecorder
-    if (this.onStateChange) {
-      this.onStateChange({ isListening: true, isSpeaking: false, isRecordingAudio: false, transcript: "" });
+        // Próg detekcji mowy człowieka (ok. 12% głośności)
+        if (normalizedVolume > 0.12) {
+          if (!this.isCurrentlyRecording) {
+            this.startRecordingChunk();
+          }
+          this.hasSpokenInCurrentChunk = true;
+          this.speechStartTime = Date.now();
+          if (this.silenceTimer) {
+            clearTimeout(this.silenceTimer);
+            this.silenceTimer = null;
+          }
+        } else if (this.isCurrentlyRecording && this.hasSpokenInCurrentChunk) {
+          // Jeśli nagrywamy i nastała cisza po tym, jak użytkownik mówił
+          if (!this.silenceTimer) {
+            this.silenceTimer = setTimeout(() => {
+              // Po 1.2s ciszy zakończ i przetwórz nagranie
+              this.stopAndTranscribeCurrentChunk();
+            }, 1200);
+          }
+        }
+      }
+
+      this.volumeCheckAnimationId = requestAnimationFrame(checkVolume);
+    };
+
+    this.volumeCheckAnimationId = requestAnimationFrame(checkVolume);
+  }
+
+  private startRecordingChunk() {
+    if (!this.mediaStream || this.isCurrentlyRecording || this.isCurrentlySpeaking) return;
+
+    try {
+      this.audioChunks = [];
+      const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? { mimeType: "audio/webm;codecs=opus" }
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? { mimeType: "audio/mp4" }
+        : undefined;
+
+      this.mediaRecorder = new MediaRecorder(this.mediaStream, options);
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          this.audioChunks.push(e.data);
+        }
+      };
+
+      this.mediaRecorder.start(200);
+      this.isCurrentlyRecording = true;
+      this.hasSpokenInCurrentChunk = false;
+      this.notifyState();
+    } catch (e) {
+      console.warn("MediaRecorder start error:", e);
     }
   }
 
-  public stopLiveDialogue() {
-    this.isContinuousMode = false;
-    if (this.silenceTimer) clearTimeout(this.silenceTimer);
-    if (this.recognition) {
+  private async stopAndTranscribeCurrentChunk() {
+    if (!this.isCurrentlyRecording || !this.mediaRecorder) return;
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+
+    return new Promise<void>((resolve) => {
+      this.mediaRecorder!.onstop = async () => {
+        this.isCurrentlyRecording = false;
+        const mimeType = this.mediaRecorder?.mimeType || "audio/webm";
+        const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+        this.audioChunks = [];
+
+        // Ignoruj zbyt krótkie pliki (poniżej 0.5s mowy lub pusty szum)
+        if (audioBlob.size < 2000 || !this.hasSpokenInCurrentChunk) {
+          this.notifyState();
+          resolve();
+          return;
+        }
+
+        this.isProcessingTranscript = true;
+        this.notifyState();
+
+        try {
+          const formData = new FormData();
+          formData.append("file", audioBlob, "audio.webm");
+
+          const res = await fetch("/api/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const text = (data.text || "").trim();
+            if (text && text.length > 1) {
+              this.currentTranscript = text;
+              if (this.onMessageCaptured) {
+                this.onMessageCaptured(text);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Transcription error:", err);
+        } finally {
+          this.isProcessingTranscript = false;
+          this.notifyState();
+          resolve();
+        }
+      };
+
       try {
-        this.recognition.stop();
+        this.mediaRecorder!.stop();
       } catch {
-        // Ignored
+        this.isCurrentlyRecording = false;
+        this.notifyState();
+        resolve();
       }
-    }
-    if (this.isRecording) {
-      this.stopRecording();
-    }
-    this.stopSpeaking();
-    if (this.onStateChange) {
-      this.onStateChange({ isListening: false, isSpeaking: false, isRecordingAudio: false, transcript: "" });
-    }
+    });
   }
 
-  // Bezpośrednie nagrywanie głosu (Tap-to-Speak / Push-to-Talk) dla 100% niezawodności na iOS
-  public async startRecording(): Promise<boolean> {
+  // Ręczne rozpoczęcie nagrywania (Tap-to-Speak / Push-to-Talk)
+  public async startManualRecording(): Promise<boolean> {
     await this.unlock();
     this.stopSpeaking();
-    if (this.recognition) {
+    const stream = await this.getOrCreateMediaStream();
+    if (!stream) return false;
+
+    if (this.silenceTimer) clearTimeout(this.silenceTimer);
+    if (this.isCurrentlyRecording && this.mediaRecorder) {
       try {
-        this.recognition.stop();
+        this.mediaRecorder.stop();
       } catch {}
     }
 
     try {
-      let stream = this.mediaStream;
-      if (!stream || !stream.active) {
-        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        this.mediaStream = stream;
-      }
-
       this.audioChunks = [];
       const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? { mimeType: "audio/webm;codecs=opus" }
@@ -232,60 +343,40 @@ class VoiceEngine {
       };
 
       this.mediaRecorder.start(200);
-      this.isRecording = true;
-
-      if (this.onStateChange) {
-        this.onStateChange({
-          isListening: true,
-          isSpeaking: false,
-          isRecordingAudio: true,
-          transcript: "Nagrywam Twój głos...",
-        });
-      }
+      this.isCurrentlyRecording = true;
+      this.hasSpokenInCurrentChunk = true;
+      this.notifyState();
       return true;
-    } catch (err: any) {
-      console.error("Failed to start MediaRecorder:", err);
-      if (this.onStateChange) {
-        this.onStateChange({
-          isListening: false,
-          isSpeaking: false,
-          isRecordingAudio: false,
-          transcript: "",
-          errorMessage: "Brak dostępu do mikrofonu.",
-        });
-      }
+    } catch (err) {
+      console.error("Manual recording error:", err);
+      this.notifyState("Nie udało się uruchomić nagrywania mikrofonu.");
       return false;
     }
   }
 
-  // Zatrzymuje nagrywanie i wysyła do Whisper API
-  public async stopRecordingAndTranscribe(): Promise<string | null> {
-    if (!this.mediaRecorder || !this.isRecording) return null;
+  // Ręczne zatrzymanie nagrywania i natychmiastowa transkrypcja
+  public async stopManualRecordingAndTranscribe(): Promise<string | null> {
+    if (!this.isCurrentlyRecording || !this.mediaRecorder) return null;
 
     return new Promise((resolve) => {
       this.mediaRecorder!.onstop = async () => {
-        this.isRecording = false;
+        this.isCurrentlyRecording = false;
         const mimeType = this.mediaRecorder?.mimeType || "audio/webm";
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        if (audioBlob.size < 1000) {
+        if (audioBlob.size < 1200) {
+          this.notifyState();
           resolve(null);
           return;
         }
 
-        if (this.onStateChange) {
-          this.onStateChange({
-            isListening: false,
-            isSpeaking: false,
-            isRecordingAudio: false,
-            transcript: "Przetwarzam wypowiedź...",
-          });
-        }
+        this.isProcessingTranscript = true;
+        this.notifyState();
 
         try {
           const formData = new FormData();
-          formData.append("file", audioBlob, "recording.webm");
+          formData.append("file", audioBlob, "manual_audio.webm");
 
           const res = await fetch("/api/transcribe", {
             method: "POST",
@@ -295,33 +386,53 @@ class VoiceEngine {
           if (res.ok) {
             const data = await res.json();
             const text = (data.text || "").trim();
-            if (text && this.onMessageCaptured) {
-              this.onMessageCaptured(text);
+            if (text) {
+              this.currentTranscript = text;
+              if (this.onMessageCaptured) {
+                this.onMessageCaptured(text);
+              }
+              this.isProcessingTranscript = false;
+              this.notifyState();
+              resolve(text);
+              return;
             }
-            resolve(text);
-            return;
           }
         } catch (e) {
           console.error("Transcription error:", e);
         }
+        this.isProcessingTranscript = false;
+        this.notifyState();
         resolve(null);
       };
 
       try {
         this.mediaRecorder!.stop();
       } catch {
+        this.isCurrentlyRecording = false;
+        this.notifyState();
         resolve(null);
       }
     });
   }
 
-  public stopRecording() {
-    if (this.mediaRecorder && this.isRecording) {
+  public stopLiveDialogue() {
+    this.isContinuousMode = false;
+    if (this.volumeCheckAnimationId) {
+      cancelAnimationFrame(this.volumeCheckAnimationId);
+      this.volumeCheckAnimationId = null;
+    }
+    if (this.silenceTimer) {
+      clearTimeout(this.silenceTimer);
+      this.silenceTimer = null;
+    }
+    if (this.mediaRecorder && this.isCurrentlyRecording) {
       try {
         this.mediaRecorder.stop();
       } catch {}
-      this.isRecording = false;
     }
+    this.isCurrentlyRecording = false;
+    this.stopSpeaking();
+    this.notifyState();
   }
 
   // Odtwarzanie głosu lektora
@@ -329,23 +440,22 @@ class VoiceEngine {
     await this.unlock();
     this.stopSpeaking();
 
-    if (this.recognition && this.isContinuousMode) {
+    // Wstrzymaj nagrywanie na czas mowy lektora, aby AI nie nagrywało samego siebie
+    if (this.mediaRecorder && this.isCurrentlyRecording) {
       try {
-        this.recognition.stop();
-      } catch {
-        // Ignored
-      }
+        this.mediaRecorder.stop();
+      } catch {}
+      this.isCurrentlyRecording = false;
     }
 
-    if (this.onStateChange) {
-      this.onStateChange({ isListening: false, isSpeaking: true, isRecordingAudio: false, transcript: "" });
-    }
+    this.isCurrentlySpeaking = true;
+    this.notifyState();
 
     try {
       const storedCode = typeof window !== "undefined" ? localStorage.getItem("przyjaciel_access_code_v1") || "A132a132!" : "A132a132!";
       const res = await fetch("/api/voice", {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
           "x-access-code": storedCode,
         },
@@ -375,39 +485,32 @@ class VoiceEngine {
         const playPromise = audio.play();
         if (playPromise !== undefined) {
           await playPromise.catch((err) => {
-            console.warn("Audio play warning:", err);
+            console.warn("Audio play error:", err);
+            this.handlePlaybackEnd(onEnd);
           });
         }
         return;
       }
     } catch (err) {
-      console.error("Voice playback fetch failed:", err);
+      console.error("Voice playback fetch error:", err);
     }
 
     this.handlePlaybackEnd(onEnd);
   }
 
   private handlePlaybackEnd(onEnd?: () => void) {
-    if (this.onStateChange) {
-      this.onStateChange({ isListening: this.isContinuousMode, isSpeaking: false, isRecordingAudio: false, transcript: "" });
-    }
-    if (this.isContinuousMode && this.recognition) {
-      setTimeout(() => {
-        try {
-          if (this.isContinuousMode && !this.isSpeakingNow()) {
-            this.recognition.start();
-          }
-        } catch {
-          // Ignored
-        }
-      }, 350);
-    }
+    this.isCurrentlySpeaking = false;
+    this.notifyState();
     if (onEnd) onEnd();
   }
 
   public stopSpeaking() {
+    this.isCurrentlySpeaking = false;
     if (this.currentAudio) {
-      this.currentAudio.pause();
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+      } catch {}
     }
   }
 }

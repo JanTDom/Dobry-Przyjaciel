@@ -28,12 +28,12 @@ export const LiveVoiceBar: React.FC<LiveVoiceBarProps> = ({
   const handleToggleVoiceRecord = async () => {
     if (isRecording) {
       setIsRecording(false);
-      const text = await voiceEngine.stopRecordingAndTranscribe();
+      const text = await voiceEngine.stopManualRecordingAndTranscribe();
       if (text) {
         onSendMessage(text, true);
       }
     } else {
-      const started = await voiceEngine.startRecording();
+      const started = await voiceEngine.startManualRecording();
       if (started) {
         setIsRecording(true);
       }
@@ -44,13 +44,13 @@ export const LiveVoiceBar: React.FC<LiveVoiceBarProps> = ({
     <div className="w-full max-w-2xl mx-auto">
       <form
         onSubmit={handleSubmit}
-        className="bg-paper-surface/95 backdrop-blur-xl rounded-full p-2 pl-3 flex items-center gap-2 border border-warm-amber/20 shadow-quiet-lg focus-within:border-warm-amber focus-within:ring-1 focus-within:ring-warm-amber/30 transition-all"
+        className="bg-paper-surface/95 backdrop-blur-xl rounded-full p-2 pl-3 flex items-center gap-2 border border-warm-amber/25 shadow-quiet-lg focus-within:border-warm-amber focus-within:ring-1 focus-within:ring-warm-amber/30 transition-all"
       >
         {/* Przycisk natychmiastowej rozmowy na żywo */}
         <button
           type="button"
           onClick={onOpenLiveCall}
-          className="presence-btn-primary flex items-center gap-2 font-sans font-medium text-xs px-4 py-2.5 rounded-full transition-all select-none shadow-quiet-sm flex-shrink-0"
+          className="presence-btn-primary flex items-center gap-2 font-sans font-medium text-xs px-4 py-2.5 rounded-full transition-all select-none shadow-quiet-sm flex-shrink-0 active:scale-95"
           title="Uruchom pełnoekranową rozmowę głosową na żywo"
         >
           <PhoneCall size={13} strokeWidth={1.75} className="animate-pulse text-warm-honey" />
@@ -71,10 +71,10 @@ export const LiveVoiceBar: React.FC<LiveVoiceBarProps> = ({
         <button
           type="button"
           onClick={handleToggleVoiceRecord}
-          className={`p-2.5 rounded-full transition-all ${
+          className={`p-2.5 rounded-full transition-all active:scale-95 ${
             isRecording
-              ? "bg-red-700 text-white animate-pulse"
-              : "bg-paper-dark hover:bg-warm-amber/15 text-warm-amber"
+              ? "bg-red-700 text-white animate-pulse shadow-quiet-sm"
+              : "bg-paper-dark hover:bg-warm-amber/15 text-warm-amber border border-warm-amber/20"
           }`}
           title={isRecording ? "Wyślij nagranie" : "Nagraj szybką wiadomość głosową"}
         >

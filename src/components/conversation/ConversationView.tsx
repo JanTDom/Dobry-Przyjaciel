@@ -30,9 +30,10 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
         </p>
         <button
           onClick={onOpenLiveCall}
-          className="presence-btn-primary font-sans font-medium text-xs px-6 py-3 rounded-full flex items-center gap-2 shadow-quiet-sm"
+          className="presence-btn-primary font-sans font-medium text-xs px-7 py-3.5 rounded-full flex items-center gap-2 shadow-quiet-sm active:scale-95 transition-all"
         >
-          <span>Rozpocznij rozmowę na żywo</span>
+          <PhoneCall size={14} className="animate-pulse text-warm-honey" />
+          <span>Porozmawiajmy na żywo</span>
         </button>
       </div>
     );

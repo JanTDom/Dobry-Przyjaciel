@@ -298,8 +298,8 @@ export default function HomePage() {
                 onClick={() => setIsAuthOpen(true)}
                 className="presence-btn-primary flex items-center gap-2.5 font-sans font-medium text-xs sm:text-sm px-8 py-4 rounded-full active:scale-95 transition-all shadow-quiet-md"
               >
-                <span>Porozmawiaj teraz</span>
-                <ArrowRight size={15} strokeWidth={2} />
+                <Sparkles size={16} className="text-warm-honey" />
+                <span>Spotkaj się z Przyjacielem</span>
               </button>
 
               <button
