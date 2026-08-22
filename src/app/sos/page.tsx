@@ -1,21 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { BreathingGuide } from "@/components/sos/BreathingGuide";
 import { GroundingExercise } from "@/components/sos/GroundingExercise";
+import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
 import { Phone, ShieldAlert } from "lucide-react";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
-import { getStoredProfile } from "@/lib/storage";
+import { getStoredProfile, saveStoredProfile } from "@/lib/storage";
+import { UserProfile } from "@/types";
 
 export default function SOSPage() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
-  const profile = getStoredProfile();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  useEffect(() => {
+    setProfile(getStoredProfile());
+  }, []);
+
+  const handleSaveProfile = (updated: UserProfile) => {
+    setProfile(updated);
+    saveStoredProfile(updated);
+  };
+
+  if (!profile) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
-      <TopNav onOpenLiveCall={() => setIsLiveCallOpen(true)} />
+      <TopNav
+        onOpenLiveCall={() => setIsLiveCallOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        companionName={profile.companionName}
+        companionGender={profile.companionGender}
+      />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
         <div className="border-b border-cream-300 pb-4">
@@ -34,7 +53,6 @@ export default function SOSPage() {
         <BreathingGuide />
         <GroundingExercise />
 
-        {/* Ważne numery wsparcia */}
         <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2.5 rounded-2xl bg-rose-100 text-rose-700 border border-rose-200">
@@ -72,14 +90,19 @@ export default function SOSPage() {
 
       <BottomNav />
 
-      {profile && (
-        <LiveVoiceCallModal
-          isOpen={isLiveCallOpen}
-          onClose={() => setIsLiveCallOpen(false)}
-          profile={profile}
-          onNewMessage={() => {}}
-        />
-      )}
+      <LiveVoiceCallModal
+        isOpen={isLiveCallOpen}
+        onClose={() => setIsLiveCallOpen(false)}
+        profile={profile}
+        onNewMessage={() => {}}
+      />
+
+      <CompanionSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        profile={profile}
+        onSaveProfile={handleSaveProfile}
+      />
     </div>
   );
 }

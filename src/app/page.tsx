@@ -7,19 +7,22 @@ import { ConversationView } from "@/components/conversation/ConversationView";
 import { LiveVoiceBar } from "@/components/conversation/LiveVoiceBar";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
+import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
+import { IdeaPhilosophySection } from "@/components/philosophy/IdeaPhilosophySection";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
-import { getStoredProfile, getStoredMessages, saveStoredMessages, getInitialSeedMessages } from "@/lib/storage";
+import { getStoredProfile, saveStoredProfile, getStoredMessages, saveStoredMessages, getInitialSeedMessages } from "@/lib/storage";
 import { getCompanionReplyAsync } from "@/lib/companion-personality";
 import { voiceEngine } from "@/lib/voice-engine";
 import { UserProfile, Message } from "@/types";
-import { PhoneCall, Sparkles, MessageCircle } from "lucide-react";
+import { PhoneCall, Sparkles, MessageCircle, SlidersHorizontal, Compass } from "lucide-react";
 
 export default function HomePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isCompanionSpeaking, setIsCompanionSpeaking] = useState(false);
 
   useEffect(() => {
@@ -28,6 +31,11 @@ export default function HomePage() {
     setProfile(p);
     setMessages(m.length > 0 ? m : getInitialSeedMessages());
   }, []);
+
+  const handleSaveProfile = (updated: UserProfile) => {
+    setProfile(updated);
+    saveStoredProfile(updated);
+  };
 
   const handleSendMessage = async (text: string, isVoice = false) => {
     if (!profile || !text.trim()) return;
@@ -62,9 +70,13 @@ export default function HomePage() {
 
     if (isVoice) {
       setIsCompanionSpeaking(true);
-      voiceEngine.speak(reply.text, () => {
-        setIsCompanionSpeaking(false);
-      });
+      voiceEngine.speak(
+        reply.text,
+        () => {
+          setIsCompanionSpeaking(false);
+        },
+        profile.companionVoice || (profile.companionGender === "male" ? "echo" : "nova")
+      );
     }
   };
 
@@ -80,31 +92,38 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
+      {/* Górna nawigacja szklana */}
       <TopNav
         onOpenLiveCall={() => setIsLiveCallOpen(true)}
         onOpenPricing={() => setIsPricingOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        companionName={profile.companionName}
+        companionGender={profile.companionGender}
       />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
+      {/* Główna nastrojowa przystań */}
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-12 flex flex-col gap-10 pb-28 md:pb-16">
+        {/* Centralne przywitanie i żywe słoneczne światło obecności */}
         <section className="flex flex-col items-center text-center pt-2 sm:pt-4">
           <div className="relative mb-3 group cursor-pointer" onClick={() => setIsLiveCallOpen(true)}>
             <LivingWarmHearth
-              size={240}
+              size={260}
               isSpeaking={isCompanionSpeaking}
               intensity={0.45}
             />
-            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/95 border border-sun-300 text-sun-800 text-[11px] font-sans px-3.5 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-md font-medium">
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/95 border border-sun-300 text-sun-900 text-[11px] font-sans px-4 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg font-semibold">
               Dotknij, aby rozmawiać na żywo
             </div>
           </div>
 
-          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-cream-950 font-normal tracking-tight mb-2.5">
+          <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-cream-950 font-normal tracking-tight mb-3">
             Witaj, {profile.name}. Jak się dzisiaj czujesz?
           </h1>
           <p className="font-sans text-sm sm:text-base text-cream-700 max-w-md mx-auto leading-relaxed mb-6">
-            Jestem twoim osobistym przyjacielem. Uczę się ciebie każdego dnia, pamiętam to, co ważne i zawsze mam dla ciebie czas.
+            Jestem {profile.companionName}, twoim osobistym przyjacielem. Uczę się ciebie każdego dnia, pamiętam to, co ważne i zawsze mam dla ciebie czas.
           </p>
 
+          {/* Główne przyciski akcji */}
           <div className="flex flex-wrap items-center justify-center gap-3.5">
             <button
               onClick={() => setIsLiveCallOpen(true)}
@@ -115,8 +134,16 @@ export default function HomePage() {
             </button>
 
             <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="secondary-warm-button flex items-center gap-2 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
+            >
+              <span>{profile.companionGender === "male" ? "👨" : "👩"}</span>
+              <span>Twój przyjaciel ({profile.companionName})</span>
+            </button>
+
+            <button
               onClick={() => setIsPricingOpen(true)}
-              className="secondary-warm-button flex items-center gap-2 text-xs font-sans px-6 py-3.5 rounded-full font-medium"
+              className="secondary-warm-button flex items-center gap-2 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
             >
               <Sparkles size={14} className="text-sun-500" />
               <span>Osobista opieka</span>
@@ -124,15 +151,17 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Kojące tła dźwiękowe (kominek, letni deszcz, fale oceanu, fale alfa 8Hz) */}
         <section>
           <AmbientSoundscape />
         </section>
 
+        {/* Dziennik rozmów i przemyśleń */}
         <section className="flex flex-col gap-4 mt-2">
           <div className="flex items-center justify-between border-b border-cream-300 pb-2.5 px-1">
             <div className="flex items-center gap-2 text-xs text-cream-700 font-sans font-medium">
               <MessageCircle size={16} className="text-sun-600" />
-              <span>Dziennik rozmów i przemyśleń</span>
+              <span>Dziennik rozmów z {profile.companionName}</span>
             </div>
             <span className="text-[11px] text-cream-500 font-sans">
               {messages.length} wiadomości
@@ -153,10 +182,16 @@ export default function HomePage() {
             />
           </div>
         </section>
+
+        {/* Nastrojowa sekcja: Dlaczego powstał Dobry Przyjaciel? */}
+        <section className="pt-6">
+          <IdeaPhilosophySection />
+        </section>
       </main>
 
       <BottomNav />
 
+      {/* Pełnoekranowa rozmowa na żywo */}
       <LiveVoiceCallModal
         isOpen={isLiveCallOpen}
         onClose={() => setIsLiveCallOpen(false)}
@@ -164,6 +199,15 @@ export default function HomePage() {
         onNewMessage={handleNewLiveCallMessage}
       />
 
+      {/* Modal wyboru i edycji przyjaciela */}
+      <CompanionSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        profile={profile}
+        onSaveProfile={handleSaveProfile}
+      />
+
+      {/* Modal subskrypcji */}
       <SubscriptionModal
         isOpen={isPricingOpen}
         onClose={() => setIsPricingOpen(false)}

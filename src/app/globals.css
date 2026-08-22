@@ -3,30 +3,30 @@
 @tailwind utilities;
 
 :root {
-  --bg-sanctuary: #FAF7F2;
-  --color-sun: #F59E0B;
-  --color-text-main: #2A1D15;
+  --bg-primary: #FAF7F2;
+  --color-gold-glow: rgba(245, 158, 11, 0.28);
+  --color-text-main: #231812;
   --font-serif: "Newsreader", "Playfair Display", "Georgia", serif;
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @layer base {
   body {
-    @apply bg-cream-100 text-cream-900 antialiased selection:bg-sun-200 selection:text-cream-950;
+    @apply bg-cream-100 text-cream-950 antialiased selection:bg-sun-300 selection:text-cream-950;
     font-family: var(--font-sans);
     background-color: #FAF7F2;
     background-image: 
-      radial-gradient(at 50% -10%, rgba(251, 191, 36, 0.22) 0px, transparent 65%),
-      radial-gradient(at 90% 20%, rgba(253, 230, 138, 0.25) 0px, transparent 50%),
-      radial-gradient(at 10% 80%, rgba(254, 215, 170, 0.2) 0px, transparent 50%),
-      radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.08) 0px, transparent 60%);
+      radial-gradient(at 50% 0%, rgba(251, 191, 36, 0.25) 0px, transparent 65%),
+      radial-gradient(at 100% 25%, rgba(254, 215, 170, 0.3) 0px, transparent 55%),
+      radial-gradient(at 0% 75%, rgba(253, 230, 138, 0.22) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.12) 0px, transparent 60%);
     min-height: 100vh;
     overflow-x: hidden;
   }
 
-  h1, h2, h3, .font-serif-accent {
+  h1, h2, h3, .font-serif-display {
     font-family: var(--font-serif);
-    letter-spacing: -0.015em;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -49,34 +49,49 @@
   background: #C6AC90;
 }
 
-/* Jasne, przytulne karty (Sunlit Cream Cards) */
-.sanctuary-card {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 253, 249, 0.98) 100%);
-  border: 1px solid rgba(223, 203, 179, 0.7);
-  box-shadow: 0 8px 30px -4px rgba(74, 55, 40, 0.06), 0 2px 8px -2px rgba(74, 55, 40, 0.04);
-  backdrop-filter: blur(12px);
+/* Nastrojowe, luksusowe szkło ze złotym obrysem (Stunning Atmospheric Glass) */
+.glass-sanctuary {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 253, 250, 0.82) 100%);
+  border: 1px solid rgba(223, 203, 179, 0.75);
+  box-shadow: 
+    0 4px 20px -2px rgba(74, 55, 40, 0.05),
+    0 16px 36px -6px rgba(245, 158, 11, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
-.sanctuary-card-hover {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+.glass-sanctuary-hover {
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.sanctuary-card-hover:hover {
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow: 0 16px 36px -6px rgba(245, 158, 11, 0.12), 0 4px 12px -2px rgba(74, 55, 40, 0.06);
+.glass-sanctuary-hover:hover {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: 
+    0 8px 30px -4px rgba(74, 55, 40, 0.08),
+    0 24px 48px -8px rgba(245, 158, 11, 0.18),
+    inset 0 1px 2px rgba(255, 255, 255, 1);
   transform: translateY(-2px);
 }
 
+/* Złoty przycisk z żywą poświatą */
 .hearth-button {
-  background: linear-gradient(135deg, #F59E0B 0%, #EA580C 100%);
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 50%, #EA580C 100%);
   color: #FFFFFF;
-  box-shadow: 0 6px 20px -2px rgba(245, 158, 11, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 
+    0 8px 24px -2px rgba(245, 158, 11, 0.45),
+    0 2px 6px rgba(0, 0, 0, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4);
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .hearth-button:hover {
-  box-shadow: 0 10px 28px -2px rgba(245, 158, 11, 0.5);
-  transform: translateY(-1.5px) scale(1.01);
+  box-shadow: 
+    0 12px 32px -2px rgba(245, 158, 11, 0.6),
+    0 4px 10px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  transform: translateY(-2px) scale(1.015);
 }
 
 .hearth-button:active {
@@ -84,16 +99,22 @@
 }
 
 .secondary-warm-button {
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(223, 203, 179, 0.8);
-  color: #4A3728;
-  box-shadow: 0 2px 8px rgba(74, 55, 40, 0.04);
-  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(223, 203, 179, 0.85);
+  color: #38271B;
+  box-shadow: 0 2px 8px rgba(74, 55, 40, 0.04), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .secondary-warm-button:hover {
   background: #FFFFFF;
-  border-color: rgba(245, 158, 11, 0.5);
-  color: #2A1D15;
-  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.1);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #1A100B;
+  box-shadow: 0 6px 18px rgba(245, 158, 11, 0.15);
+  transform: translateY(-1.5px);
+}
+
+/* Subtelna nastrojowa aura świetlna */
+.golden-light-glow {
+  filter: drop-shadow(0 0 35px rgba(245, 158, 11, 0.35));
 }

@@ -128,11 +128,9 @@ class VoiceEngine {
     }
   }
 
-  // Odtwarzanie głosu: Próbuje OpenAI TTS, a w razie braku klucza używa Web Speech API
-  public async speak(text: string, onEnd?: () => void) {
+  public async speak(text: string, onEnd?: () => void, voiceName: string = "nova") {
     this.stopSpeaking();
 
-    // Wstrzymaj nasłuch w trakcie mówienia bota
     if (this.recognition && this.isContinuousMode) {
       try {
         this.recognition.stop();
@@ -149,7 +147,7 @@ class VoiceEngine {
       const res = await fetch("/api/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: "nova" }),
+        body: JSON.stringify({ text, voice: voiceName }),
       });
 
       if (res.ok) {
@@ -163,20 +161,20 @@ class VoiceEngine {
         };
 
         audio.onerror = () => {
-          this.speakWithLocalFallback(text, onEnd);
+          this.speakWithLocalFallback(text, onEnd, voiceName);
         };
 
         await audio.play();
         return;
       }
     } catch {
-      // Fallback do lokalnego głosu
+      // Fallback
     }
 
-    this.speakWithLocalFallback(text, onEnd);
+    this.speakWithLocalFallback(text, onEnd, voiceName);
   }
 
-  private speakWithLocalFallback(text: string, onEnd?: () => void) {
+  private speakWithLocalFallback(text: string, onEnd?: () => void, voiceName: string = "nova") {
     if (!this.synth) {
       this.handlePlaybackEnd(onEnd);
       return;
@@ -186,11 +184,14 @@ class VoiceEngine {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "pl-PL";
     utterance.rate = 0.94;
-    utterance.pitch = 0.98;
+    utterance.pitch = voiceName === "echo" || voiceName === "onyx" ? 0.85 : 0.98;
 
     const voices = this.synth.getVoices();
-    const polishVoice = voices.find((v) => v.lang.startsWith("pl") && (v.name.includes("Zosia") || v.name.includes("Maja") || v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Paulina"))) ||
-      voices.find((v) => v.lang.startsWith("pl"));
+    const isMale = voiceName === "echo" || voiceName === "onyx";
+
+    const polishVoice = isMale
+      ? voices.find((v) => v.lang.startsWith("pl") && (v.name.includes("Jan") || v.name.includes("Marek") || v.name.includes("Male"))) || voices.find((v) => v.lang.startsWith("pl"))
+      : voices.find((v) => v.lang.startsWith("pl") && (v.name.includes("Zosia") || v.name.includes("Maja") || v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Paulina"))) || voices.find((v) => v.lang.startsWith("pl"));
 
     if (polishVoice) utterance.voice = polishVoice;
 

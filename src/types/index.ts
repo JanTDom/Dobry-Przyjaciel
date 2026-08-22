@@ -67,6 +67,8 @@ export interface UserProfile {
   userId?: string;
   name: string;
   companionName: string;
+  companionGender?: "female" | "male" | "neutral";
+  companionVoice?: "nova" | "shimmer" | "echo" | "onyx" | "fable" | "alloy" | string;
   preferredTone: "warm_gentle" | "calm_grounding" | "deep_philosophical" | "uplifting_coach";
   daysTogether: number;
   currentMood: MoodType;

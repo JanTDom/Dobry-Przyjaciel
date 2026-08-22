@@ -26,12 +26,13 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [companionText, setCompanionText] = useState(
-    `Cześć ${profile.name}. Jestem przy tobie. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`
+    `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`
   );
   const [activeSoundscape, setActiveSoundscape] = useState<SoundscapeType | null>("fireplace");
   const [callDuration, setCallDuration] = useState(0);
 
   const durationTimerRef = useRef<any>(null);
+  const companionVoice = profile.companionVoice || (profile.companionGender === "male" ? "echo" : "nova");
 
   useEffect(() => {
     if (!isOpen) {
@@ -52,7 +53,9 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 
     setTimeout(() => {
       voiceEngine.speak(
-        `Cześć ${profile.name}. Jestem przy tobie. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`
+        `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`,
+        undefined,
+        companionVoice
       );
     }, 400);
 
@@ -85,7 +88,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         };
         onNewMessage(companionMsg);
 
-        voiceEngine.speak(reply.text);
+        voiceEngine.speak(reply.text, undefined, companionVoice);
       },
       (state) => {
         setIsListening(state.isListening);
@@ -102,7 +105,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       voiceEngine.stopLiveDialogue();
       if (durationTimerRef.current) clearInterval(durationTimerRef.current);
     };
-  }, [isOpen]);
+  }, [isOpen, profile]);
 
   const handleToggleSoundscape = (type: SoundscapeType) => {
     if (activeSoundscape === type) {

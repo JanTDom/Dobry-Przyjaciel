@@ -16,6 +16,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tekstu do syntezy" }, { status: 400 });
     }
 
+    // Walidacja dostępnych głosów OpenAI
+    const validVoices = ["nova", "shimmer", "echo", "onyx", "fable", "alloy"];
+    const selectedVoice = validVoices.includes(voice) ? voice : "nova";
+
     const res = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
@@ -25,7 +29,7 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({
         model: "tts-1",
         input: text,
-        voice: voice, // nova, shimmer, alloy, echo, fable, onyx
+        voice: selectedVoice,
         response_format: "mp3",
         speed: 0.95, // Spokojne, ciepłe tempo
       }),

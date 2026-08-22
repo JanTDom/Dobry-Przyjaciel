@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { VictoryVault } from "@/components/sanctuary/VictoryVault";
-import { getStoredProfile } from "@/lib/storage";
+import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
+import { getStoredProfile, saveStoredProfile } from "@/lib/storage";
 import { UserProfile } from "@/types";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
@@ -13,10 +14,16 @@ export default function SanctuaryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   useEffect(() => {
     setProfile(getStoredProfile());
   }, []);
+
+  const handleSaveProfile = (updated: UserProfile) => {
+    setProfile(updated);
+    saveStoredProfile(updated);
+  };
 
   if (!profile) return null;
 
@@ -25,6 +32,9 @@ export default function SanctuaryPage() {
       <TopNav
         onOpenLiveCall={() => setIsLiveCallOpen(true)}
         onOpenPricing={() => setIsPricingOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+        companionName={profile.companionName}
+        companionGender={profile.companionGender}
       />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
@@ -47,6 +57,13 @@ export default function SanctuaryPage() {
         onClose={() => setIsLiveCallOpen(false)}
         profile={profile}
         onNewMessage={() => {}}
+      />
+
+      <CompanionSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        profile={profile}
+        onSaveProfile={handleSaveProfile}
       />
 
       <SubscriptionModal

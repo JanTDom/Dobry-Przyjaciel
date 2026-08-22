@@ -1,12 +1,14 @@
 import { UserProfile, Message, PersonInLife, LifeMemoryFact, OvercomeCrisis } from "@/types";
 
-const STORAGE_KEY_PROFILE = "przyjaciel_user_profile_v2";
-const STORAGE_KEY_MESSAGES = "przyjaciel_messages_v2";
+const STORAGE_KEY_PROFILE = "przyjaciel_user_profile_v3";
+const STORAGE_KEY_MESSAGES = "przyjaciel_messages_v3";
 
 export const INITIAL_USER_PROFILE: UserProfile = {
   id: "default_user",
   name: "Tobiasz",
   companionName: "Mira",
+  companionGender: "female",
+  companionVoice: "nova",
   preferredTone: "warm_gentle",
   daysTogether: 28,
   currentMood: "peaceful",
@@ -114,7 +116,7 @@ export const INITIAL_MESSAGES: Message[] = [
     id: "msg-2",
     userId: "default_user",
     sender: "user",
-    text: "Cześć Mira. Wstałem, ale czuję taki dziwny ucisk w klatce piersiowej. Boję się dzisiejszego spotkania z Markiem.",
+    text: "Cześć. Wstałem, ale czuję taki dziwny ucisk w klatce piersiowej. Boję się dzisiejszego spotkania z Markiem.",
     messageType: "text",
     createdAt: new Date(Date.now() - 2400000).toISOString(),
   },
@@ -140,7 +142,13 @@ export function getStoredProfile(): UserProfile {
       localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(INITIAL_USER_PROFILE));
       return INITIAL_USER_PROFILE;
     }
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return {
+      ...INITIAL_USER_PROFILE,
+      ...parsed,
+      companionGender: parsed.companionGender || "female",
+      companionVoice: parsed.companionVoice || (parsed.companionGender === "male" ? "echo" : "nova"),
+    };
   } catch {
     return INITIAL_USER_PROFILE;
   }

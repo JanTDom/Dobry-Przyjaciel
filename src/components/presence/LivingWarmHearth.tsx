@@ -15,12 +15,13 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
   isListening = false,
   isSpeaking = false,
   intensity = 0.5,
-  size = 280,
+  size = 300,
   className = "",
   onClick,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
+  const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -33,134 +34,154 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
     canvas.width = size * dpr;
     canvas.height = size * dpr;
 
-    // Radosne, złote drobinki światła i promienie
-    const sparklesCount = 28;
-    const sparkles = Array.from({ length: sparklesCount }, () => ({
-      x: (Math.random() - 0.5) * (size * 0.5),
-      y: (Math.random() - 0.5) * (size * 0.5),
-      radius: 1.5 + Math.random() * 2.5,
-      speedY: -0.2 - Math.random() * 0.6,
-      speedX: (Math.random() - 0.5) * 0.3,
-      alpha: 0.3 + Math.random() * 0.6,
-      decay: 0.003 + Math.random() * 0.005,
-      hue: 38 + Math.random() * 16, // Złoty słoneczny bursztyn
+    // Nastrojowe cząsteczki złotego pyłu (Floating Light Motes)
+    const particleCount = 36;
+    const particles = Array.from({ length: particleCount }, () => ({
+      x: (Math.random() - 0.5) * (size * 0.65),
+      y: (Math.random() - 0.5) * (size * 0.65),
+      radius: 1.2 + Math.random() * 2.8,
+      speedY: -0.15 - Math.random() * 0.45,
+      speedX: (Math.random() - 0.5) * 0.25,
+      alpha: 0.2 + Math.random() * 0.7,
+      decay: 0.002 + Math.random() * 0.004,
+      hue: 36 + Math.random() * 18, // Miodowo-złoty bursztyn
     }));
 
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      mouseRef.current = {
+        x: (e.clientX - rect.left - size / 2) * 0.15,
+        y: (e.clientY - rect.top - size / 2) * 0.15,
+        active: true,
+      };
+    };
+
+    const handleMouseLeave = () => {
+      mouseRef.current.active = false;
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    canvas.addEventListener("mouseleave", handleMouseLeave);
+
     const render = () => {
-      time += 0.02;
+      time += 0.018;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       ctx.scale(dpr, dpr);
 
-      const centerX = size / 2;
-      const centerY = size / 2;
+      // Płynne podążanie za ruchem
+      const targetX = size / 2 + (mouseRef.current.active ? mouseRef.current.x : 0);
+      const targetY = size / 2 + (mouseRef.current.active ? mouseRef.current.y : 0);
 
-      // Pulsacja oddechu i reakcja na głos
-      const pulseSpeed = isSpeaking ? 3.2 : isListening ? 2.2 : 1.1;
-      const basePulse = Math.sin(time * pulseSpeed) * 0.06;
-      const voiceReaction = (isSpeaking || isListening ? 0.15 : 0) + intensity * 0.12;
+      // Harmoniczny rytm oddechu i reakcja na głos
+      const pulseSpeed = isSpeaking ? 3.4 : isListening ? 2.2 : 1.15;
+      const basePulse = Math.sin(time * pulseSpeed) * 0.07;
+      const voiceReaction = (isSpeaking || isListening ? 0.18 : 0) + intensity * 0.14;
       const scaleFactor = 1 + basePulse + voiceReaction;
 
-      // 1. Zewnętrzna, słoneczna miękka poświata
-      const outerRadius = (size * 0.44) * scaleFactor;
-      const outerGrad = ctx.createRadialGradient(
-        centerX,
-        centerY,
-        outerRadius * 0.15,
-        centerX,
-        centerY,
-        outerRadius
+      // 1. Zewnętrzna, głęboka aura złotej godziny (Golden Hour Ambient Halo)
+      const maxHaloRadius = (size * 0.48) * scaleFactor;
+      const haloGrad = ctx.createRadialGradient(
+        targetX,
+        targetY,
+        maxHaloRadius * 0.1,
+        targetX,
+        targetY,
+        maxHaloRadius
       );
-      outerGrad.addColorStop(0, "rgba(251, 191, 36, 0.45)");
-      outerGrad.addColorStop(0.35, "rgba(245, 158, 11, 0.25)");
-      outerGrad.addColorStop(0.7, "rgba(253, 230, 138, 0.12)");
-      outerGrad.addColorStop(1, "rgba(250, 247, 242, 0)");
+      haloGrad.addColorStop(0, "rgba(251, 191, 36, 0.42)");
+      haloGrad.addColorStop(0.35, "rgba(245, 158, 11, 0.22)");
+      haloGrad.addColorStop(0.7, "rgba(253, 230, 138, 0.09)");
+      haloGrad.addColorStop(1, "rgba(250, 247, 242, 0)");
 
-      ctx.fillStyle = outerGrad;
+      ctx.fillStyle = haloGrad;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+      ctx.arc(targetX, targetY, maxHaloRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Miękkie, organiczne promienie słońca
-      const rayCount = 12;
+      // 2. Nastrojowe promienie słoneczne (Atmospheric Sunbeams)
+      const rayCount = 14;
       for (let r = 0; r < rayCount; r++) {
-        const angle = (r / rayCount) * Math.PI * 2 + time * 0.25;
-        const rayLen = (size * 0.38) * scaleFactor * (1 + Math.sin(time * 2 + r) * 0.1);
-        const rx = centerX + Math.cos(angle) * rayLen;
-        const ry = centerY + Math.sin(angle) * rayLen;
+        const angle = (r / rayCount) * Math.PI * 2 + time * 0.18;
+        const waveOffset = Math.sin(time * 2.2 + r * 1.5) * 8;
+        const rayLen = (size * 0.41) * scaleFactor + waveOffset;
+        const rx = targetX + Math.cos(angle) * rayLen;
+        const ry = targetY + Math.sin(angle) * rayLen;
 
-        ctx.strokeStyle = `rgba(251, 191, 36, ${0.08 + Math.sin(time + r) * 0.04})`;
-        ctx.lineWidth = 12;
+        const rayAlpha = 0.07 + Math.sin(time * 1.5 + r) * 0.05 + (isSpeaking ? 0.08 : 0);
+        ctx.strokeStyle = `rgba(251, 191, 36, ${rayAlpha})`;
+        ctx.lineWidth = 14;
         ctx.lineCap = "round";
         ctx.beginPath();
-        ctx.moveTo(centerX, centerY);
+        ctx.moveTo(targetX, targetY);
         ctx.lineTo(rx, ry);
         ctx.stroke();
       }
 
-      // 3. Ciepłe, pulsujące serce światła (Golden Honey Core)
-      const midRadius = (size * 0.26) * scaleFactor;
+      // 3. Organiczny, falujący dysk światła (Living Solar Corona)
+      const coronaRadius = (size * 0.28) * scaleFactor;
       ctx.beginPath();
-      for (let i = 0; i <= Math.PI * 2; i += 0.1) {
-        const offset = Math.sin(i * 5 + time * 3) * (3 + (isSpeaking ? 5 : 1.5));
-        const r = midRadius + offset;
-        const x = centerX + Math.cos(i) * r;
-        const y = centerY + Math.sin(i) * r;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
+      for (let i = 0; i <= Math.PI * 2; i += 0.08) {
+        const organicNoise = Math.sin(i * 6 + time * 3.5) * (4 + (isSpeaking ? 7 : 2)) +
+                             Math.cos(i * 3 - time * 2) * 3;
+        const r = coronaRadius + organicNoise;
+        const cx = targetX + Math.cos(i) * r;
+        const cy = targetY + Math.sin(i) * r;
+        if (i === 0) ctx.moveTo(cx, cy);
+        else ctx.lineTo(cx, cy);
       }
       ctx.closePath();
 
-      const midGrad = ctx.createRadialGradient(
-        centerX,
-        centerY,
-        midRadius * 0.1,
-        centerX,
-        centerY,
-        midRadius
+      const coronaGrad = ctx.createRadialGradient(
+        targetX,
+        targetY,
+        coronaRadius * 0.05,
+        targetX,
+        targetY,
+        coronaRadius * 1.05
       );
-      midGrad.addColorStop(0, "rgba(255, 255, 255, 1)");
-      midGrad.addColorStop(0.3, "rgba(254, 240, 138, 0.95)");
-      midGrad.addColorStop(0.65, "rgba(245, 158, 11, 0.75)");
-      midGrad.addColorStop(1, "rgba(234, 88, 12, 0)");
-      ctx.fillStyle = midGrad;
+      coronaGrad.addColorStop(0, "rgba(255, 255, 255, 1)");
+      coronaGrad.addColorStop(0.35, "rgba(254, 240, 138, 0.96)");
+      coronaGrad.addColorStop(0.7, "rgba(245, 158, 11, 0.78)");
+      coronaGrad.addColorStop(1, "rgba(234, 88, 12, 0)");
+      ctx.fillStyle = coronaGrad;
       ctx.fill();
 
-      // 4. Lśniący, słoneczny środek
-      const coreRadius = (size * 0.12) * scaleFactor;
+      // 4. Lśniące, perłowo-białe jądro (Diamond Pearl Core)
+      const coreRadius = (size * 0.13) * scaleFactor;
       const coreGrad = ctx.createRadialGradient(
-        centerX,
-        centerY,
+        targetX,
+        targetY,
         0,
-        centerX,
-        centerY,
+        targetX,
+        targetY,
         coreRadius
       );
       coreGrad.addColorStop(0, "#FFFFFF");
-      coreGrad.addColorStop(0.5, "#FEF08A");
+      coreGrad.addColorStop(0.55, "rgba(254, 240, 138, 0.95)");
       coreGrad.addColorStop(1, "rgba(245, 158, 11, 0)");
 
       ctx.fillStyle = coreGrad;
       ctx.beginPath();
-      ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
+      ctx.arc(targetX, targetY, coreRadius, 0, Math.PI * 2);
       ctx.fill();
 
-      // 5. Radosne, unoszące się iskry światła
-      sparkles.forEach((sparkle) => {
-        sparkle.y += sparkle.speedY;
-        sparkle.x += sparkle.speedX + Math.sin(time + sparkle.y * 0.05) * 0.3;
-        sparkle.alpha -= sparkle.decay;
+      // 5. Unoszące się nastrojowe złote drobinki światła
+      particles.forEach((p) => {
+        p.y += p.speedY;
+        p.x += p.speedX + Math.sin(time * 1.2 + p.y * 0.04) * 0.35;
+        p.alpha -= p.decay;
 
-        if (sparkle.alpha <= 0 || sparkle.y < -size * 0.45) {
-          sparkle.x = (Math.random() - 0.5) * (size * 0.35);
-          sparkle.y = (Math.random() * 0.2) * (size * 0.2);
-          sparkle.alpha = 0.4 + Math.random() * 0.5;
-          sparkle.radius = 1.5 + Math.random() * 2;
+        if (p.alpha <= 0 || p.y < -size * 0.45) {
+          p.x = (Math.random() - 0.5) * (size * 0.45);
+          p.y = (Math.random() * 0.25) * (size * 0.3);
+          p.alpha = 0.35 + Math.random() * 0.6;
+          p.radius = 1.2 + Math.random() * 2.5;
         }
 
-        ctx.fillStyle = `hsla(${sparkle.hue}, 95%, 55%, ${sparkle.alpha})`;
+        ctx.fillStyle = `hsla(${p.hue}, 95%, 55%, ${p.alpha})`;
         ctx.beginPath();
-        ctx.arc(centerX + sparkle.x, centerY + sparkle.y, sparkle.radius, 0, Math.PI * 2);
+        ctx.arc(targetX + p.x, targetY + p.y, p.radius, 0, Math.PI * 2);
         ctx.fill();
       });
 
@@ -174,6 +195,7 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
       }
+      window.removeEventListener("mousemove", handleMouseMove);
     };
   }, [isListening, isSpeaking, intensity, size]);
 
@@ -186,7 +208,7 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
       <canvas
         ref={canvasRef}
         style={{ width: size, height: size }}
-        className="transition-transform duration-500 hover:scale-105 drop-shadow-md"
+        className="transition-transform duration-500 hover:scale-105 golden-light-glow"
       />
     </div>
   );
