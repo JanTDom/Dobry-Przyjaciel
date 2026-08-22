@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { Message, UserProfile } from "@/types";
 import { VoiceMessageBubble } from "./VoiceMessageBubble";
-import { Flame, Sparkles, Heart } from "lucide-react";
+import { Flame, Sparkles } from "lucide-react";
 
 interface ConversationViewProps {
   messages: Message[];
@@ -16,12 +16,6 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   profile,
   onOpenLiveCall,
 }) => {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   if (messages.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center text-center p-8 sanctuary-card rounded-3xl border border-sanctuary-800/80 my-4 max-w-lg mx-auto">
@@ -46,7 +40,7 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
   }
 
   return (
-    <div className="flex flex-col gap-6 py-4 overflow-y-auto max-w-2xl mx-auto w-full px-2">
+    <div className="flex flex-col gap-5 py-3 max-w-2xl mx-auto w-full px-1">
       {messages.map((msg) => (
         <VoiceMessageBubble
           key={msg.id}
@@ -54,7 +48,6 @@ export const ConversationView: React.FC<ConversationViewProps> = ({
           companionName={profile.companionName}
         />
       ))}
-      <div ref={bottomRef} className="h-4" />
     </div>
   );
 };
