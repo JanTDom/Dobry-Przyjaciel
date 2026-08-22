@@ -8,14 +8,15 @@ import { LiveVoiceBar } from "@/components/conversation/LiveVoiceBar";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
+import { AccessGateModal } from "@/components/auth/AccessGateModal";
 import { IdeaPhilosophySection } from "@/components/philosophy/IdeaPhilosophySection";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
-import { getStoredProfile, saveStoredProfile, getStoredMessages, saveStoredMessages, getInitialSeedMessages } from "@/lib/storage";
+import { getStoredProfile, saveStoredProfile, getStoredMessages, saveStoredMessages, getInitialSeedMessages, isAccessGranted } from "@/lib/storage";
 import { getCompanionReplyAsync } from "@/lib/companion-personality";
 import { voiceEngine } from "@/lib/voice-engine";
 import { UserProfile, Message } from "@/types";
-import { PhoneCall, Sparkles, MessageCircle, SlidersHorizontal, Compass } from "lucide-react";
+import { PhoneCall, Sparkles, MessageCircle, SlidersHorizontal, Lock } from "lucide-react";
 
 export default function HomePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -23,6 +24,8 @@ export default function HomePage() {
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGateOpen, setIsGateOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [isCompanionSpeaking, setIsCompanionSpeaking] = useState(false);
 
   useEffect(() => {
@@ -37,47 +40,64 @@ export default function HomePage() {
     saveStoredProfile(updated);
   };
 
+  const requireAccess = (action: () => void) => {
+    if (isAccessGranted()) {
+      action();
+    } else {
+      setPendingAction(() => action);
+      setIsGateOpen(true);
+    }
+  };
+
+  const handleOpenLiveCall = () => {
+    requireAccess(() => {
+      setIsLiveCallOpen(true);
+    });
+  };
+
   const handleSendMessage = async (text: string, isVoice = false) => {
     if (!profile || !text.trim()) return;
 
-    const userMsg: Message = {
-      id: "msg_" + Date.now(),
-      userId: profile.id,
-      sender: "user",
-      text: text.trim(),
-      messageType: isVoice ? "voice" : "text",
-      createdAt: new Date().toISOString(),
-    };
+    requireAccess(async () => {
+      const userMsg: Message = {
+        id: "msg_" + Date.now(),
+        userId: profile.id,
+        sender: "user",
+        text: text.trim(),
+        messageType: isVoice ? "voice" : "text",
+        createdAt: new Date().toISOString(),
+      };
 
-    const updatedWithUser = [...messages, userMsg];
-    setMessages(updatedWithUser);
-    saveStoredMessages(updatedWithUser);
+      const updatedWithUser = [...messages, userMsg];
+      setMessages(updatedWithUser);
+      saveStoredMessages(updatedWithUser);
 
-    const reply = await getCompanionReplyAsync(text, profile, updatedWithUser);
-    const companionMsg: Message = {
-      id: "msg_" + (Date.now() + 1),
-      userId: profile.id,
-      sender: "companion",
-      text: reply.text,
-      messageType: isVoice ? "voice" : "text",
-      moodContext: reply.moodContext,
-      createdAt: new Date().toISOString(),
-    };
+      const reply = await getCompanionReplyAsync(text, profile, updatedWithUser);
+      const companionMsg: Message = {
+        id: "msg_" + (Date.now() + 1),
+        userId: profile.id,
+        sender: "companion",
+        text: reply.text,
+        messageType: isVoice ? "voice" : "text",
+        moodContext: reply.moodContext,
+        createdAt: new Date().toISOString(),
+      };
 
-    const updatedWithCompanion = [...updatedWithUser, companionMsg];
-    setMessages(updatedWithCompanion);
-    saveStoredMessages(updatedWithCompanion);
+      const updatedWithCompanion = [...updatedWithUser, companionMsg];
+      setMessages(updatedWithCompanion);
+      saveStoredMessages(updatedWithCompanion);
 
-    if (isVoice) {
-      setIsCompanionSpeaking(true);
-      voiceEngine.speak(
-        reply.text,
-        () => {
-          setIsCompanionSpeaking(false);
-        },
-        profile.companionVoice || (profile.companionGender === "male" ? "echo" : "nova")
-      );
-    }
+      if (isVoice) {
+        setIsCompanionSpeaking(true);
+        voiceEngine.speak(
+          reply.text,
+          () => {
+            setIsCompanionSpeaking(false);
+          },
+          profile.companionVoice || (profile.companionGender === "male" ? "echo" : "nova")
+        );
+      }
+    });
   };
 
   const handleNewLiveCallMessage = (msg: Message) => {
@@ -94,7 +114,7 @@ export default function HomePage() {
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
       {/* Górna nawigacja szklana */}
       <TopNav
-        onOpenLiveCall={() => setIsLiveCallOpen(true)}
+        onOpenLiveCall={handleOpenLiveCall}
         onOpenPricing={() => setIsPricingOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         companionName={profile.companionName}
@@ -105,7 +125,7 @@ export default function HomePage() {
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-12 flex flex-col gap-10 pb-28 md:pb-16">
         {/* Centralne przywitanie i żywe słoneczne światło obecności */}
         <section className="flex flex-col items-center text-center pt-2 sm:pt-4">
-          <div className="relative mb-3 group cursor-pointer" onClick={() => setIsLiveCallOpen(true)}>
+          <div className="relative mb-3 group cursor-pointer" onClick={handleOpenLiveCall}>
             <LivingWarmHearth
               size={260}
               isSpeaking={isCompanionSpeaking}
@@ -126,7 +146,7 @@ export default function HomePage() {
           {/* Główne przyciski akcji */}
           <div className="flex flex-wrap items-center justify-center gap-3.5">
             <button
-              onClick={() => setIsLiveCallOpen(true)}
+              onClick={handleOpenLiveCall}
               className="hearth-button flex items-center gap-2.5 font-sans font-semibold text-sm px-8 py-3.5 rounded-full active:scale-95 transition-all shadow-xl shadow-sun-500/25"
             >
               <PhoneCall size={18} className="animate-pulse" />
@@ -151,7 +171,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Kojące tła dźwiękowe (kominek, letni deszcz, fale oceanu, fale alfa 8Hz) */}
+        {/* Kojące tła dźwiękowe */}
         <section>
           <AmbientSoundscape />
         </section>
@@ -171,13 +191,13 @@ export default function HomePage() {
           <ConversationView
             messages={messages}
             profile={profile}
-            onOpenLiveCall={() => setIsLiveCallOpen(true)}
+            onOpenLiveCall={handleOpenLiveCall}
           />
 
           <div className="sticky bottom-20 md:bottom-6 z-30 pt-2">
             <LiveVoiceBar
               onSendMessage={handleSendMessage}
-              onOpenLiveCall={() => setIsLiveCallOpen(true)}
+              onOpenLiveCall={handleOpenLiveCall}
               isCompanionSpeaking={isCompanionSpeaking}
             />
           </div>
@@ -205,6 +225,18 @@ export default function HomePage() {
         onClose={() => setIsSettingsOpen(false)}
         profile={profile}
         onSaveProfile={handleSaveProfile}
+      />
+
+      {/* Modal bramki hasła testowego */}
+      <AccessGateModal
+        isOpen={isGateOpen}
+        onClose={() => setIsGateOpen(false)}
+        onSuccess={() => {
+          if (pendingAction) {
+            pendingAction();
+            setPendingAction(null);
+          }
+        }}
       />
 
       {/* Modal subskrypcji */}

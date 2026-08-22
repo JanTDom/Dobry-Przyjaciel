@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const REQUIRED_ACCESS_CODE = "A132a132";
+
 export async function POST(req: NextRequest) {
   try {
-    const { message, profile, history } = await req.json();
-    const apiKey = process.env.OPENAI_API_KEY;
+    const accessCodeHeader = req.headers.get("x-access-code");
+    const body = await req.json();
+    const { message, profile, history, accessCode } = body;
 
+    const providedCode = accessCode || accessCodeHeader;
+    if (providedCode !== REQUIRED_ACCESS_CODE) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy kod dostępu roboczego. Wprowadź właściwe hasło, aby korzystać z modelu AI." },
+        { status: 401 }
+      );
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: "Brak klucza OPENAI_API_KEY" },

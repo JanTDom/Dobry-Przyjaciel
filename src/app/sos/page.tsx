@@ -6,15 +6,17 @@ import { BottomNav } from "@/components/navigation/BottomNav";
 import { BreathingGuide } from "@/components/sos/BreathingGuide";
 import { GroundingExercise } from "@/components/sos/GroundingExercise";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
+import { AccessGateModal } from "@/components/auth/AccessGateModal";
 import { Phone, ShieldAlert } from "lucide-react";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
-import { getStoredProfile, saveStoredProfile } from "@/lib/storage";
+import { getStoredProfile, saveStoredProfile, isAccessGranted } from "@/lib/storage";
 import { UserProfile } from "@/types";
 
 export default function SOSPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGateOpen, setIsGateOpen] = useState(false);
 
   useEffect(() => {
     setProfile(getStoredProfile());
@@ -25,12 +27,20 @@ export default function SOSPage() {
     saveStoredProfile(updated);
   };
 
+  const handleOpenLiveCall = () => {
+    if (isAccessGranted()) {
+      setIsLiveCallOpen(true);
+    } else {
+      setIsGateOpen(true);
+    }
+  };
+
   if (!profile) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
       <TopNav
-        onOpenLiveCall={() => setIsLiveCallOpen(true)}
+        onOpenLiveCall={handleOpenLiveCall}
         onOpenSettings={() => setIsSettingsOpen(true)}
         companionName={profile.companionName}
         companionGender={profile.companionGender}
@@ -102,6 +112,12 @@ export default function SOSPage() {
         onClose={() => setIsSettingsOpen(false)}
         profile={profile}
         onSaveProfile={handleSaveProfile}
+      />
+
+      <AccessGateModal
+        isOpen={isGateOpen}
+        onClose={() => setIsGateOpen(false)}
+        onSuccess={() => setIsLiveCallOpen(true)}
       />
     </div>
   );

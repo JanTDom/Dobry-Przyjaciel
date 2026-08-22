@@ -22,10 +22,14 @@ export async function getCompanionReplyAsync(
   history: Message[] = []
 ): Promise<CompanionResponse> {
   try {
+    const storedCode = typeof window !== "undefined" ? localStorage.getItem("przyjaciel_access_code_v1") || "" : "";
     const res = await fetch("/api/chat", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userText, profile, history }),
+      headers: { 
+        "Content-Type": "application/json",
+        "x-access-code": storedCode,
+      },
+      body: JSON.stringify({ message: userText, profile, history, accessCode: storedCode }),
     });
 
     if (res.ok) {

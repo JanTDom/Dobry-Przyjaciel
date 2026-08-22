@@ -200,3 +200,38 @@ export function getStoredCrises(): OvercomeCrisis[] {
   const profile = getStoredProfile();
   return profile.overcomeCrises || INITIAL_USER_PROFILE.overcomeCrises || [];
 }
+
+const STORAGE_KEY_ACCESS_CODE = "przyjaciel_access_code_v1";
+export const VALID_ACCESS_CODE = "A132a132";
+
+export function isAccessGranted(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const code = localStorage.getItem(STORAGE_KEY_ACCESS_CODE);
+    return code === VALID_ACCESS_CODE;
+  } catch {
+    return false;
+  }
+}
+
+export function getStoredAccessCode(): string {
+  if (typeof window === "undefined") return "";
+  try {
+    return localStorage.getItem(STORAGE_KEY_ACCESS_CODE) || "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveAccessCode(code: string): boolean {
+  if (typeof window === "undefined") return false;
+  if (code.trim() === VALID_ACCESS_CODE) {
+    try {
+      localStorage.setItem(STORAGE_KEY_ACCESS_CODE, VALID_ACCESS_CODE);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}

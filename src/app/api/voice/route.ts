@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 
+const REQUIRED_ACCESS_CODE = "A132a132";
+
 export async function POST(req: NextRequest) {
   try {
-    const { text, voice = "nova" } = await req.json();
-    const apiKey = process.env.OPENAI_API_KEY;
+    const accessCodeHeader = req.headers.get("x-access-code");
+    const body = await req.json();
+    const { text, voice = "nova", accessCode } = body;
 
+    const providedCode = accessCode || accessCodeHeader;
+    if (providedCode !== REQUIRED_ACCESS_CODE) {
+      return NextResponse.json(
+        { error: "Nieprawidłowy kod dostępu roboczego." },
+        { status: 401 }
+      );
+    }
+
+    const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
       return NextResponse.json(
         { error: "Brak klucza OPENAI_API_KEY" },
@@ -16,7 +28,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tekstu do syntezy" }, { status: 400 });
     }
 
-    // Walidacja dostępnych głosów OpenAI
     const validVoices = ["nova", "shimmer", "echo", "onyx", "fable", "alloy"];
     const selectedVoice = validVoices.includes(voice) ? voice : "nova";
 
@@ -31,7 +42,7 @@ export async function POST(req: NextRequest) {
         input: text,
         voice: selectedVoice,
         response_format: "mp3",
-        speed: 0.95, // Spokojne, ciepłe tempo
+        speed: 0.95,
       }),
     });
 

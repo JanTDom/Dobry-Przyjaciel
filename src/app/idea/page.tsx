@@ -5,17 +5,19 @@ import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { IdeaPhilosophySection } from "@/components/philosophy/IdeaPhilosophySection";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
+import { AccessGateModal } from "@/components/auth/AccessGateModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
-import { getStoredProfile, saveStoredProfile } from "@/lib/storage";
+import { getStoredProfile, saveStoredProfile, isAccessGranted } from "@/lib/storage";
 import { UserProfile } from "@/types";
-import { Heart, Sparkles, Shield, Compass, PhoneCall } from "lucide-react";
+import { Compass, PhoneCall } from "lucide-react";
 
 export default function IdeaPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGateOpen, setIsGateOpen] = useState(false);
 
   useEffect(() => {
     setProfile(getStoredProfile());
@@ -26,12 +28,20 @@ export default function IdeaPage() {
     saveStoredProfile(updated);
   };
 
+  const handleOpenLiveCall = () => {
+    if (isAccessGranted()) {
+      setIsLiveCallOpen(true);
+    } else {
+      setIsGateOpen(true);
+    }
+  };
+
   if (!profile) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
       <TopNav
-        onOpenLiveCall={() => setIsLiveCallOpen(true)}
+        onOpenLiveCall={handleOpenLiveCall}
         onOpenPricing={() => setIsPricingOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         companionName={profile.companionName}
@@ -39,10 +49,8 @@ export default function IdeaPage() {
       />
 
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
-        {/* Główna sekcja filozofii */}
         <IdeaPhilosophySection />
 
-        {/* List do człowieka */}
         <div className="glass-sanctuary rounded-3xl p-6 sm:p-10 border border-cream-300 shadow-warm-md text-center max-w-2xl mx-auto">
           <div className="inline-flex items-center justify-center p-3 rounded-full bg-sun-100 text-sun-700 border border-sun-300 mb-4">
             <Compass size={24} />
@@ -57,7 +65,7 @@ export default function IdeaPage() {
           </p>
 
           <button
-            onClick={() => setIsLiveCallOpen(true)}
+            onClick={handleOpenLiveCall}
             className="hearth-button inline-flex items-center gap-2.5 font-sans font-semibold text-xs px-8 py-3.5 rounded-full active:scale-95 transition-all shadow-xl shadow-sun-500/25"
           >
             <PhoneCall size={16} className="animate-pulse" />
@@ -80,6 +88,12 @@ export default function IdeaPage() {
         onClose={() => setIsSettingsOpen(false)}
         profile={profile}
         onSaveProfile={handleSaveProfile}
+      />
+
+      <AccessGateModal
+        isOpen={isGateOpen}
+        onClose={() => setIsGateOpen(false)}
+        onSuccess={() => setIsLiveCallOpen(true)}
       />
 
       <SubscriptionModal

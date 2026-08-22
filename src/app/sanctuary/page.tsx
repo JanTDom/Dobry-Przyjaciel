@@ -5,7 +5,8 @@ import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { VictoryVault } from "@/components/sanctuary/VictoryVault";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
-import { getStoredProfile, saveStoredProfile } from "@/lib/storage";
+import { AccessGateModal } from "@/components/auth/AccessGateModal";
+import { getStoredProfile, saveStoredProfile, isAccessGranted } from "@/lib/storage";
 import { UserProfile } from "@/types";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
@@ -15,6 +16,7 @@ export default function SanctuaryPage() {
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isGateOpen, setIsGateOpen] = useState(false);
 
   useEffect(() => {
     setProfile(getStoredProfile());
@@ -25,12 +27,20 @@ export default function SanctuaryPage() {
     saveStoredProfile(updated);
   };
 
+  const handleOpenLiveCall = () => {
+    if (isAccessGranted()) {
+      setIsLiveCallOpen(true);
+    } else {
+      setIsGateOpen(true);
+    }
+  };
+
   if (!profile) return null;
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
       <TopNav
-        onOpenLiveCall={() => setIsLiveCallOpen(true)}
+        onOpenLiveCall={handleOpenLiveCall}
         onOpenPricing={() => setIsPricingOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         companionName={profile.companionName}
@@ -64,6 +74,12 @@ export default function SanctuaryPage() {
         onClose={() => setIsSettingsOpen(false)}
         profile={profile}
         onSaveProfile={handleSaveProfile}
+      />
+
+      <AccessGateModal
+        isOpen={isGateOpen}
+        onClose={() => setIsGateOpen(false)}
+        onSuccess={() => setIsLiveCallOpen(true)}
       />
 
       <SubscriptionModal

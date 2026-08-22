@@ -144,10 +144,14 @@ class VoiceEngine {
     }
 
     try {
+      const storedCode = typeof window !== "undefined" ? localStorage.getItem("przyjaciel_access_code_v1") || "" : "";
       const res = await fetch("/api/voice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voice: voiceName }),
+        headers: { 
+          "Content-Type": "application/json",
+          "x-access-code": storedCode,
+        },
+        body: JSON.stringify({ text, voice: voiceName, accessCode: storedCode }),
       });
 
       if (res.ok) {
