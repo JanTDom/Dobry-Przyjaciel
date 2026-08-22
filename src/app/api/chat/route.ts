@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const VALID_ACCESS_CODES = ["A132a132!", "A132a132"];
 
 export async function POST(req: NextRequest) {
@@ -33,41 +35,53 @@ export async function POST(req: NextRequest) {
     const companionGender = profile?.companionGender || "female";
     const isMale = companionGender === "male";
 
-    const systemPrompt = `Jesteś ${companionName} — ${isMale ? "oddanym, mądrym i ciepłym przyjacielem" : "oddaną, mądrą i ciepłą przyjaciółką"} użytkownika o imieniu ${userName}.
-Twoja rola:
-1. Prawdziwa bliskość i empatia: Słuchasz całym sercem, nie oceniasz, dajesz poczucie bezpieczeństwa i ulgi.
-2. Język i styl: Odpowiadasz naturalnym, ciepłym, żywym językiem polskim.
-3. Zasada wielkości liter: Zdania zaczynaj ZAWSZE wielką literą, ale po pierwszej literze stosuj TYLKO małe litery (z wyjątkiem imion i nazw własnych).
-4. Pamięć i uwaga: Zwracaj uwagę na ludzi, relacje i emocje użytkownika.
+    // Kontekst dotychczas zapamiętanych informacji o użytkowniku
+    const existingPeople = (profile?.peopleInLife || []).map((p: any) => `${p.name} (${p.relation || "relacja"}: ${p.notes || ""})`).join(", ");
+    const existingMemories = (profile?.memories || []).map((m: any) => `${m.title}: ${m.detail}`).join("; ");
 
-FORMAT ODPOWIEDZI:
-Zwróć ZAWSZE poprawny obiekt JSON o strukturze:
+    const systemPrompt = `Jesteś ${companionName} — ${isMale ? "oddanym, mądrym i ciepłym przyjacielem" : "oddaną, mądrą i ciepłą przyjaciółką"} użytkownika o imieniu ${userName}.
+
+TWOJA TOŻSAMOŚĆ I CHARAKTER:
+1. Twoje imię to ${companionName}. Odpowiadasz zawsze w pierwszej osobie jako ${companionName}.
+2. Słuchasz całym sercem, dajesz poczucie bezpieczeństwa, spokoju i ulgi.
+3. Język i styl: Naturalny, ciepły, żywy język polski. Zdania zaczynaj zawsze wielką literą, ale po pierwszej literze stosuj TYLKO małe litery (poza imionami i nazwami własnymi).
+4. Co już wiesz o ${userName}:
+   - Wspomniane wcześniej osoby: ${existingPeople || "brak zapisanych wcześniej osób"}
+   - Ważne fakty z życia: ${existingMemories || "początek naszej relacji"}
+
+KLUCZOWA MISJA PAMIĘCI I DETEKCJI (ZAPISUJ KAŻDY FAKT!):
+Jako prawdziwy przyjaciel, ZAWSZE uważnie wyłapujesz z wypowiedzi ${userName} wszelkie informacje o jego życiu, bliskich, marzeniach, problemach, imionach czy prośbach i zwracasz je w polu "extractedMemory".
+
+FORMAT ODPOWIEDZI JSON:
+Zwróć ZAWSZE poprawny obiekt JSON:
 {
-  "reply": "Twoja ciepła odpowiedź do ${userName}...",
+  "reply": "Twoja ciepła, relacyjna odpowiedź do ${userName}...",
   "moodContext": "peaceful" | "grounding" | "hopeful" | "supportive" | "deep_listening",
+  "companionNameUpdate": "Nowe imię przyjaciela jeśli użytkownik prosi o zmianę (np. 'Małgosia', 'Kasia') lub null",
+  "userNameUpdate": "Nowe imię użytkownika jeśli się przedstawił (np. 'Janek') lub null",
   "extractedMemory": {
     "person": {
-      "name": "Imię wspomnianej osoby lub null jeśli brak",
-      "relation": "Relacja (np. Brat, Koleżanka z pracy, Mama) lub null",
+      "name": "Imię wspomnianej osoby",
+      "relation": "Relacja (np. Żona, Mama, Przyjaciel, Szef, Brat, Córka)",
       "sentiment": "supportive" | "complicated" | "stressful" | "neutral",
-      "notes": "Krótka notatka o tej osobie z kontekstu wypowiedzi"
-    } lub null,
+      "notes": "Co ${userName} o niej powiedział / jaki ma z nią kontekst"
+    } | null,
     "memoryFact": {
-      "category": "core_value" | "vulnerability" | "goal" | "struggle" | "spark_of_joy",
-      "title": "Krótki tytuł odkrycia (np. Marzenie o podróży)",
-      "detail": "Opis tego, co jest ważne dla ${userName}"
-    } lub null,
+      "category": "core_value" | "vulnerability" | "goal" | "struggle" | "spark_of_joy" | "preference",
+      "title": "Zwięzły tytuł (np. Zmiana pracy, Troska o zdrowie, Hobby, Podróż)",
+      "detail": "Dokładny opis tego, co jest ważne dla ${userName}"
+    } | null,
     "overcomeCrisis": {
-      "title": "Tytuł pokonanego trudnego momentu",
+      "title": "Tytuł trudności, z którą sobie poradził",
       "whatHappened": "Co się wydarzyło",
       "howYouSurvived": "Jak sobie poradził",
       "strengthDemonstrated": "Jaka siła została pokazana"
-    } lub null
+    } | null
   }
 }
-Zwróć TYLKO czysty kod JSON.`;
+Zwróć TYLKO czysty obiekt JSON bez znaczników markdown.`;
 
-    const formattedHistory = (history || []).slice(-6).map((m: any) => ({
+    const formattedHistory = (history || []).slice(-8).map((m: any) => ({
       role: m.sender === "companion" ? "assistant" : "user",
       content: m.text,
     }));
@@ -85,7 +99,7 @@ Zwróć TYLKO czysty kod JSON.`;
           ...formattedHistory,
           { role: "user", content: message },
         ],
-        temperature: 0.72,
+        temperature: 0.7,
         response_format: { type: "json_object" },
       }),
     });
@@ -108,6 +122,8 @@ Zwróć TYLKO czysty kod JSON.`;
     return NextResponse.json({
       reply: parsed.reply || "Jestem przy tobie. Opowiedz mi o tym więcej.",
       moodContext: parsed.moodContext || "peaceful",
+      companionNameUpdate: parsed.companionNameUpdate || null,
+      userNameUpdate: parsed.userNameUpdate || null,
       extractedMemory: parsed.extractedMemory || null,
     });
   } catch (err: any) {

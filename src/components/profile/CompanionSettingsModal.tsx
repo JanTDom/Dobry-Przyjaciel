@@ -28,6 +28,16 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
   );
   const [isPlayingSample, setIsPlayingSample] = useState(false);
 
+  // Synchronizacja przy każdorazowym otwarciu modalu
+  React.useEffect(() => {
+    if (isOpen && profile) {
+      setUserName(profile.name || "Janek");
+      setCompanionName(profile.companionName || (profile.companionGender === "male" ? "Maciej" : "Agata"));
+      setCompanionGender(profile.companionGender || "female");
+      setCompanionVoice(profile.companionVoice || (profile.companionGender === "male" ? "echo" : "nova"));
+    }
+  }, [isOpen, profile]);
+
   if (!isOpen) return null;
 
   const femaleSuggestions = ["Agata", "Łucja", "Zofia", "Ania", "Maja", "Hania"];

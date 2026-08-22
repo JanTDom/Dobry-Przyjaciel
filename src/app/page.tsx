@@ -103,8 +103,12 @@ export default function HomePage() {
     setMessages(updatedWithCompanion);
     saveStoredMessages(updatedWithCompanion);
 
-    const freshProfile = getStoredProfile();
-    if (freshProfile) setProfile(freshProfile);
+    if (reply.updatedProfile) {
+      setProfile(reply.updatedProfile);
+    } else {
+      const freshProfile = getStoredProfile();
+      if (freshProfile) setProfile(freshProfile);
+    }
 
     if (isVoice) {
       setIsCompanionSpeaking(true);

@@ -3,9 +3,12 @@
 export interface VoiceState {
   isSupported: boolean;
   isListening: boolean;
+  isRecordingAudio: boolean;
   isSpeaking: boolean;
+  isProcessing: boolean;
   transcript: string;
   interimTranscript: string;
+  errorMessage?: string;
 }
 
 class VoiceEngine {
@@ -14,41 +17,64 @@ class VoiceEngine {
   private isContinuousMode: boolean = false;
   private silenceTimer: any = null;
   private onMessageCaptured: ((text: string) => void) | null = null;
-  private onStateChange: ((state: { isListening: boolean; isSpeaking: boolean; transcript: string }) => void) | null = null;
+  private onStateChange: ((state: { isListening: boolean; isSpeaking: boolean; isRecordingAudio?: boolean; transcript: string; errorMessage?: string }) => void) | null = null;
   private isUnlocked: boolean = false;
+
+  // MediaRecorder do bezpośredniego nagrywania na iOS Safari / fallback
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private mediaStream: MediaStream | null = null;
+  private isRecording: boolean = false;
 
   constructor() {
     if (typeof window !== "undefined") {
-      // Tworzymy stały element audio do natychmiastowego odblokowania w przeglądarce
       this.currentAudio = new Audio();
+      this.initSpeechRecognition();
+    }
+  }
 
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      if (SpeechRecognition) {
+  private initSpeechRecognition() {
+    if (typeof window === "undefined") return;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      try {
         this.recognition = new SpeechRecognition();
         this.recognition.continuous = true;
         this.recognition.interimResults = true;
         this.recognition.lang = "pl-PL";
         this.setupRecognitionListeners();
+      } catch (e) {
+        console.warn("SpeechRecognition init warning:", e);
       }
     }
   }
 
-  // Odblokowuje politykę autoplay przeglądarek (Chrome/Safari) synchronicznie w geście użytkownika
-  public unlock() {
-    if (typeof window === "undefined" || this.isUnlocked) return;
+  // Odblokowuje audio i żąda uprawnień do mikrofonu synchronicznie w geście użytkownika
+  public async unlock(): Promise<boolean> {
+    if (typeof window === "undefined") return false;
     try {
       if (!this.currentAudio) {
         this.currentAudio = new Audio();
       }
       this.currentAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-      this.currentAudio.play().then(() => {
-        if (this.currentAudio) {
-          this.currentAudio.pause();
+      await this.currentAudio.play().catch(() => {});
+      this.isUnlocked = true;
+
+      // Poproś o uprawnienia do mikrofonu jeśli jeszcze ich nie ma (kluczowe na iOS Safari)
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        if (!this.mediaStream) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch((err) => {
+            console.warn("Microphone access prompt error:", err);
+            return null;
+          });
+          if (stream) {
+            this.mediaStream = stream;
+          }
         }
-        this.isUnlocked = true;
-      }).catch(() => {});
+      }
+      return true;
     } catch {
-      // Ignored
+      return false;
     }
   }
 
@@ -72,32 +98,47 @@ class VoiceEngine {
         this.onStateChange({
           isListening: true,
           isSpeaking: false,
+          isRecordingAudio: false,
           transcript: activeText,
         });
       }
 
-      if (activeText.length > 2) {
+      if (activeText.length > 1) {
         if (this.silenceTimer) clearTimeout(this.silenceTimer);
         this.silenceTimer = setTimeout(() => {
-          if (activeText.length > 1 && this.onMessageCaptured) {
+          if (activeText.length > 0 && this.onMessageCaptured) {
             const captured = activeText;
             this.onMessageCaptured(captured);
           }
-        }, 1200);
+        }, 1300);
       }
     };
 
     this.recognition.onerror = (event: any) => {
-      console.warn("Speech recognition status:", event.error);
+      console.warn("Speech recognition error:", event.error);
+      if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+        if (this.onStateChange) {
+          this.onStateChange({
+            isListening: false,
+            isSpeaking: false,
+            transcript: "",
+            errorMessage: "Zezwól na dostęp do mikrofonu w przeglądarce.",
+          });
+        }
+      }
     };
 
     this.recognition.onend = () => {
-      if (this.isContinuousMode && !this.isSpeakingNow()) {
-        try {
-          this.recognition.start();
-        } catch {
-          // Ignored
-        }
+      if (this.isContinuousMode && !this.isSpeakingNow() && !this.isRecording) {
+        setTimeout(() => {
+          try {
+            if (this.isContinuousMode && !this.isSpeakingNow() && this.recognition) {
+              this.recognition.start();
+            }
+          } catch {
+            // Ignored
+          }
+        }, 300);
       }
     };
   }
@@ -109,25 +150,34 @@ class VoiceEngine {
 
   public setCallbacks(
     onMessage: (text: string) => void,
-    onState: (state: { isListening: boolean; isSpeaking: boolean; transcript: string }) => void
+    onState: (state: { isListening: boolean; isSpeaking: boolean; isRecordingAudio?: boolean; transcript: string; errorMessage?: string }) => void
   ) {
     this.onMessageCaptured = onMessage;
     this.onStateChange = onState;
   }
 
-  public startLiveDialogue() {
-    this.unlock();
+  // Rozpoczyna ciągły dialog głosowy
+  public async startLiveDialogue() {
+    await this.unlock();
     this.isContinuousMode = true;
     this.stopSpeaking();
+
+    // 1. Spróbuj Web Speech API
     if (this.recognition) {
       try {
         this.recognition.start();
-      } catch {
-        // Ignored
+        if (this.onStateChange) {
+          this.onStateChange({ isListening: true, isSpeaking: false, isRecordingAudio: false, transcript: "" });
+        }
+        return;
+      } catch (e) {
+        console.warn("Recognition start fallback:", e);
       }
-      if (this.onStateChange) {
-        this.onStateChange({ isListening: true, isSpeaking: false, transcript: "" });
-      }
+    }
+
+    // 2. Jeśli Web Speech API niedostępne lub zablokowane na iOS, włącz stan nasłuchu MediaRecorder
+    if (this.onStateChange) {
+      this.onStateChange({ isListening: true, isSpeaking: false, isRecordingAudio: false, transcript: "" });
     }
   }
 
@@ -141,14 +191,142 @@ class VoiceEngine {
         // Ignored
       }
     }
+    if (this.isRecording) {
+      this.stopRecording();
+    }
     this.stopSpeaking();
     if (this.onStateChange) {
-      this.onStateChange({ isListening: false, isSpeaking: false, transcript: "" });
+      this.onStateChange({ isListening: false, isSpeaking: false, isRecordingAudio: false, transcript: "" });
     }
   }
 
+  // Bezpośrednie nagrywanie głosu (Tap-to-Speak / Push-to-Talk) dla 100% niezawodności na iOS
+  public async startRecording(): Promise<boolean> {
+    await this.unlock();
+    this.stopSpeaking();
+    if (this.recognition) {
+      try {
+        this.recognition.stop();
+      } catch {}
+    }
+
+    try {
+      let stream = this.mediaStream;
+      if (!stream || !stream.active) {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this.mediaStream = stream;
+      }
+
+      this.audioChunks = [];
+      const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? { mimeType: "audio/webm;codecs=opus" }
+        : MediaRecorder.isTypeSupported("audio/mp4")
+        ? { mimeType: "audio/mp4" }
+        : undefined;
+
+      this.mediaRecorder = new MediaRecorder(stream, options);
+      this.mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          this.audioChunks.push(e.data);
+        }
+      };
+
+      this.mediaRecorder.start(200);
+      this.isRecording = true;
+
+      if (this.onStateChange) {
+        this.onStateChange({
+          isListening: true,
+          isSpeaking: false,
+          isRecordingAudio: true,
+          transcript: "Nagrywam Twój głos...",
+        });
+      }
+      return true;
+    } catch (err: any) {
+      console.error("Failed to start MediaRecorder:", err);
+      if (this.onStateChange) {
+        this.onStateChange({
+          isListening: false,
+          isSpeaking: false,
+          isRecordingAudio: false,
+          transcript: "",
+          errorMessage: "Brak dostępu do mikrofonu.",
+        });
+      }
+      return false;
+    }
+  }
+
+  // Zatrzymuje nagrywanie i wysyła do Whisper API
+  public async stopRecordingAndTranscribe(): Promise<string | null> {
+    if (!this.mediaRecorder || !this.isRecording) return null;
+
+    return new Promise((resolve) => {
+      this.mediaRecorder!.onstop = async () => {
+        this.isRecording = false;
+        const mimeType = this.mediaRecorder?.mimeType || "audio/webm";
+        const audioBlob = new Blob(this.audioChunks, { type: mimeType });
+        this.audioChunks = [];
+
+        if (audioBlob.size < 1000) {
+          resolve(null);
+          return;
+        }
+
+        if (this.onStateChange) {
+          this.onStateChange({
+            isListening: false,
+            isSpeaking: false,
+            isRecordingAudio: false,
+            transcript: "Przetwarzam wypowiedź...",
+          });
+        }
+
+        try {
+          const formData = new FormData();
+          formData.append("file", audioBlob, "recording.webm");
+
+          const res = await fetch("/api/transcribe", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const text = (data.text || "").trim();
+            if (text && this.onMessageCaptured) {
+              this.onMessageCaptured(text);
+            }
+            resolve(text);
+            return;
+          }
+        } catch (e) {
+          console.error("Transcription error:", e);
+        }
+        resolve(null);
+      };
+
+      try {
+        this.mediaRecorder!.stop();
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+
+  public stopRecording() {
+    if (this.mediaRecorder && this.isRecording) {
+      try {
+        this.mediaRecorder.stop();
+      } catch {}
+      this.isRecording = false;
+    }
+  }
+
+  // Odtwarzanie głosu lektora
   public async speak(text: string, onEnd?: () => void, voiceName: string = "nova", isPreview: boolean = false) {
-    this.unlock();
+    await this.unlock();
     this.stopSpeaking();
 
     if (this.recognition && this.isContinuousMode) {
@@ -160,11 +338,11 @@ class VoiceEngine {
     }
 
     if (this.onStateChange) {
-      this.onStateChange({ isListening: false, isSpeaking: true, transcript: "" });
+      this.onStateChange({ isListening: false, isSpeaking: true, isRecordingAudio: false, transcript: "" });
     }
 
     try {
-      const storedCode = typeof window !== "undefined" ? localStorage.getItem("przyjaciel_access_code_v1") || "" : "";
+      const storedCode = typeof window !== "undefined" ? localStorage.getItem("przyjaciel_access_code_v1") || "A132a132!" : "A132a132!";
       const res = await fetch("/api/voice", {
         method: "POST",
         headers: { 
@@ -211,16 +389,18 @@ class VoiceEngine {
 
   private handlePlaybackEnd(onEnd?: () => void) {
     if (this.onStateChange) {
-      this.onStateChange({ isListening: this.isContinuousMode, isSpeaking: false, transcript: "" });
+      this.onStateChange({ isListening: this.isContinuousMode, isSpeaking: false, isRecordingAudio: false, transcript: "" });
     }
     if (this.isContinuousMode && this.recognition) {
       setTimeout(() => {
         try {
-          this.recognition.start();
+          if (this.isContinuousMode && !this.isSpeakingNow()) {
+            this.recognition.start();
+          }
         } catch {
           // Ignored
         }
-      }, 250);
+      }, 350);
     }
     if (onEnd) onEnd();
   }

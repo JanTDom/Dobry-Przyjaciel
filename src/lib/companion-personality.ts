@@ -5,6 +5,7 @@ export interface CompanionReplyResult {
   text: string;
   moodContext: MoodType;
   extractedMemory?: any;
+  updatedProfile?: UserProfile;
 }
 
 export async function getCompanionReplyAsync(
@@ -25,44 +26,60 @@ export async function getCompanionReplyAsync(
 
     if (res.ok) {
       const data = await res.json();
-      
-      // Automatyczna aktualizacja pamięci i relacji w profilu użytkownika
-      if (data.extractedMemory) {
-        const currentProfile = getStoredProfile() || profile;
-        let hasChanges = false;
+      const currentProfile = getStoredProfile() || profile;
+      let hasChanges = false;
 
-        // 1. Dodaj lub zaktualizuj osobę
-        if (data.extractedMemory.person && data.extractedMemory.person.name) {
-          const p = data.extractedMemory.person;
+      // 1. Zmiana imienia przyjaciela na życzenie użytkownika (np. "Chcę żebyś miała na imię Małgosia")
+      if (data.companionNameUpdate && typeof data.companionNameUpdate === "string" && data.companionNameUpdate.trim().length > 1) {
+        currentProfile.companionName = data.companionNameUpdate.trim();
+        hasChanges = true;
+      }
+
+      // 2. Zmiana imienia użytkownika (np. "Nazywam się Janek")
+      if (data.userNameUpdate && typeof data.userNameUpdate === "string" && data.userNameUpdate.trim().length > 1) {
+        currentProfile.name = data.userNameUpdate.trim();
+        hasChanges = true;
+      }
+
+      // 3. Automatyczna ekstrakcja pamięci, osób i trudności
+      if (data.extractedMemory) {
+        const mem = data.extractedMemory;
+
+        // A. Dodaj lub zaktualizuj osobę w życiu
+        if (mem.person && mem.person.name && mem.person.name.trim().length > 0) {
+          const p = mem.person;
+          const cleanName = p.name.trim();
           const existingIdx = (currentProfile.peopleInLife || []).findIndex(
-            (item) => item.name.toLowerCase() === p.name.toLowerCase()
+            (item) => item.name.toLowerCase() === cleanName.toLowerCase()
           );
+
           if (existingIdx >= 0) {
-            currentProfile.peopleInLife[existingIdx].notes = p.notes;
-            currentProfile.peopleInLife[existingIdx].sentiment = p.sentiment || "neutral";
+            currentProfile.peopleInLife[existingIdx].notes = p.notes || currentProfile.peopleInLife[existingIdx].notes;
+            currentProfile.peopleInLife[existingIdx].sentiment = p.sentiment || currentProfile.peopleInLife[existingIdx].sentiment;
+            currentProfile.peopleInLife[existingIdx].relation = p.relation || currentProfile.peopleInLife[existingIdx].relation;
             currentProfile.peopleInLife[existingIdx].lastMentioned = "Dzisiaj";
           } else {
             const newPerson: PersonInLife = {
               id: "p_" + Date.now(),
-              name: p.name,
+              name: cleanName,
               relation: p.relation || "Bliska osoba",
               sentiment: p.sentiment || "neutral",
               notes: p.notes || "",
               lastMentioned: "Dzisiaj",
             };
-            currentProfile.peopleInLife = [...(currentProfile.peopleInLife || []), newPerson];
+            currentProfile.peopleInLife = [newPerson, ...(currentProfile.peopleInLife || [])];
           }
           hasChanges = true;
         }
 
-        // 2. Dodaj fakt pamięci
-        if (data.extractedMemory.memoryFact && data.extractedMemory.memoryFact.title) {
-          const f = data.extractedMemory.memoryFact;
+        // B. Dodaj fakt pamięci
+        if (mem.memoryFact && mem.memoryFact.title && mem.memoryFact.title.trim().length > 0) {
+          const f = mem.memoryFact;
           const newFact: LifeMemoryFact = {
             id: "m_" + Date.now(),
             category: f.category || "core_value",
-            title: f.title,
-            detail: f.detail,
+            title: f.title.trim(),
+            detail: f.detail || f.title,
             confidence: 0.95,
             extractedAt: "Dzisiaj",
           };
@@ -70,30 +87,31 @@ export async function getCompanionReplyAsync(
           hasChanges = true;
         }
 
-        // 3. Dodaj pokonany kryzys
-        if (data.extractedMemory.overcomeCrisis && data.extractedMemory.overcomeCrisis.title) {
-          const c = data.extractedMemory.overcomeCrisis;
+        // C. Dodaj pokonany kryzys
+        if (mem.overcomeCrisis && mem.overcomeCrisis.title && mem.overcomeCrisis.title.trim().length > 0) {
+          const c = mem.overcomeCrisis;
           const newCrisis: OvercomeCrisis = {
             id: "c_" + Date.now(),
-            title: c.title,
+            title: c.title.trim(),
             date: "Dzisiaj",
-            whatHappened: c.whatHappened,
-            howYouSurvived: c.howYouSurvived,
-            strengthDemonstrated: c.strengthDemonstrated,
+            whatHappened: c.whatHappened || "",
+            howYouSurvived: c.howYouSurvived || "",
+            strengthDemonstrated: c.strengthDemonstrated || "Odwaga i spokój",
           };
           currentProfile.overcomeCrises = [newCrisis, ...(currentProfile.overcomeCrises || [])];
           hasChanges = true;
         }
+      }
 
-        if (hasChanges) {
-          saveStoredProfile(currentProfile);
-        }
+      if (hasChanges) {
+        saveStoredProfile(currentProfile);
       }
 
       return {
-        text: data.reply || "Jestem przy tobie.",
+        text: data.reply || "Jestem przy Tobie.",
         moodContext: data.moodContext || "peaceful",
         extractedMemory: data.extractedMemory,
+        updatedProfile: currentProfile,
       };
     }
   } catch (err) {
@@ -101,7 +119,7 @@ export async function getCompanionReplyAsync(
   }
 
   return {
-    text: `Jestem przy tobie, ${profile.name}. Opowiedz mi o tym więcej.`,
+    text: `Jestem przy Tobie, ${profile.name}. Opowiedz mi o tym więcej.`,
     moodContext: "peaceful",
   };
 }
