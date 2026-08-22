@@ -41,6 +41,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       return;
     }
 
+    voiceEngine.unlock();
     setCallDuration(0);
     durationTimerRef.current = setInterval(() => {
       setCallDuration((prev) => prev + 1);
@@ -51,13 +52,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       soundscapeEngine.setVolume(0.25);
     }
 
-    setTimeout(() => {
-      voiceEngine.speak(
-        `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`,
-        undefined,
-        companionVoice
-      );
-    }, 400);
+    const greetingText = `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`;
+    setCompanionText(greetingText);
+
+    // Odtwarzamy przywitanie natychmiast
+    voiceEngine.speak(greetingText, undefined, companionVoice);
 
     voiceEngine.setCallbacks(
       async (capturedUserText: string) => {

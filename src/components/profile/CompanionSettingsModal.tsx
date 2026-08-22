@@ -203,8 +203,8 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
                       : "bg-white border-cream-200 text-cream-800 hover:bg-cream-50"
                   }`}
                 >
-                  <span className="block font-semibold">Nova</span>
-                  <span className="text-[10px] text-cream-600">Ciepły, kojący</span>
+                  <span className="block font-semibold">Agata</span>
+                  <span className="text-[10px] text-cream-600">Ciepła, kojąca przyjaciółka</span>
                 </button>
                 <button
                   type="button"
@@ -215,8 +215,8 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
                       : "bg-white border-cream-200 text-cream-800 hover:bg-cream-50"
                   }`}
                 >
-                  <span className="block font-semibold">Shimmer</span>
-                  <span className="text-[10px] text-cream-600">Łagodny, jasny</span>
+                  <span className="block font-semibold">Paula</span>
+                  <span className="text-[10px] text-cream-600">Naturalna, serdeczna lektorka</span>
                 </button>
               </>
             ) : (
@@ -230,8 +230,8 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
                       : "bg-white border-cream-200 text-cream-800 hover:bg-cream-50"
                   }`}
                 >
-                  <span className="block font-semibold">Echo</span>
-                  <span className="text-[10px] text-cream-600">Spokojny, serdeczny</span>
+                  <span className="block font-semibold">Maciej</span>
+                  <span className="text-[10px] text-cream-600">Spokojny, uziemiający przyjaciel</span>
                 </button>
                 <button
                   type="button"
@@ -242,8 +242,8 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
                       : "bg-white border-cream-200 text-cream-800 hover:bg-cream-50"
                   }`}
                 >
-                  <span className="block font-semibold">Onyx</span>
-                  <span className="text-[10px] text-cream-600">Głęboki, uziemiający</span>
+                  <span className="block font-semibold">Paweł</span>
+                  <span className="text-[10px] text-cream-600">Ciepły, zrelaksowany radiowy</span>
                 </button>
               </>
             )}

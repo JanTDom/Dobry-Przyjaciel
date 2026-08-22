@@ -9,19 +9,19 @@ export interface VoiceState {
 }
 
 class VoiceEngine {
-  private synth: SpeechSynthesis | null = null;
   private recognition: any = null;
   private currentAudio: HTMLAudioElement | null = null;
   private isContinuousMode: boolean = false;
   private silenceTimer: any = null;
   private onMessageCaptured: ((text: string) => void) | null = null;
   private onStateChange: ((state: { isListening: boolean; isSpeaking: boolean; transcript: string }) => void) | null = null;
+  private isUnlocked: boolean = false;
 
   constructor() {
     if (typeof window !== "undefined") {
-      if ("speechSynthesis" in window) {
-        this.synth = window.speechSynthesis;
-      }
+      // Tworzymy stały element audio do natychmiastowego odblokowania w przeglądarce
+      this.currentAudio = new Audio();
+
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (SpeechRecognition) {
         this.recognition = new SpeechRecognition();
@@ -30,6 +30,25 @@ class VoiceEngine {
         this.recognition.lang = "pl-PL";
         this.setupRecognitionListeners();
       }
+    }
+  }
+
+  // Odblokowuje politykę autoplay przeglądarek (Chrome/Safari) synchronicznie w geście użytkownika
+  public unlock() {
+    if (typeof window === "undefined" || this.isUnlocked) return;
+    try {
+      if (!this.currentAudio) {
+        this.currentAudio = new Audio();
+      }
+      this.currentAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+      this.currentAudio.play().then(() => {
+        if (this.currentAudio) {
+          this.currentAudio.pause();
+        }
+        this.isUnlocked = true;
+      }).catch(() => {});
+    } catch {
+      // Ignored
     }
   }
 
@@ -64,12 +83,12 @@ class VoiceEngine {
             const captured = activeText;
             this.onMessageCaptured(captured);
           }
-        }, 1300);
+        }, 1200);
       }
     };
 
     this.recognition.onerror = (event: any) => {
-      console.warn("Speech recognition notice:", event.error);
+      console.warn("Speech recognition status:", event.error);
     };
 
     this.recognition.onend = () => {
@@ -85,7 +104,6 @@ class VoiceEngine {
 
   private isSpeakingNow(): boolean {
     if (this.currentAudio && !this.currentAudio.paused) return true;
-    if (this.synth && this.synth.speaking) return true;
     return false;
   }
 
@@ -98,6 +116,7 @@ class VoiceEngine {
   }
 
   public startLiveDialogue() {
+    this.unlock();
     this.isContinuousMode = true;
     this.stopSpeaking();
     if (this.recognition) {
@@ -129,6 +148,7 @@ class VoiceEngine {
   }
 
   public async speak(text: string, onEnd?: () => void, voiceName: string = "nova", isPreview: boolean = false) {
+    this.unlock();
     this.stopSpeaking();
 
     if (this.recognition && this.isContinuousMode) {
@@ -157,8 +177,13 @@ class VoiceEngine {
       if (res.ok) {
         const blob = await res.blob();
         const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        this.currentAudio = audio;
+
+        if (!this.currentAudio) {
+          this.currentAudio = new Audio();
+        }
+
+        const audio = this.currentAudio;
+        audio.src = audioUrl;
 
         audio.onended = () => {
           this.handlePlaybackEnd(onEnd);
@@ -169,17 +194,18 @@ class VoiceEngine {
           this.handlePlaybackEnd(onEnd);
         };
 
-        await audio.play();
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+          await playPromise.catch((err) => {
+            console.warn("Audio play warning:", err);
+          });
+        }
         return;
-      } else {
-        const errJson = await res.json().catch(() => ({}));
-        console.warn("OpenAI TTS API returned error:", errJson);
       }
     } catch (err) {
-      console.error("OpenAI TTS fetch failed:", err);
+      console.error("Voice playback fetch failed:", err);
     }
 
-    // Jeśli API zawiodło, zakończ bez włączania robotycznego głosu
     this.handlePlaybackEnd(onEnd);
   }
 
@@ -194,7 +220,7 @@ class VoiceEngine {
         } catch {
           // Ignored
         }
-      }, 300);
+      }, 250);
     }
     if (onEnd) onEnd();
   }
@@ -202,10 +228,6 @@ class VoiceEngine {
   public stopSpeaking() {
     if (this.currentAudio) {
       this.currentAudio.pause();
-      this.currentAudio = null;
-    }
-    if (this.synth) {
-      this.synth.cancel();
     }
   }
 }

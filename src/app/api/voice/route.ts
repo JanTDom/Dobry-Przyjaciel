@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 
 const REQUIRED_ACCESS_CODE = "A132a132";
 
-// ElevenLabs Voice Mapping
+// Dedykowane, autentyczne polskie głosy z naturalnym oddechem i ciepłą intonacją
 const ELEVENLABS_VOICES: Record<string, string> = {
-  nova: "21m00Tcm4TlvDq8ikWAM", // Rachel (Ciepły, kojący kobiecy)
-  shimmer: "EXAVITQu4vr4xnSDxMaL", // Sarah (Łagodny, jasny kobiecy)
-  echo: "pNInz6obpgDQGcFmaJgB", // Adam (Głęboki, ciepły męski)
-  onyx: "ErXwobaYiN019PkySvjV", // Antoni (Naturalny polski męski)
-  fable: "TxGEqnHWrfWFTfGW9XjX", // Josh (Młody, spokojny)
-  alloy: "21m00Tcm4TlvDq8ikWAM",
+  nova: "xJQ0EWXEICoCWK3Ld1Ew", // Agata - Ciepły, medytacyjny, kojący polski głos kobiecy
+  shimmer: "Jh0mX1tXXa7ZuZmHDYFp", // Paula - Ciepła, przyjacielska polska lektorka
+  echo: "Qs4qmNrqlneCgYPLSNQ7", // Maciej Litwiniec - Spokojny, uziemiający, ciepły polski głos męski
+  onyx: "8qCMI2ZZW5ZGwmg0lM1l", // Paweł Siwek - Ciepły, zrelaksowany radiowy głos męski
+  fable: "ZrIglAg8qumzXuvlNzWL", // Weronika - Naturalna, serdeczna polska przyjaciółka
+  alloy: "xJQ0EWXEICoCWK3Ld1Ew",
 };
 
 export async function POST(req: NextRequest) {
@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Brak tekstu do syntezy" }, { status: 400 });
     }
 
-    // 1. Próba użycia ElevenLabs (Hiperrealistyczny, ludzki głos z oddechem)
+    // 1. ElevenLabs (Autentyczny, ciepły polski głos lektorski)
     const elevenKey = process.env.ELEVENLABS_API_KEY;
     if (elevenKey && elevenKey.trim().length > 10) {
-      const elevenVoiceId = ELEVENLABS_VOICES[voice] || "21m00Tcm4TlvDq8ikWAM";
+      const elevenVoiceId = ELEVENLABS_VOICES[voice] || "xJQ0EWXEICoCWK3Ld1Ew";
       try {
         const elevenRes = await fetch(
           `https://api.elevenlabs.io/v1/text-to-speech/${elevenVoiceId}?output_format=mp3_44100_128`,
@@ -47,9 +47,9 @@ export async function POST(req: NextRequest) {
               text: text,
               model_id: "eleven_multilingual_v2",
               voice_settings: {
-                stability: 0.52,
-                similarity_boost: 0.82,
-                style: 0.25,
+                stability: 0.45,
+                similarity_boost: 0.85,
+                style: 0.30,
                 use_speaker_boost: true,
               },
             }),
@@ -63,19 +63,19 @@ export async function POST(req: NextRequest) {
             headers: {
               "Content-Type": "audio/mpeg",
               "Content-Length": audioBuffer.byteLength.toString(),
-              "x-voice-engine": "ElevenLabs",
+              "x-voice-engine": "ElevenLabs-Polish",
             },
           });
         } else {
           const errText = await elevenRes.text();
-          console.warn("ElevenLabs notice, falling back to OpenAI TTS:", errText);
+          console.warn("ElevenLabs error, falling back to OpenAI:", errText);
         }
       } catch (e: any) {
-        console.warn("ElevenLabs request error, falling back to OpenAI:", e.message);
+        console.warn("ElevenLabs request error:", e.message);
       }
     }
 
-    // 2. Niezawodny fallback do OpenAI TTS HD (Studio Quality)
+    // 2. Rezerwowy fallback do OpenAI TTS HD
     const openAiKey = process.env.OPENAI_API_KEY;
     if (!openAiKey) {
       return NextResponse.json(
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         input: text,
         voice: selectedVoice,
         response_format: "mp3",
-        speed: 0.96,
+        speed: 0.94,
       }),
     });
 
