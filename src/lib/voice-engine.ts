@@ -1,7 +1,5 @@
 "use client";
 
-// Speech synthesis and continuous real-time voice recognition
-
 export interface VoiceState {
   isSupported: boolean;
   isListening: boolean;
@@ -13,7 +11,7 @@ export interface VoiceState {
 class VoiceEngine {
   private synth: SpeechSynthesis | null = null;
   private recognition: any = null;
-  private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private currentAudio: HTMLAudioElement | null = null;
   private isContinuousMode: boolean = false;
   private silenceTimer: any = null;
   private onMessageCaptured: ((text: string) => void) | null = null;
@@ -60,14 +58,13 @@ class VoiceEngine {
       }
 
       if (activeText.length > 2) {
-        // Reset silence timer on every new speech token
         if (this.silenceTimer) clearTimeout(this.silenceTimer);
         this.silenceTimer = setTimeout(() => {
           if (activeText.length > 1 && this.onMessageCaptured) {
             const captured = activeText;
             this.onMessageCaptured(captured);
           }
-        }, 1400); // 1.4s pause triggers companion response in live mode
+        }, 1300);
       }
     };
 
@@ -76,8 +73,7 @@ class VoiceEngine {
     };
 
     this.recognition.onend = () => {
-      // Auto-restart if we are in live hands-free mode and not speaking
-      if (this.isContinuousMode && (!this.synth || !this.synth.speaking)) {
+      if (this.isContinuousMode && !this.isSpeakingNow()) {
         try {
           this.recognition.start();
         } catch {
@@ -85,6 +81,12 @@ class VoiceEngine {
         }
       }
     };
+  }
+
+  private isSpeakingNow(): boolean {
+    if (this.currentAudio && !this.currentAudio.paused) return true;
+    if (this.synth && this.synth.speaking) return true;
+    return false;
   }
 
   public setCallbacks(
@@ -97,12 +99,12 @@ class VoiceEngine {
 
   public startLiveDialogue() {
     this.isContinuousMode = true;
-    if (this.synth) this.synth.cancel();
+    this.stopSpeaking();
     if (this.recognition) {
       try {
         this.recognition.start();
       } catch {
-        // Already started
+        // Ignored
       }
       if (this.onStateChange) {
         this.onStateChange({ isListening: true, isSpeaking: false, transcript: "" });
@@ -120,21 +122,17 @@ class VoiceEngine {
         // Ignored
       }
     }
-    if (this.synth) {
-      this.synth.cancel();
-    }
+    this.stopSpeaking();
     if (this.onStateChange) {
       this.onStateChange({ isListening: false, isSpeaking: false, transcript: "" });
     }
   }
 
-  public speak(text: string, onEnd?: () => void) {
-    if (!this.synth) {
-      if (onEnd) onEnd();
-      return;
-    }
+  // Odtwarzanie głosu: Próbuje OpenAI TTS, a w razie braku klucza używa Web Speech API
+  public async speak(text: string, onEnd?: () => void) {
+    this.stopSpeaking();
 
-    // Temporarily pause recognition while speaking to prevent echo
+    // Wstrzymaj nasłuch w trakcie mówienia bota
     if (this.recognition && this.isContinuousMode) {
       try {
         this.recognition.stop();
@@ -143,62 +141,91 @@ class VoiceEngine {
       }
     }
 
-    this.synth.cancel();
-
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "pl-PL";
-    utterance.rate = 0.94; // Calm, thoughtful pace
-    utterance.pitch = 0.98; // Warm, gentle pitch
-
-    const voices = this.synth.getVoices();
-    const polishVoice = voices.find((v) => v.lang.startsWith("pl") && (v.name.includes("Zosia") || v.name.includes("Maja") || v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Paulina") || v.name.includes("Ewa"))) ||
-      voices.find((v) => v.lang.startsWith("pl"));
-
-    if (polishVoice) {
-      utterance.voice = polishVoice;
+    if (this.onStateChange) {
+      this.onStateChange({ isListening: false, isSpeaking: true, transcript: "" });
     }
 
-    utterance.onstart = () => {
-      if (this.onStateChange) {
-        this.onStateChange({ isListening: false, isSpeaking: true, transcript: "" });
+    try {
+      const res = await fetch("/api/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, voice: "nova" }),
+      });
+
+      if (res.ok) {
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        this.currentAudio = audio;
+
+        audio.onended = () => {
+          this.handlePlaybackEnd(onEnd);
+        };
+
+        audio.onerror = () => {
+          this.speakWithLocalFallback(text, onEnd);
+        };
+
+        await audio.play();
+        return;
       }
-    };
+    } catch {
+      // Fallback do lokalnego głosu
+    }
+
+    this.speakWithLocalFallback(text, onEnd);
+  }
+
+  private speakWithLocalFallback(text: string, onEnd?: () => void) {
+    if (!this.synth) {
+      this.handlePlaybackEnd(onEnd);
+      return;
+    }
+
+    this.synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "pl-PL";
+    utterance.rate = 0.94;
+    utterance.pitch = 0.98;
+
+    const voices = this.synth.getVoices();
+    const polishVoice = voices.find((v) => v.lang.startsWith("pl") && (v.name.includes("Zosia") || v.name.includes("Maja") || v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Paulina"))) ||
+      voices.find((v) => v.lang.startsWith("pl"));
+
+    if (polishVoice) utterance.voice = polishVoice;
 
     utterance.onend = () => {
-      if (this.onStateChange) {
-        this.onStateChange({ isListening: this.isContinuousMode, isSpeaking: false, transcript: "" });
-      }
-      if (this.isContinuousMode && this.recognition) {
-        setTimeout(() => {
-          try {
-            this.recognition.start();
-          } catch {
-            // Ignored
-          }
-        }, 300);
-      }
-      if (onEnd) onEnd();
+      this.handlePlaybackEnd(onEnd);
     };
 
     utterance.onerror = () => {
-      if (this.onStateChange) {
-        this.onStateChange({ isListening: this.isContinuousMode, isSpeaking: false, transcript: "" });
-      }
-      if (this.isContinuousMode && this.recognition) {
+      this.handlePlaybackEnd(onEnd);
+    };
+
+    this.synth.speak(utterance);
+  }
+
+  private handlePlaybackEnd(onEnd?: () => void) {
+    if (this.onStateChange) {
+      this.onStateChange({ isListening: this.isContinuousMode, isSpeaking: false, transcript: "" });
+    }
+    if (this.isContinuousMode && this.recognition) {
+      setTimeout(() => {
         try {
           this.recognition.start();
         } catch {
           // Ignored
         }
-      }
-      if (onEnd) onEnd();
-    };
-
-    this.currentUtterance = utterance;
-    this.synth.speak(utterance);
+      }, 300);
+    }
+    if (onEnd) onEnd();
   }
 
   public stopSpeaking() {
+    if (this.currentAudio) {
+      this.currentAudio.pause();
+      this.currentAudio = null;
+    }
     if (this.synth) {
       this.synth.cancel();
     }

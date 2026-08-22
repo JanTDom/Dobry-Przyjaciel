@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, PhoneOff, Flame, CloudRain, Waves, Sparkles, MessageSquare } from "lucide-react";
+import { Mic, MicOff, PhoneOff, Flame, CloudRain, Waves, MessageSquare } from "lucide-react";
 import { LivingWarmHearth } from "@/components/presence/LivingWarmHearth";
 import { voiceEngine } from "@/lib/voice-engine";
 import { soundscapeEngine, SoundscapeType } from "@/lib/audio-synthesizer";
-import { generateCompanionReply } from "@/lib/companion-personality";
+import { getCompanionReplyAsync } from "@/lib/companion-personality";
 import { UserProfile, Message } from "@/types";
 
 interface LiveVoiceCallModalProps {
@@ -57,7 +57,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     }, 400);
 
     voiceEngine.setCallbacks(
-      (capturedUserText: string) => {
+      async (capturedUserText: string) => {
         if (!capturedUserText || capturedUserText.trim().length === 0) return;
 
         const userMsg: Message = {
@@ -71,7 +71,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         onNewMessage(userMsg);
         setLiveTranscript(capturedUserText);
 
-        const reply = generateCompanionReply(capturedUserText, profile);
+        const reply = await getCompanionReplyAsync(capturedUserText, profile);
         setCompanionText(reply.text);
 
         const companionMsg: Message = {
@@ -131,7 +131,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-gradient-to-b from-amber-50/98 via-cream-100/98 to-orange-50/95 backdrop-blur-2xl px-6 py-8 select-none text-cream-950"
       >
-        {/* Górny pasek statusu */}
         <div className="w-full max-w-xl flex items-center justify-between">
           <div className="flex items-center gap-3 bg-white/80 border border-cream-300 px-4 py-1.5 rounded-full shadow-warm-sm">
             <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -140,7 +139,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             </div>
           </div>
 
-          {/* Dźwięki otoczenia w rozmowie */}
           <div className="flex items-center gap-1.5 bg-white/80 border border-cream-300 rounded-full px-3 py-1 shadow-warm-sm">
             <button
               onClick={() => handleToggleSoundscape("fireplace")}
@@ -178,7 +176,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           </div>
         </div>
 
-        {/* Centralne słoneczne światło i status obecności */}
         <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg w-full">
           <div className="relative mb-6">
             <LivingWarmHearth
@@ -189,7 +186,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             />
           </div>
 
-          {/* Dynamiczny stan */}
           <motion.div
             key={isSpeaking ? "speaking" : isListening ? "listening" : "idle"}
             initial={{ opacity: 0, y: 6 }}
@@ -203,7 +199,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               : "Jestem przy tobie"}
           </motion.div>
 
-          {/* Tekst wypowiedzi / transkrypcja na żywo */}
           <div className="min-h-[100px] flex items-center justify-center px-4">
             <p className="font-serif text-lg md:text-2xl text-cream-950 leading-relaxed max-w-md">
               {isSpeaking
@@ -215,9 +210,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           </div>
         </div>
 
-        {/* Dolny panel sterowania rozmową */}
         <div className="w-full max-w-md flex items-center justify-center gap-6 pt-6 border-t border-cream-300/80">
-          {/* Wyciszenie mikrofonu */}
           <button
             onClick={() => {
               if (isListening) {
@@ -238,7 +231,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             {isListening ? <Mic size={22} /> : <MicOff size={22} />}
           </button>
 
-          {/* Zakończenie rozmowy */}
           <button
             onClick={onClose}
             className="flex items-center gap-3 bg-rose-600 hover:bg-rose-700 text-white font-medium px-8 py-4 rounded-full shadow-lg shadow-rose-600/30 transition-all active:scale-95"
@@ -247,7 +239,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             <span className="text-sm tracking-wide">Zakończ rozmowę</span>
           </button>
 
-          {/* Przełącz na pisanie */}
           <button
             onClick={onClose}
             className="p-4 rounded-full bg-white text-cream-800 hover:bg-cream-100 border border-cream-300 shadow-warm-sm transition-all"

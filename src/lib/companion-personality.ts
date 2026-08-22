@@ -1,4 +1,4 @@
-import { Message, UserProfile, LifeMemoryFact } from "@/types";
+import { Message, UserProfile } from "@/types";
 
 export interface CompanionResponse {
   text: string;
@@ -15,6 +15,35 @@ export interface CompanionResponse {
   deepQuestion?: string;
 }
 
+// Asynchroniczne wywołanie GPT-4o-mini z płynnym fallbackiem lokalnym
+export async function getCompanionReplyAsync(
+  userText: string,
+  profile: UserProfile,
+  history: Message[] = []
+): Promise<CompanionResponse> {
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: userText, profile, history }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.reply) {
+        return {
+          text: data.reply,
+          moodContext: "supportive",
+        };
+      }
+    }
+  } catch {
+    // Fallback do lokalnego silnika
+  }
+
+  return generateCompanionReply(userText, profile, history);
+}
+
 export function generateCompanionReply(
   userText: string,
   profile: UserProfile,
@@ -22,7 +51,7 @@ export function generateCompanionReply(
 ): CompanionResponse {
   const lower = userText.toLowerCase();
 
-  // 1. Wykrywanie silnego lęku, paniki lub kryzysu
+  // 1. Silny lęk, panika, kryzys
   if (
     lower.includes("panik") ||
     lower.includes("nie daję rady") ||
@@ -44,7 +73,7 @@ export function generateCompanionReply(
     };
   }
 
-  // 2. Temat pracy, przeciążenia i relacji z szefem (np. Marek)
+  // 2. Praca, przeciążenie, szef
   if (
     lower.includes("prac") ||
     lower.includes("szef") ||
@@ -65,7 +94,7 @@ export function generateCompanionReply(
     };
   }
 
-  // 3. Relacje i bliscy (Kasia, Mama, rodzina)
+  // 3. Relacje i bliscy
   if (
     lower.includes("kasia") ||
     lower.includes("partnerk") ||
@@ -81,27 +110,7 @@ export function generateCompanionReply(
     };
   }
 
-  // 4. Samotność, zmęczenie, smutek
-  if (
-    lower.includes("samotn") ||
-    lower.includes("smutn") ||
-    lower.includes("zmęczon") ||
-    lower.includes("ciężko") ||
-    lower.includes("pustka")
-  ) {
-    return {
-      text: `Rozumiem cię. Nie musisz być dzisiaj silny ani niczego udowadniać. Zmęczenie po prostu mówi ci, że niosłeś zbyt duży ciężar przez zbyt długi czas. Usiądź wygodnie, napij się czegoś ciepłego. Jestem tutaj i nigdzie się nie spieszę.`,
-      moodContext: "supportive",
-      detectedLifeFact: {
-        category: "vulnerability",
-        title: "Potrzeba odpoczynku i czułości dla siebie",
-        detail: "Kiedy czujesz przeciążenie, najważniejsze to nie karać się za brak energii.",
-      },
-      deepQuestion: "Co jest jedną małą rzeczą, którą możesz dziś zrobić wyłącznie dla swojego ukojenia?",
-    };
-  }
-
-  // 5. Sukces, radość, małe zwycięstwo
+  // 4. Sukces, radość
   if (
     lower.includes("udało się") ||
     lower.includes("zrobiłem") ||
@@ -126,7 +135,7 @@ export function generateCompanionReply(
     };
   }
 
-  // 6. Domyślna głęboka, poznająca i doradzająca odpowiedź
+  // 5. Domyślna odpowiedź
   const reflectiveReplies = [
     `Wsłuchuję się w twoje słowa. Opowiedz mi o tym więcej — co w tej sytuacji dotyka cię najbardziej?`,
     `Jestem z tobą. Często to, co bierzemy za własną słabość, jest po prostu dowodem na to, jak bardzo nam zależy. Jak myślisz, co byłoby dla ciebie teraz najłagodniejszym rozwiązaniem?`,

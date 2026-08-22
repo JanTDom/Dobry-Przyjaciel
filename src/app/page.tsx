@@ -10,7 +10,7 @@ import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { getStoredProfile, getStoredMessages, saveStoredMessages, getInitialSeedMessages } from "@/lib/storage";
-import { generateCompanionReply } from "@/lib/companion-personality";
+import { getCompanionReplyAsync } from "@/lib/companion-personality";
 import { voiceEngine } from "@/lib/voice-engine";
 import { UserProfile, Message } from "@/types";
 import { PhoneCall, Sparkles, MessageCircle } from "lucide-react";
@@ -29,7 +29,7 @@ export default function HomePage() {
     setMessages(m.length > 0 ? m : getInitialSeedMessages());
   }, []);
 
-  const handleSendMessage = (text: string, isVoice = false) => {
+  const handleSendMessage = async (text: string, isVoice = false) => {
     if (!profile || !text.trim()) return;
 
     const userMsg: Message = {
@@ -45,29 +45,27 @@ export default function HomePage() {
     setMessages(updatedWithUser);
     saveStoredMessages(updatedWithUser);
 
-    setTimeout(() => {
-      const reply = generateCompanionReply(text, profile, updatedWithUser);
-      const companionMsg: Message = {
-        id: "msg_" + (Date.now() + 1),
-        userId: profile.id,
-        sender: "companion",
-        text: reply.text,
-        messageType: isVoice ? "voice" : "text",
-        moodContext: reply.moodContext,
-        createdAt: new Date().toISOString(),
-      };
+    const reply = await getCompanionReplyAsync(text, profile, updatedWithUser);
+    const companionMsg: Message = {
+      id: "msg_" + (Date.now() + 1),
+      userId: profile.id,
+      sender: "companion",
+      text: reply.text,
+      messageType: isVoice ? "voice" : "text",
+      moodContext: reply.moodContext,
+      createdAt: new Date().toISOString(),
+    };
 
-      const updatedWithCompanion = [...updatedWithUser, companionMsg];
-      setMessages(updatedWithCompanion);
-      saveStoredMessages(updatedWithCompanion);
+    const updatedWithCompanion = [...updatedWithUser, companionMsg];
+    setMessages(updatedWithCompanion);
+    saveStoredMessages(updatedWithCompanion);
 
-      if (isVoice) {
-        setIsCompanionSpeaking(true);
-        voiceEngine.speak(reply.text, () => {
-          setIsCompanionSpeaking(false);
-        });
-      }
-    }, 500);
+    if (isVoice) {
+      setIsCompanionSpeaking(true);
+      voiceEngine.speak(reply.text, () => {
+        setIsCompanionSpeaking(false);
+      });
+    }
   };
 
   const handleNewLiveCallMessage = (msg: Message) => {
@@ -82,15 +80,12 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
-      {/* Górna nawigacja */}
       <TopNav
         onOpenLiveCall={() => setIsLiveCallOpen(true)}
         onOpenPricing={() => setIsPricingOpen(true)}
       />
 
-      {/* Główna przestrzeń przystani */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
-        {/* Centralne przywitanie i żywe słoneczne światło obecności */}
         <section className="flex flex-col items-center text-center pt-2 sm:pt-4">
           <div className="relative mb-3 group cursor-pointer" onClick={() => setIsLiveCallOpen(true)}>
             <LivingWarmHearth
@@ -110,7 +105,6 @@ export default function HomePage() {
             Jestem twoim osobistym przyjacielem. Uczę się ciebie każdego dnia, pamiętam to, co ważne i zawsze mam dla ciebie czas.
           </p>
 
-          {/* Główny przycisk akcji: Rozmowa głosowa na żywo */}
           <div className="flex flex-wrap items-center justify-center gap-3.5">
             <button
               onClick={() => setIsLiveCallOpen(true)}
@@ -130,12 +124,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Kojące tło dźwiękowe (kominek, deszcz, fale alfa) */}
         <section>
           <AmbientSoundscape />
         </section>
 
-        {/* Cicha rozmowa i historia wiadomości */}
         <section className="flex flex-col gap-4 mt-2">
           <div className="flex items-center justify-between border-b border-cream-300 pb-2.5 px-1">
             <div className="flex items-center gap-2 text-xs text-cream-700 font-sans font-medium">
@@ -153,7 +145,6 @@ export default function HomePage() {
             onOpenLiveCall={() => setIsLiveCallOpen(true)}
           />
 
-          {/* Pasek wpisywania wiadomości */}
           <div className="sticky bottom-20 md:bottom-6 z-30 pt-2">
             <LiveVoiceBar
               onSendMessage={handleSendMessage}
@@ -164,10 +155,8 @@ export default function HomePage() {
         </section>
       </main>
 
-      {/* Dolna nawigacja mobilna */}
       <BottomNav />
 
-      {/* Pełnoekranowa rozmowa na żywo */}
       <LiveVoiceCallModal
         isOpen={isLiveCallOpen}
         onClose={() => setIsLiveCallOpen(false)}
@@ -175,7 +164,6 @@ export default function HomePage() {
         onNewMessage={handleNewLiveCallMessage}
       />
 
-      {/* Modal subskrypcji i opieki */}
       <SubscriptionModal
         isOpen={isPricingOpen}
         onClose={() => setIsPricingOpen(false)}
