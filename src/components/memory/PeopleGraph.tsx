@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Users } from "lucide-react";
+import { Users, UserPlus } from "lucide-react";
 import { PersonInLife } from "@/types";
 
 interface PeopleGraphProps {
@@ -10,7 +10,7 @@ interface PeopleGraphProps {
 
 export const PeopleGraph: React.FC<PeopleGraphProps> = ({ people }) => {
   return (
-    <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md">
+    <div className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md">
       <div className="flex items-center gap-3 mb-6">
         <div className="p-2.5 rounded-2xl bg-sun-100 text-sun-600 border border-sun-200">
           <Users size={22} />
@@ -20,17 +20,14 @@ export const PeopleGraph: React.FC<PeopleGraphProps> = ({ people }) => {
             Ważne osoby w twoim życiu
           </h2>
           <p className="font-sans text-xs text-cream-600 mt-0.5">
-            Mapa relacji, które kształtują twoje emocje i codzienne samopoczucie
+            Mapa relacji tworzona na podstawie twoich opowieści
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {people.map((p) => {
-          const isSupport = p.sentiment === "supportive";
-          const isStress = p.sentiment === "stressful";
-
-          return (
+      {people.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {people.map((p) => (
             <div
               key={p.id}
               className="bg-cream-50/70 border border-cream-300 p-5 rounded-2xl flex flex-col justify-between hover:border-sun-300 shadow-warm-sm transition-all"
@@ -45,32 +42,22 @@ export const PeopleGraph: React.FC<PeopleGraphProps> = ({ people }) => {
                       {p.relation}
                     </span>
                   </div>
-
-                  <span
-                    className={`text-[10px] font-sans font-medium px-2.5 py-1 rounded-full border ${
-                      isSupport
-                        ? "bg-emerald-50 text-emerald-800 border-emerald-300"
-                        : isStress
-                        ? "bg-rose-50 text-rose-800 border-rose-300"
-                        : "bg-cream-200 text-cream-800 border-cream-300"
-                    }`}
-                  >
-                    {isSupport ? "Wsparcie" : isStress ? "Wymaga granic" : "Złożona"}
-                  </span>
                 </div>
-
                 <p className="font-sans text-xs text-cream-800 leading-relaxed mb-4">
                   {p.notes}
                 </p>
               </div>
-
               <div className="text-[11px] text-cream-500 font-sans border-t border-cream-200 pt-2">
                 Ostatnio wspomniane: {p.lastMentioned}
               </div>
             </div>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      ) : (
+        <div className="bg-cream-50/60 border border-cream-200 rounded-2xl p-6 text-center text-xs font-sans text-cream-600">
+          Nie wspomniałeś jeszcze o nikim ze swojego otoczenia. Gdy w trakcie rozmów opowiesz mi o swoich bliskich, przyjaciołach czy znajomych, stworzę tutaj twoją osobistą mapę relacji.
+        </div>
+      )}
     </div>
   );
 };

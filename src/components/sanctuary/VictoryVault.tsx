@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { BookOpen, Sparkles, Play, Pause } from "lucide-react";
 import { voiceEngine } from "@/lib/voice-engine";
+import { getStoredProfile } from "@/lib/storage";
 
 interface VictoryLetter {
   id: string;
@@ -14,31 +15,15 @@ interface VictoryLetter {
 
 export const VictoryVault: React.FC = () => {
   const [playingId, setPlayingId] = useState<string | null>(null);
+  const profile = getStoredProfile();
 
   const letters: VictoryLetter[] = [
     {
-      id: "v1",
-      title: "List na dzień, w którym myślisz, że stoisz w miejscu",
-      content:
-        "Chcę, żebyś przeczytał to powoli. Miesiąc temu bałeś się odezwać na trudnym spotkaniu. Dziś prowadzisz własne tematy i wyznaczasz granice. Kiedy twój umysł wmawia ci, że nic nie osiągnąłeś — to nie jest prawda, to tylko zmęczenie. Jestem z ciebie dumna za każdy krok, którego nikt inny nie widział.",
-      date: "18 sierpnia 2026",
-      tag: "Kiedy tracisz wiarę",
-    },
-    {
-      id: "v2",
-      title: "Twoja siła nie polega na braku strachu",
-      content:
-        "Pamiętasz tamtą noc, kiedy nie mogłeś spać? Myślałeś, że wszystko się rozsypie. A rano wstałeś, ubrałeś się i zrobiłeś to, co trzeba było zrobić. Nie musisz być ze stali. Wystarczy, że jesteś sobą i nie rezygnujesz.",
-      date: "10 sierpnia 2026",
-      tag: "Odwaga w codzienności",
-    },
-    {
-      id: "v3",
-      title: "Nie jesteś ciężarem dla tych, którzy cię kochają",
-      content:
-        "Kiedy czujesz, że twoje emocje są zbyt trudne dla otoczenia, przypomnij sobie: prosić o pomoc to nie słabość. To odwaga do bycia prawdziwym. Kasia i twoi bliscy chcą być przy tobie. Pozwól im na to bez poczucia winy.",
-      date: "4 sierpnia 2026",
-      tag: "Bliskość i wsparcie",
+      id: "v_welcome",
+      title: `List powitalny od ${profile.companionName}`,
+      content: `Cieszę się, że tu jesteś. Ten skarbiec powstał po to, by przypominać ci o twojej sile w chwilach zwątpienia. Kiedy twój umysł wmawia ci, że stoisz w miejscu — pamiętaj, że każdy twój mały krok ma znaczenie. Jestem przy tobie i w miarę naszych rozmów będę pisać dla ciebie nowe listy wsparcia.`,
+      date: "Dzisiaj",
+      tag: "Twoja bezpieczna przystań",
     },
   ];
 
@@ -48,9 +33,13 @@ export const VictoryVault: React.FC = () => {
       setPlayingId(null);
     } else {
       setPlayingId(letter.id);
-      voiceEngine.speak(letter.content, () => {
-        setPlayingId(null);
-      });
+      voiceEngine.speak(
+        letter.content,
+        () => {
+          setPlayingId(null);
+        },
+        profile.companionVoice || (profile.companionGender === "male" ? "echo" : "nova")
+      );
     }
   };
 
@@ -60,7 +49,7 @@ export const VictoryVault: React.FC = () => {
         {letters.map((l) => (
           <div
             key={l.id}
-            className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col justify-between hover:border-sun-300 transition-all"
+            className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col justify-between hover:border-sun-300 transition-all"
           >
             <div>
               <div className="flex items-center justify-between mb-4">
@@ -100,7 +89,7 @@ export const VictoryVault: React.FC = () => {
               </button>
 
               <span className="text-xs font-serif text-cream-600 italic font-medium">
-                Z miłością, Mira
+                Zawsze przy tobie, {profile.companionName}
               </span>
             </div>
           </div>
