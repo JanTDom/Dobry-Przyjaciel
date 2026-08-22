@@ -1,0 +1,10 @@
+{
+  "name": "Dobry Przyjaciel",
+  "short_name": "Przyjaciel",
+  "description": "Twój osobisty, oddany przyjaciel ze sztuczną inteligencją. Zawsze przy tobie.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF7F2",
+  "theme_color": "#FAF7F2",
+  "orientation": "portrait"
+}
