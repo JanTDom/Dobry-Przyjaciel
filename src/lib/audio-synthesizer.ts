@@ -1,4 +1,4 @@
-// Web Audio API procedural atmospheric sound synthesizer
+// Web Audio API procedural atmospheric sound synthesizer - Czysty, miękki i bez trzasków
 
 export type SoundscapeType = "fireplace" | "rain" | "ocean" | "alpha_waves" | "forest";
 
@@ -8,7 +8,7 @@ class AudioSynthesizer {
   private masterGain: GainNode | null = null;
   private activeNodes: (AudioNode | number)[] = [];
   private isMuted: boolean = false;
-  private currentVolume: number = 0.5;
+  private currentVolume: number = 0.3;
 
   private initContext() {
     if (!this.ctx) {
@@ -96,11 +96,10 @@ class AudioSynthesizer {
     }
   }
 
-  // 1. Ciepły Kominek (Warm Hearth & Fireplace Crackle)
+  // 1. Ciepłe, miękkie tło kominka (Czysty, ciepły szum bez jakichkolwiek trzasków czy klików)
   private playFireplace() {
     if (!this.ctx || !this.masterGain) return;
 
-    // A. Warm base roar (low frequency warm hum)
     const bufferSize = this.ctx.sampleRate * 2;
     const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
@@ -110,7 +109,7 @@ class AudioSynthesizer {
       b0 = 0.99886 * b0 + white * 0.0555179;
       b1 = 0.99332 * b1 + white * 0.0750759;
       b2 = 0.96900 * b2 + white * 0.1538520;
-      output[i] = (b0 + b1 + b2) * 0.18;
+      output[i] = (b0 + b1 + b2) * 0.12;
     }
 
     const baseNoise = this.ctx.createBufferSource();
@@ -119,10 +118,10 @@ class AudioSynthesizer {
 
     const baseFilter = this.ctx.createBiquadFilter();
     baseFilter.type = "lowpass";
-    baseFilter.frequency.setValueAtTime(320, this.ctx.currentTime);
+    baseFilter.frequency.setValueAtTime(240, this.ctx.currentTime);
 
     const baseGain = this.ctx.createGain();
-    baseGain.gain.setValueAtTime(0.4, this.ctx.currentTime);
+    baseGain.gain.setValueAtTime(0.25, this.ctx.currentTime);
 
     baseNoise.connect(baseFilter);
     baseFilter.connect(baseGain);
@@ -130,37 +129,6 @@ class AudioSynthesizer {
     baseNoise.start();
 
     this.activeNodes.push(baseNoise, baseFilter, baseGain);
-
-    // B. Wood crackle pops (periodic random popping transients)
-    const crackleInterval = window.setInterval(() => {
-      if (!this.ctx || !this.masterGain || this.currentType !== "fireplace") return;
-
-      const osc = this.ctx.createOscillator();
-      const popGain = this.ctx.createGain();
-      const popFilter = this.ctx.createBiquadFilter();
-
-      const freq = 600 + Math.random() * 2400;
-      osc.type = Math.random() > 0.4 ? "triangle" : "sawtooth";
-      osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.035);
-
-      popFilter.type = "bandpass";
-      popFilter.frequency.setValueAtTime(freq * 0.8, this.ctx.currentTime);
-      popFilter.Q.setValueAtTime(2, this.ctx.currentTime);
-
-      const popVol = 0.08 + Math.random() * 0.22;
-      popGain.gain.setValueAtTime(popVol, this.ctx.currentTime);
-      popGain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.04);
-
-      osc.connect(popFilter);
-      popFilter.connect(popGain);
-      popGain.connect(this.masterGain);
-
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.045);
-    }, 90);
-
-    this.activeNodes.push(crackleInterval as unknown as number);
   }
 
   // 2. Kojący Ciepły Deszcz
@@ -174,7 +142,7 @@ class AudioSynthesizer {
       const white = Math.random() * 2 - 1;
       output[i] = (lastOut + 0.02 * white) / 1.02;
       lastOut = output[i];
-      output[i] *= 2.8;
+      output[i] *= 1.8;
     }
 
     const rainSource = this.ctx.createBufferSource();
@@ -183,10 +151,10 @@ class AudioSynthesizer {
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(900, this.ctx.currentTime);
+    filter.frequency.setValueAtTime(700, this.ctx.currentTime);
 
     const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
 
     rainSource.connect(filter);
     filter.connect(gain);
@@ -212,16 +180,15 @@ class AudioSynthesizer {
 
     const filter = this.ctx.createBiquadFilter();
     filter.type = "lowpass";
-    filter.frequency.setValueAtTime(300, this.ctx.currentTime);
+    filter.frequency.setValueAtTime(280, this.ctx.currentTime);
 
     const gain = this.ctx.createGain();
-    gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    gain.gain.setValueAtTime(0.18, this.ctx.currentTime);
 
-    // LFO for wave swelling
     const lfo = this.ctx.createOscillator();
-    lfo.frequency.setValueAtTime(0.12, this.ctx.currentTime); // 8-second wave period
+    lfo.frequency.setValueAtTime(0.1, this.ctx.currentTime);
     const lfoGain = this.ctx.createGain();
-    lfoGain.gain.setValueAtTime(250, this.ctx.currentTime);
+    lfoGain.gain.setValueAtTime(200, this.ctx.currentTime);
 
     lfo.connect(lfoGain);
     lfoGain.connect(filter.frequency);
@@ -236,14 +203,13 @@ class AudioSynthesizer {
     this.activeNodes.push(noise, filter, gain, lfo, lfoGain);
   }
 
-  // 4. Fale Alfa 8Hz (Binaural Drone dla ukojenia)
+  // 4. Fale Alfa 8Hz (Binaural Drone)
   private playAlphaWaves() {
     if (!this.ctx || !this.masterGain) return;
 
     const baseFreq = 160;
-    const alphaDiff = 8; // 8Hz alpha state
+    const alphaDiff = 8;
 
-    // Left channel
     const oscLeft = this.ctx.createOscillator();
     oscLeft.type = "sine";
     oscLeft.frequency.setValueAtTime(baseFreq, this.ctx.currentTime);
@@ -252,9 +218,8 @@ class AudioSynthesizer {
     if (panLeft) panLeft.pan.setValueAtTime(-0.8, this.ctx.currentTime);
 
     const gainLeft = this.ctx.createGain();
-    gainLeft.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    gainLeft.gain.setValueAtTime(0.15, this.ctx.currentTime);
 
-    // Right channel
     const oscRight = this.ctx.createOscillator();
     oscRight.type = "sine";
     oscRight.frequency.setValueAtTime(baseFreq + alphaDiff, this.ctx.currentTime);
@@ -263,7 +228,7 @@ class AudioSynthesizer {
     if (panRight) panRight.pan.setValueAtTime(0.8, this.ctx.currentTime);
 
     const gainRight = this.ctx.createGain();
-    gainRight.gain.setValueAtTime(0.18, this.ctx.currentTime);
+    gainRight.gain.setValueAtTime(0.15, this.ctx.currentTime);
 
     if (panLeft && panRight) {
       oscLeft.connect(panLeft);
@@ -284,16 +249,15 @@ class AudioSynthesizer {
     this.activeNodes.push(oscLeft, oscRight, gainLeft, gainRight);
   }
 
-  // 5. Nocny Spokojny Las
+  // 5. Nocny Las
   private playForest() {
     if (!this.ctx || !this.masterGain) return;
 
-    // Wind base
     const bufferSize = this.ctx.sampleRate * 2;
     const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
     const output = noiseBuffer.getChannelData(0);
     for (let i = 0; i < bufferSize; i++) {
-      output[i] = (Math.random() * 2 - 1) * 0.15;
+      output[i] = (Math.random() * 2 - 1) * 0.1;
     }
 
     const windSource = this.ctx.createBufferSource();
@@ -302,11 +266,11 @@ class AudioSynthesizer {
 
     const windFilter = this.ctx.createBiquadFilter();
     windFilter.type = "bandpass";
-    windFilter.frequency.setValueAtTime(450, this.ctx.currentTime);
-    windFilter.Q.setValueAtTime(1.5, this.ctx.currentTime);
+    windFilter.frequency.setValueAtTime(400, this.ctx.currentTime);
+    windFilter.Q.setValueAtTime(1.2, this.ctx.currentTime);
 
     const windGain = this.ctx.createGain();
-    windGain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+    windGain.gain.setValueAtTime(0.15, this.ctx.currentTime);
 
     windSource.connect(windFilter);
     windFilter.connect(windGain);
@@ -314,26 +278,6 @@ class AudioSynthesizer {
     windSource.start();
 
     this.activeNodes.push(windSource, windFilter, windGain);
-
-    // Night crickets
-    const cricketInterval = window.setInterval(() => {
-      if (!this.ctx || !this.masterGain || this.currentType !== "forest") return;
-
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(4500 + Math.random() * 300, this.ctx.currentTime);
-
-      gain.gain.setValueAtTime(0.015, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.08);
-
-      osc.connect(gain);
-      gain.connect(this.masterGain);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.09);
-    }, 180);
-
-    this.activeNodes.push(cricketInterval as unknown as number);
   }
 }
 

@@ -28,7 +28,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const [companionText, setCompanionText] = useState(
     `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`
   );
-  const [activeSoundscape, setActiveSoundscape] = useState<SoundscapeType | null>("fireplace");
+  const [activeSoundscape, setActiveSoundscape] = useState<SoundscapeType | null>(null);
   const [callDuration, setCallDuration] = useState(0);
 
   const durationTimerRef = useRef<any>(null);
@@ -47,9 +47,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
+    soundscapeEngine.stop();
     if (activeSoundscape) {
       soundscapeEngine.play(activeSoundscape);
-      soundscapeEngine.setVolume(0.25);
+      soundscapeEngine.setVolume(0.2);
     }
 
     const greetingText = `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`;
