@@ -229,37 +229,55 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleGenderSelect("female")}
-                    className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${
+                    className={`p-5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden ${
                       companionGender === "female"
-                        ? "bg-sun-50 border-sun-400 shadow-md ring-2 ring-sun-400/25"
-                        : "bg-cream-50/60 border-cream-200 hover:border-cream-300"
+                        ? "bg-gradient-to-br from-sun-50/90 to-white border-sun-400 shadow-md ring-2 ring-sun-400/20"
+                        : "bg-white/80 border-cream-200 hover:border-cream-300"
                     }`}
                   >
-                    <div className="text-3xl mb-1.5">👩</div>
-                    <span className="font-serif text-base text-cream-950 font-medium">
-                      Przyjaciółka
-                    </span>
-                    <span className="text-[11px] text-cream-600 font-sans mt-0.5">
-                      Ciepły, kojący głos (Agata)
-                    </span>
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-sans uppercase tracking-widest text-sun-800 font-bold px-2 py-0.5 rounded-full bg-sun-100/80 border border-sun-200">
+                          Głos żeński
+                        </span>
+                        {companionGender === "female" && (
+                          <div className="w-2 h-2 rounded-full bg-sun-500" />
+                        )}
+                      </div>
+                      <span className="font-serif text-lg text-cream-950 font-normal block mb-1">
+                        Przyjaciółka
+                      </span>
+                      <p className="text-xs text-cream-600 font-sans leading-relaxed">
+                        Agata • Ciepły, miękki tembr kojący
+                      </p>
+                    </div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleGenderSelect("male")}
-                    className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${
+                    className={`p-5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden ${
                       companionGender === "male"
-                        ? "bg-sun-50 border-sun-400 shadow-md ring-2 ring-sun-400/25"
-                        : "bg-cream-50/60 border-cream-200 hover:border-cream-300"
+                        ? "bg-gradient-to-br from-sun-50/90 to-white border-sun-400 shadow-md ring-2 ring-sun-400/20"
+                        : "bg-white/80 border-cream-200 hover:border-cream-300"
                     }`}
                   >
-                    <div className="text-3xl mb-1.5">👨</div>
-                    <span className="font-serif text-base text-cream-950 font-medium">
-                      Przyjaciel
-                    </span>
-                    <span className="text-[11px] text-cream-600 font-sans mt-0.5">
-                      Spokojny, głęboki głos (Maciej)
-                    </span>
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[10px] font-sans uppercase tracking-widest text-sun-800 font-bold px-2 py-0.5 rounded-full bg-sun-100/80 border border-sun-200">
+                          Głos męski
+                        </span>
+                        {companionGender === "male" && (
+                          <div className="w-2 h-2 rounded-full bg-sun-500" />
+                        )}
+                      </div>
+                      <span className="font-serif text-lg text-cream-950 font-normal block mb-1">
+                        Przyjaciel
+                      </span>
+                      <p className="text-xs text-cream-600 font-sans leading-relaxed">
+                        Maciej • Spokojny, uziemiający tembr
+                      </p>
+                    </div>
                   </button>
                 </div>
 

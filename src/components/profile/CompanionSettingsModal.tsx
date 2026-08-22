@@ -118,37 +118,55 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
             <button
               type="button"
               onClick={() => handleGenderChange("female")}
-              className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${
+              className={`p-5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden ${
                 companionGender === "female"
-                  ? "bg-sun-50 border-sun-400 shadow-md shadow-sun-500/10 ring-2 ring-sun-400/25"
-                  : "bg-cream-50/60 border-cream-200 hover:border-cream-300"
+                  ? "bg-gradient-to-br from-sun-50/90 to-white border-sun-400 shadow-md ring-2 ring-sun-400/20"
+                  : "bg-white/80 border-cream-200 hover:border-cream-300"
               }`}
             >
-              <div className="text-2xl mb-1">👩</div>
-              <span className="font-serif text-base text-cream-950 font-medium">
-                Przyjaciółka
-              </span>
-              <span className="text-[11px] text-cream-600 font-sans mt-0.5">
-                Kobiecy, ciepły głos
-              </span>
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-sans uppercase tracking-widest text-sun-800 font-bold px-2 py-0.5 rounded-full bg-sun-100/80 border border-sun-200">
+                    Głos żeński
+                  </span>
+                  {companionGender === "female" && (
+                    <div className="w-2 h-2 rounded-full bg-sun-500" />
+                  )}
+                </div>
+                <span className="font-serif text-lg text-cream-950 font-normal block mb-1">
+                  Przyjaciółka
+                </span>
+                <p className="text-xs text-cream-600 font-sans leading-relaxed">
+                  Kobiecy, ciepły tembr
+                </p>
+              </div>
             </button>
 
             <button
               type="button"
               onClick={() => handleGenderChange("male")}
-              className={`p-4 rounded-2xl border flex flex-col items-center text-center transition-all ${
+              className={`p-5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden ${
                 companionGender === "male"
-                  ? "bg-sun-50 border-sun-400 shadow-md shadow-sun-500/10 ring-2 ring-sun-400/25"
-                  : "bg-cream-50/60 border-cream-200 hover:border-cream-300"
+                  ? "bg-gradient-to-br from-sun-50/90 to-white border-sun-400 shadow-md ring-2 ring-sun-400/20"
+                  : "bg-white/80 border-cream-200 hover:border-cream-300"
               }`}
             >
-              <div className="text-2xl mb-1">👨</div>
-              <span className="font-serif text-base text-cream-950 font-medium">
-                Przyjaciel
-              </span>
-              <span className="text-[11px] text-cream-600 font-sans mt-0.5">
-                Męski, spokojny głos
-              </span>
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-sans uppercase tracking-widest text-sun-800 font-bold px-2 py-0.5 rounded-full bg-sun-100/80 border border-sun-200">
+                    Głos męski
+                  </span>
+                  {companionGender === "male" && (
+                    <div className="w-2 h-2 rounded-full bg-sun-500" />
+                  )}
+                </div>
+                <span className="font-serif text-lg text-cream-950 font-normal block mb-1">
+                  Przyjaciel
+                </span>
+                <p className="text-xs text-cream-600 font-sans leading-relaxed">
+                  Męski, spokojny tembr
+                </p>
+              </div>
             </button>
           </div>
         </div>

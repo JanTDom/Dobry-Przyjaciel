@@ -196,9 +196,9 @@ export default function HomePage() {
 
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="secondary-warm-button flex items-center gap-2 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
+                className="secondary-warm-button flex items-center gap-2.5 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
               >
-                <span>{profile.companionGender === "male" ? "👨" : "👩"}</span>
+                <div className="w-2 h-2 rounded-full bg-sun-500" />
                 <span>Twój przyjaciel ({profile.companionName})</span>
               </button>
 

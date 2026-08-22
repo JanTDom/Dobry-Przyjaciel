@@ -123,10 +123,10 @@ export const TopNav: React.FC<TopNavProps> = ({
               <div className="relative">
                 <button
                   onClick={() => setShowProfileMenu(!showProfileMenu)}
-                  className="flex items-center gap-2 bg-white/90 hover:bg-white border border-cream-300 px-3 py-1.5 rounded-full shadow-warm-sm transition-all text-xs font-sans text-cream-950"
+                  className="flex items-center gap-2.5 bg-white/90 hover:bg-white border border-cream-300 hover:border-sun-300/80 px-3.5 py-1.5 rounded-full shadow-warm-sm transition-all text-xs font-sans text-cream-950 group"
                 >
-                  <span className="text-base">{companionGender === "male" ? "👨" : "👩"}</span>
-                  <span className="font-medium hidden sm:inline">{companionName}</span>
+                  <div className="w-2 h-2 rounded-full bg-sun-500 group-hover:scale-125 transition-transform" />
+                  <span className="font-medium text-cream-900">{companionName}</span>
                 </button>
 
                 {showProfileMenu && (

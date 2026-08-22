@@ -55,7 +55,7 @@ export const GrowthTracker: React.FC<GrowthTrackerProps> = ({ crises }) => {
                 </div>
               </div>
               <div className="text-xs text-sun-800 font-serif italic pt-1 font-medium">
-                ★ Udowodniona siła: {c.strengthDemonstrated}
+                Wewnętrzna siła: {c.strengthDemonstrated}
               </div>
             </div>
           ))}
