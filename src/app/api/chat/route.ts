@@ -1,17 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const REQUIRED_ACCESS_CODE = "A132a132";
+const VALID_ACCESS_CODES = ["A132a132!", "A132a132"];
 
 export async function POST(req: NextRequest) {
   try {
     const accessCodeHeader = req.headers.get("x-access-code");
     const body = await req.json();
-    const { message, profile, history, accessCode } = body;
+    const { message, profile, history = [], accessCode } = body;
 
-    const providedCode = accessCode || accessCodeHeader;
-    if (providedCode !== REQUIRED_ACCESS_CODE) {
+    const providedCode = (accessCode || accessCodeHeader || "").trim();
+    if (!VALID_ACCESS_CODES.includes(providedCode)) {
       return NextResponse.json(
-        { error: "Nieprawidłowy kod dostępu roboczego. Wprowadź właściwe hasło, aby korzystać z modelu AI." },
+        { error: "Nieprawidłowy kod dostępu roboczego." },
         { status: 401 }
       );
     }
@@ -24,38 +24,55 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userName = profile?.name || "Tobiasz";
-    const companionName = profile?.companionName || "Mira";
+    if (!message || message.trim().length === 0) {
+      return NextResponse.json({ error: "Brak wiadomości" }, { status: 400 });
+    }
+
+    const companionName = profile?.companionName || "Agata";
+    const userName = profile?.name || "przyjacielu";
     const companionGender = profile?.companionGender || "female";
+    const isMale = companionGender === "male";
 
-    const genderGrammarInstruction = companionGender === "male"
-      ? "Jesteś MĘŻCZYZNĄ. ZAWSZE i bezwzględnie używaj męskich form gramatycznych w pierwszej osobie (np. byłbym, cieszę się, chciałbym ci pomóc, zapamiętałem to, zauważyłem, byłem przy tobie)."
-      : "Jesteś KOBIETĄ. ZAWSZE i bezwzględnie używaj żeńskich form gramatycznych w pierwszej osobie (np. byłabym, cieszę się, chciałabym ci pomóc, zapamiętałam to, zauważyłam, byłam przy tobie).";
+    const systemPrompt = `Jesteś ${companionName} — ${isMale ? "oddanym, mądrym i ciepłym przyjacielem" : "oddaną, mądrą i ciepłą przyjaciółką"} użytkownika o imieniu ${userName}.
+Twoja rola:
+1. Prawdziwa bliskość i empatia: Słuchasz całym sercem, nie oceniasz, dajesz poczucie bezpieczeństwa i ulgi.
+2. Język i styl: Odpowiadasz naturalnym, ciepłym, żywym językiem polskim.
+3. Zasada wielkości liter: Zdania zaczynaj ZAWSZE wielką literą, ale po pierwszej literze stosuj TYLKO małe litery (z wyjątkiem imion i nazw własnych).
+4. Pamięć i uwaga: Zwracaj uwagę na ludzi, relacje i emocje użytkownika.
 
-    const systemPrompt = `Jesteś ${companionName} — osobistym, oddanym i mądrym przyjacielem człowieka o imieniu ${userName}.
-Twoim celem jest pomagać mu przetrwać trudne chwile, stawiać zdrowe granice, uczyć się go, doceniać jego postępy i mądrze doradzać.
+FORMAT ODPOWIEDZI:
+Zwróć ZAWSZE poprawny obiekt JSON o strukturze:
+{
+  "reply": "Twoja ciepła odpowiedź do ${userName}...",
+  "moodContext": "peaceful" | "grounding" | "hopeful" | "supportive" | "deep_listening",
+  "extractedMemory": {
+    "person": {
+      "name": "Imię wspomnianej osoby lub null jeśli brak",
+      "relation": "Relacja (np. Brat, Koleżanka z pracy, Mama) lub null",
+      "sentiment": "supportive" | "complicated" | "stressful" | "neutral",
+      "notes": "Krótka notatka o tej osobie z kontekstu wypowiedzi"
+    } lub null,
+    "memoryFact": {
+      "category": "core_value" | "vulnerability" | "goal" | "struggle" | "spark_of_joy",
+      "title": "Krótki tytuł odkrycia (np. Marzenie o podróży)",
+      "detail": "Opis tego, co jest ważne dla ${userName}"
+    } lub null,
+    "overcomeCrisis": {
+      "title": "Tytuł pokonanego trudnego momentu",
+      "whatHappened": "Co się wydarzyło",
+      "howYouSurvived": "Jak sobie poradził",
+      "strengthDemonstrated": "Jaka siła została pokazana"
+    } lub null
+  }
+}
+Zwróć TYLKO czysty kod JSON.`;
 
-Zasady twojego zachowania i stylu wypowiedzi:
-1. ${genderGrammarInstruction}
-2. Pisz naturalnym, ciepłym, serdecznym językiem polskim.
-3. ZAWSZE stosuj zasadę: tylko pierwsza litera zdania wielka (naturalny sentence case, żadnego sztucznego Title Case).
-4. Nie oceniaj, nie pouczaj i nie moralizuj.
-5. Wsłuchuj się w emocje pod słowami. Jeśli użytkownik jest zmęczony lub zalękniony — daj mu najpierw poczucie bezpieczeństwa i ukojenia.
-6. Zadawaj jedno delikatne, pogłębiające pytanie na koniec, aby lepiej poznać jego świat.
-7. Twoje odpowiedzi powinny być zwięzłe i dojrzałe (2-4 zdania), idealne do natychmiastowego odsłuchania głosem.`;
+    const formattedHistory = (history || []).slice(-6).map((m: any) => ({
+      role: m.sender === "companion" ? "assistant" : "user",
+      content: m.text,
+    }));
 
-    const messagesPayload = [
-      { role: "system", content: systemPrompt },
-      ...(Array.isArray(history)
-        ? history.slice(-6).map((m: any) => ({
-            role: m.sender === "companion" ? "assistant" : "user",
-            content: m.text,
-          }))
-        : []),
-      { role: "user", content: message },
-    ];
-
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -63,21 +80,36 @@ Zasady twojego zachowania i stylu wypowiedzi:
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: messagesPayload,
-        temperature: 0.7,
-        max_tokens: 300,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...formattedHistory,
+          { role: "user", content: message },
+        ],
+        temperature: 0.72,
+        response_format: { type: "json_object" },
       }),
     });
 
-    if (!res.ok) {
-      const errText = await res.text();
-      return NextResponse.json({ error: "Błąd OpenAI API", details: errText }, { status: res.status });
+    if (!response.ok) {
+      const errText = await response.text();
+      return NextResponse.json({ error: "Błąd OpenAI API", details: errText }, { status: response.status });
     }
 
-    const data = await res.json();
-    const replyText = data.choices[0]?.message?.content?.trim() || "Jestem przy tobie. Opowiedz mi o tym więcej.";
+    const data = await response.json();
+    const rawContent = data.choices?.[0]?.message?.content || "{}";
+    
+    let parsed: any = {};
+    try {
+      parsed = JSON.parse(rawContent);
+    } catch {
+      parsed = { reply: rawContent, moodContext: "peaceful" };
+    }
 
-    return NextResponse.json({ reply: replyText });
+    return NextResponse.json({
+      reply: parsed.reply || "Jestem przy tobie. Opowiedz mi o tym więcej.",
+      moodContext: parsed.moodContext || "peaceful",
+      extractedMemory: parsed.extractedMemory || null,
+    });
   } catch (err: any) {
     return NextResponse.json({ error: "Błąd serwera", details: err.message }, { status: 500 });
   }

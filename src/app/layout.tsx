@@ -1,9 +1,23 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dobry Przyjaciel | Twoja bezpieczna przystań, głos i obecność",
-  description: "Ciepły głos, kojący ambient kominka, żywa pamięć relacji i uziemienie w trudnych chwilach. Twój osobisty przyjaciel, który pomaga stanąć na nogi.",
+  title: "Dobry Przyjaciel | Twój osobisty, oddany przyjaciel ze sztuczną inteligencją",
+  description: "Ciepły, ludzki głos, żywa pamięć relacji, uziemienie emocjonalne i bezpieczna przystań. Twój osobisty przyjaciel, który zawsze ma dla ciebie czas.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Dobry Przyjaciel",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#FAF7F2",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
@@ -12,8 +26,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pl" className="dark">
-      <body className="bg-sanctuary-950 text-sanctuary-100 min-h-screen antialiased selection:bg-hearth-500/30 selection:text-hearth-100 font-sans">
+    <html lang="pl">
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      </head>
+      <body className="bg-cream-100 text-cream-900 min-h-screen antialiased selection:bg-sun-500/20 selection:text-cream-950 font-sans">
         {children}
       </body>
     </html>

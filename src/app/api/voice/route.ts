@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const REQUIRED_ACCESS_CODE = "A132a132";
+const VALID_ACCESS_CODES = ["A132a132!", "A132a132"];
 
 // Dedykowane, autentyczne polskie głosy z naturalnym oddechem i ciepłą intonacją
 const ELEVENLABS_VOICES: Record<string, string> = {
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     const { text, voice = "nova", accessCode, isPreview = false } = body;
 
     const providedCode = accessCode || accessCodeHeader;
-    if (!isPreview && providedCode !== REQUIRED_ACCESS_CODE) {
+    if (!isPreview && !VALID_ACCESS_CODES.includes(providedCode)) {
       return NextResponse.json(
         { error: "Nieprawidłowy kod dostępu roboczego." },
         { status: 401 }

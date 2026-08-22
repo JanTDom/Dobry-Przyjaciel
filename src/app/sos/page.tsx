@@ -6,17 +6,18 @@ import { BottomNav } from "@/components/navigation/BottomNav";
 import { BreathingGuide } from "@/components/sos/BreathingGuide";
 import { GroundingExercise } from "@/components/sos/GroundingExercise";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
-import { AccessGateModal } from "@/components/auth/AccessGateModal";
-import { Phone, ShieldAlert } from "lucide-react";
+import { AuthAndOnboardingModal } from "@/components/auth/AuthAndOnboardingModal";
+import { Phone, ShieldAlert, Heart } from "lucide-react";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
-import { getStoredProfile, saveStoredProfile, isAccessGranted } from "@/lib/storage";
+import { getStoredProfile, saveStoredProfile, logoutUser } from "@/lib/storage";
 import { UserProfile } from "@/types";
+import { voiceEngine } from "@/lib/voice-engine";
 
 export default function SOSPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGateOpen, setIsGateOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   useEffect(() => {
     setProfile(getStoredProfile());
@@ -27,26 +28,34 @@ export default function SOSPage() {
     saveStoredProfile(updated);
   };
 
-  const handleOpenLiveCall = () => {
-    if (isAccessGranted()) {
-      setIsLiveCallOpen(true);
-    } else {
-      setIsGateOpen(true);
-    }
+  const handleLogout = () => {
+    logoutUser();
+    setProfile(null);
   };
 
-  if (!profile) return null;
+  const handleOpenLiveCall = () => {
+    if (!profile) {
+      setIsAuthOpen(true);
+      return;
+    }
+    voiceEngine.unlock();
+    setIsLiveCallOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
       <TopNav
         onOpenLiveCall={handleOpenLiveCall}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        companionName={profile.companionName}
-        companionGender={profile.companionGender}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onLogout={handleLogout}
+        isLoggedIn={Boolean(profile)}
+        userName={profile?.name}
+        companionName={profile?.companionName}
+        companionGender={profile?.companionGender}
       />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16 animate-fade-in">
         <div className="border-b border-cream-300 pb-4">
           <div className="flex items-center gap-2 text-sun-700 text-xs font-sans uppercase tracking-wider mb-1 font-semibold">
             <ShieldAlert size={16} />
@@ -100,24 +109,28 @@ export default function SOSPage() {
 
       <BottomNav />
 
-      <LiveVoiceCallModal
-        isOpen={isLiveCallOpen}
-        onClose={() => setIsLiveCallOpen(false)}
-        profile={profile}
-        onNewMessage={() => {}}
-      />
+      {profile && (
+        <LiveVoiceCallModal
+          isOpen={isLiveCallOpen}
+          onClose={() => setIsLiveCallOpen(false)}
+          profile={profile}
+          onNewMessage={() => {}}
+        />
+      )}
 
-      <CompanionSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        profile={profile}
-        onSaveProfile={handleSaveProfile}
-      />
+      {profile && (
+        <CompanionSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          profile={profile}
+          onSaveProfile={handleSaveProfile}
+        />
+      )}
 
-      <AccessGateModal
-        isOpen={isGateOpen}
-        onClose={() => setIsGateOpen(false)}
-        onSuccess={() => setIsLiveCallOpen(true)}
+      <AuthAndOnboardingModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={(p) => setProfile(p)}
       />
     </div>
   );

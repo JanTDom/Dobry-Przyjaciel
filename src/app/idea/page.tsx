@@ -5,19 +5,20 @@ import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { IdeaPhilosophySection } from "@/components/philosophy/IdeaPhilosophySection";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
-import { AccessGateModal } from "@/components/auth/AccessGateModal";
+import { AuthAndOnboardingModal } from "@/components/auth/AuthAndOnboardingModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
-import { getStoredProfile, saveStoredProfile, isAccessGranted } from "@/lib/storage";
+import { getStoredProfile, saveStoredProfile, logoutUser } from "@/lib/storage";
 import { UserProfile } from "@/types";
-import { Compass, PhoneCall } from "lucide-react";
+import { Compass, PhoneCall, Heart } from "lucide-react";
+import { voiceEngine } from "@/lib/voice-engine";
 
 export default function IdeaPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isGateOpen, setIsGateOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
 
   useEffect(() => {
     setProfile(getStoredProfile());
@@ -28,15 +29,19 @@ export default function IdeaPage() {
     saveStoredProfile(updated);
   };
 
-  const handleOpenLiveCall = () => {
-    if (isAccessGranted()) {
-      setIsLiveCallOpen(true);
-    } else {
-      setIsGateOpen(true);
-    }
+  const handleLogout = () => {
+    logoutUser();
+    setProfile(null);
   };
 
-  if (!profile) return null;
+  const handleOpenLiveCall = () => {
+    if (!profile) {
+      setIsAuthOpen(true);
+      return;
+    }
+    voiceEngine.unlock();
+    setIsLiveCallOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
@@ -44,11 +49,15 @@ export default function IdeaPage() {
         onOpenLiveCall={handleOpenLiveCall}
         onOpenPricing={() => setIsPricingOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        companionName={profile.companionName}
-        companionGender={profile.companionGender}
+        onOpenAuth={() => setIsAuthOpen(true)}
+        onLogout={handleLogout}
+        isLoggedIn={Boolean(profile)}
+        userName={profile?.name}
+        companionName={profile?.companionName}
+        companionGender={profile?.companionGender}
       />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16">
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16 animate-fade-in">
         <IdeaPhilosophySection />
 
         <div className="glass-sanctuary rounded-3xl p-6 sm:p-10 border border-cream-300 shadow-warm-md text-center max-w-2xl mx-auto">
@@ -65,35 +74,51 @@ export default function IdeaPage() {
           </p>
 
           <button
-            onClick={handleOpenLiveCall}
+            onClick={() => {
+              if (profile) handleOpenLiveCall();
+              else setIsAuthOpen(true);
+            }}
             className="hearth-button inline-flex items-center gap-2.5 font-sans font-semibold text-xs px-8 py-3.5 rounded-full active:scale-95 transition-all shadow-xl shadow-sun-500/25"
           >
-            <PhoneCall size={16} className="animate-pulse" />
-            <span>Rozpocznij rozmowę z {profile.companionName}</span>
+            {profile ? (
+              <>
+                <PhoneCall size={16} className="animate-pulse" />
+                <span>Rozpocznij rozmowę z {profile.companionName}</span>
+              </>
+            ) : (
+              <>
+                <Heart size={16} />
+                <span>Spotkaj się ze swoim przyjacielem</span>
+              </>
+            )}
           </button>
         </div>
       </main>
 
       <BottomNav />
 
-      <LiveVoiceCallModal
-        isOpen={isLiveCallOpen}
-        onClose={() => setIsLiveCallOpen(false)}
-        profile={profile}
-        onNewMessage={() => {}}
-      />
+      {profile && (
+        <LiveVoiceCallModal
+          isOpen={isLiveCallOpen}
+          onClose={() => setIsLiveCallOpen(false)}
+          profile={profile}
+          onNewMessage={() => {}}
+        />
+      )}
 
-      <CompanionSettingsModal
-        isOpen={isSettingsOpen}
-        onClose={() => setIsSettingsOpen(false)}
-        profile={profile}
-        onSaveProfile={handleSaveProfile}
-      />
+      {profile && (
+        <CompanionSettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          profile={profile}
+          onSaveProfile={handleSaveProfile}
+        />
+      )}
 
-      <AccessGateModal
-        isOpen={isGateOpen}
-        onClose={() => setIsGateOpen(false)}
-        onSuccess={() => setIsLiveCallOpen(true)}
+      <AuthAndOnboardingModal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        onSuccess={(p) => setProfile(p)}
       />
 
       <SubscriptionModal

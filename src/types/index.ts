@@ -41,6 +41,15 @@ export interface OvercomeCrisis {
   strengthDemonstrated: string;
 }
 
+export interface VictoryLetter {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  tag: string;
+  audioUrl?: string;
+}
+
 export interface MessageVoiceMeta {
   durationSeconds: number;
   waveform: number[];
@@ -63,12 +72,12 @@ export interface Message {
 }
 
 export interface UserProfile {
-  id?: string;
-  userId?: string;
+  id: string;
+  email?: string;
   name: string;
   companionName: string;
-  companionGender?: "female" | "male" | "neutral";
-  companionVoice?: "nova" | "shimmer" | "echo" | "onyx" | "fable" | "alloy" | string;
+  companionGender: "female" | "male" | "neutral";
+  companionVoice: string; // "nova" (Agata) | "shimmer" (Paula) | "echo" (Maciej) | "onyx" (Paweł)
   preferredTone: "warm_gentle" | "calm_grounding" | "deep_philosophical" | "uplifting_coach";
   daysTogether: number;
   currentMood: MoodType;
@@ -76,16 +85,10 @@ export interface UserProfile {
   lastActive?: string;
   subscriptionActive: boolean;
   proactiveRemindersEnabled?: boolean;
-  peopleInLife?: PersonInLife[];
-  memories?: LifeMemoryFact[];
-  overcomeCrises?: OvercomeCrisis[];
-  victoryLetters?: {
-    id: string;
-    title: string;
-    content: string;
-    date: string;
-    tag: string;
-  }[];
+  peopleInLife: PersonInLife[];
+  memories: LifeMemoryFact[];
+  overcomeCrises: OvercomeCrisis[];
+  victoryLetters: VictoryLetter[];
 }
 
 export type SoundscapeType = "fireplace" | "rain" | "ocean" | "alpha_waves" | "forest";
