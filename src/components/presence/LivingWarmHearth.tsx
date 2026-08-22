@@ -21,7 +21,6 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animFrameRef = useRef<number | null>(null);
-  const mouseRef = useRef<{ x: number; y: number; active: boolean }>({ x: 0, y: 0, active: false });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,31 +46,15 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
       hue: 36 + Math.random() * 18, // Miodowo-złoty bursztyn
     }));
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      mouseRef.current = {
-        x: (e.clientX - rect.left - size / 2) * 0.15,
-        y: (e.clientY - rect.top - size / 2) * 0.15,
-        active: true,
-      };
-    };
-
-    const handleMouseLeave = () => {
-      mouseRef.current.active = false;
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    canvas.addEventListener("mouseleave", handleMouseLeave);
-
     const render = () => {
       time += 0.018;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.save();
       ctx.scale(dpr, dpr);
 
-      // Płynne podążanie za ruchem
-      const targetX = size / 2 + (mouseRef.current.active ? mouseRef.current.x : 0);
-      const targetY = size / 2 + (mouseRef.current.active ? mouseRef.current.y : 0);
+      // Słońce jest zawsze idealnie stabilne w centrum (bez uciekania za myszą)
+      const targetX = size / 2;
+      const targetY = size / 2;
 
       // Harmoniczny rytm oddechu i reakcja na głos
       const pulseSpeed = isSpeaking ? 3.4 : isListening ? 2.2 : 1.15;
@@ -195,7 +178,6 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
       if (animFrameRef.current) {
         cancelAnimationFrame(animFrameRef.current);
       }
-      window.removeEventListener("mousemove", handleMouseMove);
     };
   }, [isListening, isSpeaking, intensity, size]);
 
