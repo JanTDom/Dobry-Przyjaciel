@@ -2,12 +2,12 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, MicOff, PhoneOff, Flame, CloudRain, Waves, MessageSquare } from "lucide-react";
+import { Mic, MicOff, PhoneOff, MessageSquare, Check, X, ChevronDown, ChevronUp, Compass } from "lucide-react";
 import { LivingWarmHearth } from "@/components/presence/LivingWarmHearth";
 import { voiceEngine } from "@/lib/voice-engine";
-import { soundscapeEngine, SoundscapeType } from "@/lib/audio-synthesizer";
 import { getCompanionReplyAsync } from "@/lib/companion-personality";
 import { UserProfile, Message } from "@/types";
+import Link from "next/link";
 
 interface LiveVoiceCallModalProps {
   isOpen: boolean;
@@ -24,12 +24,15 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 }) => {
   const [isListening, setIsListening] = useState(true);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [liveTranscript, setLiveTranscript] = useState("");
   const [companionText, setCompanionText] = useState(
-    `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`
+    `Cześć, ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie — słucham Cię.`
   );
-  const [activeSoundscape, setActiveSoundscape] = useState<SoundscapeType | null>(null);
   const [callDuration, setCallDuration] = useState(0);
+  const [isCallEnded, setIsCallEnded] = useState(false);
+  const [showTranscriptDrawer, setShowTranscriptDrawer] = useState(false);
+  const [sessionMessages, setSessionMessages] = useState<Message[]>([]);
 
   const durationTimerRef = useRef<any>(null);
   const companionVoice = profile.companionVoice || (profile.companionGender === "male" ? "echo" : "nova");
@@ -38,22 +41,21 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     if (!isOpen) {
       voiceEngine.stopLiveDialogue();
       if (durationTimerRef.current) clearInterval(durationTimerRef.current);
+      setIsCallEnded(false);
+      setSessionMessages([]);
       return;
     }
 
     voiceEngine.unlock();
     setCallDuration(0);
+    setIsCallEnded(false);
+    setShowTranscriptDrawer(false);
+
     durationTimerRef.current = setInterval(() => {
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
-    soundscapeEngine.stop();
-    if (activeSoundscape) {
-      soundscapeEngine.play(activeSoundscape);
-      soundscapeEngine.setVolume(0.2);
-    }
-
-    const greetingText = `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie i mów do mnie swobodnie — słucham cię.`;
+    const greetingText = `Cześć, ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie — słucham Cię.`;
     setCompanionText(greetingText);
 
     // Odtwarzamy przywitanie natychmiast
@@ -72,23 +74,32 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           createdAt: new Date().toISOString(),
         };
         onNewMessage(userMsg);
+        setSessionMessages((prev) => [...prev, userMsg]);
         setLiveTranscript(capturedUserText);
+        setIsProcessing(true);
 
-        const reply = await getCompanionReplyAsync(capturedUserText, profile);
-        setCompanionText(reply.text);
+        try {
+          const reply = await getCompanionReplyAsync(capturedUserText, profile);
+          setCompanionText(reply.text);
 
-        const companionMsg: Message = {
-          id: "msg_" + (Date.now() + 1),
-          userId: profile.id,
-          sender: "companion",
-          text: reply.text,
-          messageType: "voice",
-          moodContext: reply.moodContext,
-          createdAt: new Date().toISOString(),
-        };
-        onNewMessage(companionMsg);
+          const companionMsg: Message = {
+            id: "msg_" + (Date.now() + 1),
+            userId: profile.id,
+            sender: "companion",
+            text: reply.text,
+            messageType: "voice",
+            moodContext: reply.moodContext,
+            createdAt: new Date().toISOString(),
+          };
+          onNewMessage(companionMsg);
+          setSessionMessages((prev) => [...prev, companionMsg]);
 
-        voiceEngine.speak(reply.text, undefined, companionVoice);
+          voiceEngine.speak(reply.text, undefined, companionVoice);
+        } catch (e) {
+          console.error("Conversation error:", e);
+        } finally {
+          setIsProcessing(false);
+        }
       },
       (state) => {
         setIsListening(state.isListening);
@@ -107,15 +118,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     };
   }, [isOpen, profile]);
 
-  const handleToggleSoundscape = (type: SoundscapeType) => {
-    if (activeSoundscape === type) {
-      soundscapeEngine.stop();
-      setActiveSoundscape(null);
-    } else {
-      soundscapeEngine.play(type);
-      soundscapeEngine.setVolume(0.25);
-      setActiveSoundscape(type);
-    }
+  const handleEndCallClick = () => {
+    voiceEngine.stopLiveDialogue();
+    voiceEngine.stopSpeaking();
+    if (durationTimerRef.current) clearInterval(durationTimerRef.current);
+    setIsCallEnded(true);
   };
 
   const formatDuration = (seconds: number) => {
@@ -132,124 +139,149 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-gradient-to-b from-amber-50/98 via-cream-100/98 to-orange-50/95 backdrop-blur-2xl px-6 py-8 select-none text-cream-950"
+        className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-paper/98 backdrop-blur-2xl px-6 py-8 select-none text-ink"
       >
-        <div className="w-full max-w-xl flex items-center justify-between">
-          <div className="flex items-center gap-3 bg-white/80 border border-cream-300 px-4 py-1.5 rounded-full shadow-warm-sm">
-            <div className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-            <div className="text-xs text-cream-700 font-sans tracking-wide font-medium">
-              Rozmowa na żywo z {profile.companionName} • {formatDuration(callDuration)}
+        {/* Widok w trakcie rozmowy */}
+        {!isCallEnded ? (
+          <>
+            {/* Górny dyskretny status */}
+            <div className="w-full max-w-lg flex items-center justify-between">
+              <div className="flex items-center gap-2.5 bg-paper-surface border border-ink/8 px-4 py-1.5 rounded-full shadow-quiet-sm">
+                <div className="w-2 h-2 rounded-full bg-warm-amber animate-pulse" />
+                <span className="text-xs text-ink-muted font-sans font-medium">
+                  {profile.companionName} • {formatDuration(callDuration)}
+                </span>
+              </div>
+
+              <button
+                onClick={() => setShowTranscriptDrawer(!showTranscriptDrawer)}
+                className="flex items-center gap-1.5 text-xs text-ink-muted hover:text-ink px-3 py-1.5 rounded-full bg-paper-surface border border-ink/8 transition-colors"
+              >
+                <MessageSquare size={13} strokeWidth={1.75} />
+                <span>Napisz / Tekst</span>
+                {showTranscriptDrawer ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+              </button>
+            </div>
+
+            {/* Centralna żywa obecność */}
+            <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg w-full">
+              <div className="relative mb-6">
+                <LivingWarmHearth
+                  isListening={isListening}
+                  isSpeaking={isSpeaking}
+                  size={290}
+                  intensity={isSpeaking ? 0.65 : isListening ? 0.35 : isProcessing ? 0.5 : 0.2}
+                />
+              </div>
+
+              <div className="text-xs font-medium tracking-wide text-ink-muted mb-3">
+                {isSpeaking
+                  ? `${profile.companionName} mówi`
+                  : isProcessing
+                  ? "Zastanawiam się..."
+                  : isListening
+                  ? "Słucham Cię uważnie..."
+                  : "Jestem przy Tobie"}
+              </div>
+
+              <div className="min-h-[70px] flex items-center justify-center px-4">
+                <p className="font-serif text-lg md:text-xl text-ink leading-relaxed max-w-md italic">
+                  {isSpeaking
+                    ? `„${companionText}”`
+                    : liveTranscript
+                    ? `„${liveTranscript}”`
+                    : "Mów swobodnie. Jestem obok."}
+                </p>
+              </div>
+
+              {/* Opcjonalny rozwijany podgląd transkrypcji */}
+              {showTranscriptDrawer && (
+                <div className="mt-4 w-full max-h-48 overflow-y-auto bg-paper-surface border border-ink/8 rounded-card p-4 text-left text-xs font-sans text-ink space-y-2 shadow-quiet-md animate-fade-in">
+                  <div className="text-[10px] uppercase tracking-wider text-ink-subtle font-semibold border-b border-ink/8 pb-1">
+                    Historia rozmowy
+                  </div>
+                  {sessionMessages.length === 0 ? (
+                    <p className="text-ink-subtle italic">Brak zapisanych wypowiedzi w tej sesji.</p>
+                  ) : (
+                    sessionMessages.map((m, idx) => (
+                      <div key={idx} className={m.sender === "user" ? "text-right" : "text-left"}>
+                        <span className="font-semibold text-ink-muted">
+                          {m.sender === "user" ? profile.name : profile.companionName}:
+                        </span>{" "}
+                        <span className="text-ink">{m.text}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Dolne kontrolki rozmowy */}
+            <div className="w-full max-w-md flex items-center justify-center gap-5 pt-4">
+              <button
+                onClick={() => {
+                  if (isListening) {
+                    voiceEngine.stopLiveDialogue();
+                    setIsListening(false);
+                  } else {
+                    voiceEngine.startLiveDialogue();
+                    setIsListening(true);
+                  }
+                }}
+                className={`p-4 rounded-full transition-all shadow-quiet-sm ${
+                  isListening
+                    ? "bg-white text-ink border border-ink/10 hover:bg-paper-dark"
+                    : "bg-amber-100 text-amber-800 border border-amber-300"
+                }`}
+                title={isListening ? "Wstrzymaj mikrofon" : "Włącz mikrofon"}
+              >
+                {isListening ? <Mic size={20} strokeWidth={1.75} /> : <MicOff size={20} strokeWidth={1.75} />}
+              </button>
+
+              <button
+                onClick={handleEndCallClick}
+                className="flex items-center gap-2.5 bg-ink hover:bg-black text-paper font-sans font-medium px-8 py-3.5 rounded-full shadow-quiet-md transition-all active:scale-95 text-xs tracking-wide"
+              >
+                <PhoneOff size={16} strokeWidth={1.75} />
+                <span>Zakończ rozmowę</span>
+              </button>
+            </div>
+          </>
+        ) : (
+          /* Ekran relacyjny po zakończeniu rozmowy */
+          <div className="my-auto max-w-lg w-full text-center flex flex-col items-center animate-fade-in">
+            <div className="mb-4">
+              <LivingWarmHearth size={160} intensity={0.25} />
+            </div>
+
+            <h2 className="font-serif text-3xl sm:text-4xl text-ink font-normal tracking-tight mb-3">
+              Dobrze było Cię usłyszeć.
+            </h2>
+
+            <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed max-w-md mb-8">
+              Pamiętam to, o czym rozmawialiśmy. Jeśli chcesz, następnym razem wrócimy do tych spraw.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+              <button
+                onClick={onClose}
+                className="presence-btn-primary flex items-center justify-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full"
+              >
+                <Check size={14} strokeWidth={2} />
+                <span>Zapamiętaj i wróć do przystani</span>
+              </button>
+
+              <Link
+                href="/memory"
+                onClick={onClose}
+                className="presence-btn-secondary flex items-center justify-center gap-2 text-xs font-sans px-6 py-3.5 rounded-full"
+              >
+                <Compass size={14} strokeWidth={1.75} />
+                <span>Zobacz, co pamiętam</span>
+              </Link>
             </div>
           </div>
-
-          <div className="flex items-center gap-1.5 bg-white/80 border border-cream-300 rounded-full px-3 py-1 shadow-warm-sm">
-            <button
-              onClick={() => handleToggleSoundscape("fireplace")}
-              className={`p-1.5 rounded-full transition-all ${
-                activeSoundscape === "fireplace"
-                  ? "bg-sun-100 text-sun-700 border border-sun-300"
-                  : "text-cream-400 hover:text-cream-700"
-              }`}
-              title="Trzaskający kominek"
-            >
-              <Flame size={15} />
-            </button>
-            <button
-              onClick={() => handleToggleSoundscape("rain")}
-              className={`p-1.5 rounded-full transition-all ${
-                activeSoundscape === "rain"
-                  ? "bg-sky-100 text-sky-700 border border-sky-300"
-                  : "text-cream-400 hover:text-cream-700"
-              }`}
-              title="Kojący deszcz"
-            >
-              <CloudRain size={15} />
-            </button>
-            <button
-              onClick={() => handleToggleSoundscape("alpha_waves")}
-              className={`p-1.5 rounded-full transition-all ${
-                activeSoundscape === "alpha_waves"
-                  ? "bg-amber-100 text-amber-700 border border-amber-300"
-                  : "text-cream-400 hover:text-cream-700"
-              }`}
-              title="Fale alfa 8Hz"
-            >
-              <Waves size={15} />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg w-full">
-          <div className="relative mb-6">
-            <LivingWarmHearth
-              isListening={isListening}
-              isSpeaking={isSpeaking}
-              size={320}
-              intensity={isSpeaking ? 0.8 : isListening ? 0.4 : 0.2}
-            />
-          </div>
-
-          <motion.div
-            key={isSpeaking ? "speaking" : isListening ? "listening" : "idle"}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-xs font-semibold tracking-wider uppercase text-sun-700 mb-4 bg-sun-100/80 px-4 py-1 rounded-full border border-sun-300/60"
-          >
-            {isSpeaking
-              ? `${profile.companionName} mówi...`
-              : isListening
-              ? "Słucham cię uważnie..."
-              : "Jestem przy tobie"}
-          </motion.div>
-
-          <div className="min-h-[100px] flex items-center justify-center px-4">
-            <p className="font-serif text-lg md:text-2xl text-cream-950 leading-relaxed max-w-md">
-              {isSpeaking
-                ? companionText
-                : liveTranscript
-                ? `„${liveTranscript}”`
-                : "Mów śmiało. Nie musisz niczego klikać, po prostu opowiedz mi o swoim dniu."}
-            </p>
-          </div>
-        </div>
-
-        <div className="w-full max-w-md flex items-center justify-center gap-6 pt-6 border-t border-cream-300/80">
-          <button
-            onClick={() => {
-              if (isListening) {
-                voiceEngine.stopLiveDialogue();
-                setIsListening(false);
-              } else {
-                voiceEngine.startLiveDialogue();
-                setIsListening(true);
-              }
-            }}
-            className={`p-4 rounded-full transition-all shadow-warm-sm ${
-              isListening
-                ? "bg-white text-cream-800 hover:bg-cream-100 border border-cream-300"
-                : "bg-rose-100 text-rose-700 border border-rose-300"
-            }`}
-            title={isListening ? "Wycisz mikrofon" : "Włącz mikrofon"}
-          >
-            {isListening ? <Mic size={22} /> : <MicOff size={22} />}
-          </button>
-
-          <button
-            onClick={onClose}
-            className="flex items-center gap-3 bg-rose-600 hover:bg-rose-700 text-white font-medium px-8 py-4 rounded-full shadow-lg shadow-rose-600/30 transition-all active:scale-95"
-          >
-            <PhoneOff size={20} />
-            <span className="text-sm tracking-wide">Zakończ rozmowę</span>
-          </button>
-
-          <button
-            onClick={onClose}
-            className="p-4 rounded-full bg-white text-cream-800 hover:bg-cream-100 border border-cream-300 shadow-warm-sm transition-all"
-            title="Przejdź do cichego pisania"
-          >
-            <MessageSquare size={22} />
-          </button>
-        </div>
+        )}
       </motion.div>
     </AnimatePresence>
   );

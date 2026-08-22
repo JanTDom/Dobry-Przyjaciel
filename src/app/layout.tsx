@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Dobry Przyjaciel | Twój osobisty, oddany przyjaciel ze sztuczną inteligencją",
-  description: "Ciepły, ludzki głos, żywa pamięć relacji, uziemienie emocjonalne i bezpieczna przystań. Twój osobisty przyjaciel, który zawsze ma dla ciebie czas.",
+  title: "Dobry Przyjaciel | Ktoś, kto pamięta. Ktoś, kto ma czas.",
+  description: "Ciepły, naturalny głos, żywa pamięć relacji i bezpieczna przystań. Ktoś, kto pamięta i ma dla Ciebie czas.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FAF7F2",
+  themeColor: "#F6F1EA",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -29,10 +29,16 @@ export default function RootLayout({
     <html lang="pl">
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=Plus+Jakarta+Sans:wght@200..800&display=swap"
+          rel="stylesheet"
+        />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
       </head>
-      <body className="bg-cream-100 text-cream-900 min-h-screen antialiased selection:bg-sun-500/20 selection:text-cream-950 font-sans">
+      <body className="bg-paper text-ink min-h-screen antialiased font-sans">
         {children}
       </body>
     </html>

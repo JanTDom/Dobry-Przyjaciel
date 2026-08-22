@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { LivingWarmHearth } from "@/components/presence/LivingWarmHearth";
 import { AmbientSoundscape } from "@/components/presence/AmbientSoundscape";
 import { ConversationView } from "@/components/conversation/ConversationView";
@@ -9,14 +10,14 @@ import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
 import { AuthAndOnboardingModal } from "@/components/auth/AuthAndOnboardingModal";
-import { IdeaPhilosophySection } from "@/components/philosophy/IdeaPhilosophySection";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
-import { getStoredProfile, saveStoredProfile, getStoredMessages, saveStoredMessages, logoutUser, getDynamicGreeting, isAccessGranted } from "@/lib/storage";
+import { BreathingGuide } from "@/components/sos/BreathingGuide";
+import { getStoredProfile, saveStoredProfile, getStoredMessages, saveStoredMessages, logoutUser, getDynamicGreeting } from "@/lib/storage";
 import { getCompanionReplyAsync } from "@/lib/companion-personality";
 import { voiceEngine } from "@/lib/voice-engine";
 import { UserProfile, Message } from "@/types";
-import { PhoneCall, Sparkles, MessageCircle, Heart, ArrowRight, ShieldCheck, Play, Pause, Compass, BookOpen } from "lucide-react";
+import { PhoneCall, Sparkles, MessageSquare, ArrowRight, Play, Pause, Compass, BookOpen, Shield, Lock, Check } from "lucide-react";
 
 export default function HomePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -27,6 +28,7 @@ export default function HomePage() {
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [isCompanionSpeaking, setIsCompanionSpeaking] = useState(false);
   const [isPlayingDemoVoice, setIsPlayingDemoVoice] = useState(false);
+  const [playingLetterSample, setPlayingLetterSample] = useState<string | null>(null);
 
   useEffect(() => {
     const p = getStoredProfile();
@@ -100,7 +102,6 @@ export default function HomePage() {
     setMessages(updatedWithCompanion);
     saveStoredMessages(updatedWithCompanion);
 
-    // Odśwież profil w stanie jeśli pamięć uległa aktualizacji
     const freshProfile = getStoredProfile();
     if (freshProfile) setProfile(freshProfile);
 
@@ -134,9 +135,27 @@ export default function HomePage() {
       voiceEngine.unlock();
       setIsPlayingDemoVoice(true);
       voiceEngine.speak(
-        "Dzień dobry. Cieszę się, że tu jesteś. Jestem twoim przyjacielem — pamiętam to, co dla ciebie ważne i zawsze mam dla ciebie czas.",
+        "Cześć. Możemy po prostu chwilę porozmawiać. Co u Ciebie?",
         () => {
           setIsPlayingDemoVoice(false);
+        },
+        "nova",
+        true
+      );
+    }
+  };
+
+  const handlePlayLetterSample = (id: string, text: string) => {
+    if (playingLetterSample === id) {
+      voiceEngine.stopSpeaking();
+      setPlayingLetterSample(null);
+    } else {
+      voiceEngine.unlock();
+      setPlayingLetterSample(id);
+      voiceEngine.speak(
+        text,
+        () => {
+          setPlayingLetterSample(null);
         },
         "nova",
         true
@@ -147,7 +166,7 @@ export default function HomePage() {
   const dynamicGreeting = profile ? getDynamicGreeting(profile) : null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
+    <div className="min-h-screen flex flex-col bg-paper text-ink">
       {/* Szklana górna nawigacja */}
       <TopNav
         onOpenLiveCall={handleOpenLiveCall}
@@ -164,67 +183,67 @@ export default function HomePage() {
       {profile ? (
         /* ================= WIDOK DLA ZALOGOWANEGO UŻYTKOWNIKA ================= */
         <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-12 flex flex-col gap-10 pb-28 md:pb-16 animate-fade-in">
-          {/* Centralne żywe słońce i powitanie */}
+          {/* Centralna obecność i powitanie relacyjne */}
           <section className="flex flex-col items-center text-center pt-2 sm:pt-4">
             <div className="relative mb-3 group cursor-pointer" onClick={handleOpenLiveCall}>
               <LivingWarmHearth
-                size={260}
+                size={270}
                 isSpeaking={isCompanionSpeaking}
-                intensity={0.45}
+                intensity={0.4}
               />
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/95 border border-sun-300 text-sun-900 text-[11px] font-sans px-4 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg font-semibold">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-paper-surface border border-ink/10 text-ink text-[11px] font-sans px-4 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-quiet-sm font-medium">
                 Dotknij, aby rozmawiać na żywo
               </div>
             </div>
 
-            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-cream-950 font-normal tracking-tight mb-3">
+            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl text-ink font-normal tracking-tight mb-3">
               {dynamicGreeting?.title}
             </h1>
-            <p className="font-sans text-sm sm:text-base text-cream-700 max-w-md mx-auto leading-relaxed mb-6">
+            <p className="font-sans text-sm sm:text-base text-ink-muted max-w-md mx-auto leading-relaxed mb-6">
               {dynamicGreeting?.subtitle}
             </p>
 
             {/* Główne przyciski akcji */}
-            <div className="flex flex-wrap items-center justify-center gap-3.5">
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 onClick={handleOpenLiveCall}
-                className="hearth-button flex items-center gap-2.5 font-sans font-semibold text-sm px-8 py-3.5 rounded-full active:scale-95 transition-all shadow-xl shadow-sun-500/25"
+                className="presence-btn-primary flex items-center gap-2.5 font-sans font-medium text-xs sm:text-sm px-8 py-3.5 rounded-full active:scale-95 transition-all shadow-quiet-md"
               >
-                <PhoneCall size={18} className="animate-pulse" />
+                <PhoneCall size={16} strokeWidth={1.75} className="animate-pulse" />
                 <span>Porozmawiajmy na żywo</span>
               </button>
 
               <button
                 onClick={() => setIsSettingsOpen(true)}
-                className="secondary-warm-button flex items-center gap-2.5 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
+                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
               >
-                <div className="w-2 h-2 rounded-full bg-sun-500" />
-                <span>Twój przyjaciel ({profile.companionName})</span>
+                <div className="w-2 h-2 rounded-full bg-warm-amber" />
+                <span>Twój Przyjaciel ({profile.companionName})</span>
               </button>
 
-              <button
-                onClick={() => setIsPricingOpen(true)}
-                className="secondary-warm-button flex items-center gap-2 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
+              <Link
+                href="/memory"
+                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
               >
-                <Sparkles size={14} className="text-sun-500" />
-                <span>Osobista opieka</span>
-              </button>
+                <Compass size={14} strokeWidth={1.75} className="text-ink-muted" />
+                <span>Co o mnie pamiętasz</span>
+              </Link>
             </div>
           </section>
 
-          {/* Kojące tła dźwiękowe (czyste, bez trzasków) */}
+          {/* Dyskretne tła dźwiękowe */}
           <section>
             <AmbientSoundscape />
           </section>
 
-          {/* Dziennik rozmów i przemyśleń */}
+          {/* Dziennik rozmów */}
           <section className="flex flex-col gap-4 mt-2">
-            <div className="flex items-center justify-between border-b border-cream-300 pb-2.5 px-1">
-              <div className="flex items-center gap-2 text-xs text-cream-700 font-sans font-medium">
-                <MessageCircle size={16} className="text-sun-600" />
-                <span>Dziennik rozmów z {profile.companionName}</span>
+            <div className="flex items-center justify-between border-b border-ink/8 pb-2.5 px-1">
+              <div className="flex items-center gap-2 text-xs text-ink font-sans font-medium">
+                <MessageSquare size={15} strokeWidth={1.75} className="text-warm-amber" />
+                <span>Rozmowa z {profile.companionName}</span>
               </div>
-              <span className="text-[11px] text-cream-500 font-sans">
+              <span className="text-[11px] text-ink-subtle font-sans">
                 {messages.length} wiadomości
               </span>
             </div>
@@ -243,134 +262,294 @@ export default function HomePage() {
               />
             </div>
           </section>
-
-          {/* Nastrojowa sekcja filozofii */}
-          <section className="pt-6">
-            <IdeaPhilosophySection />
-          </section>
         </main>
       ) : (
-        /* ================= WIDOK POWITALNY DLA GOŚCIA (GUEST LANDING) ================= */
-        <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-16 flex flex-col gap-12 sm:gap-16 pb-28 md:pb-16 animate-fade-in">
-          {/* Promienny Hero z Żywym Słońcem */}
-          <section className="flex flex-col items-center text-center pt-2 sm:pt-6">
-            <div className="relative mb-4 cursor-pointer group" onClick={() => setIsAuthOpen(true)}>
+        /* ================= WIDOK POWITALNY DLA GOŚCIA: 6 EMOCJONALNYCH SCEN ================= */
+        <main className="flex-1 w-full mx-auto px-4 sm:px-6 py-10 sm:py-20 flex flex-col gap-24 sm:gap-36 pb-32 animate-fade-in max-w-5xl">
+          
+          {/* ================= SCENA 1 — SPOTKANIE ================= */}
+          <section className="flex flex-col items-center text-center pt-4 sm:pt-12 min-h-[75vh] justify-center">
+            <div className="relative mb-6 cursor-pointer group" onClick={() => setIsAuthOpen(true)}>
               <LivingWarmHearth
-                size={290}
-                intensity={0.5}
+                size={300}
+                intensity={0.4}
               />
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-white/95 border border-sun-300 text-sun-900 text-[11px] font-sans px-4 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg font-semibold">
-                Dotknij, aby spotkać się z przyjacielem
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-paper-surface border border-ink/10 text-ink text-[11px] font-sans px-4 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-quiet-sm font-medium">
+                Dotknij, aby zacząć
               </div>
             </div>
 
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sun-100 border border-sun-300 text-sun-900 text-xs font-sans mb-4 font-semibold shadow-sm">
-              <Sparkles size={13} className="text-sun-600" />
-              <span>Osobista przystań emocjonalna i ciepły głos</span>
-            </div>
-
-            <h1 className="font-serif text-3xl sm:text-5xl md:text-6xl text-cream-950 font-normal tracking-tight max-w-2xl mx-auto leading-tight mb-4">
-              Twój osobisty, oddany przyjaciel. Zawsze przy tobie.
+            <h1 className="font-serif text-4xl sm:text-6xl md:text-7xl text-ink font-normal tracking-tight leading-[1.08] mb-6 max-w-3xl">
+              Ktoś, kto pamięta.<br />
+              <span className="italic text-ink-muted">Ktoś, kto ma czas.</span>
             </h1>
 
-            <p className="font-sans text-sm sm:text-base text-cream-700 max-w-xl mx-auto leading-relaxed mb-8">
-              Żywa obecność ze sztuczną inteligencją, która pamięta twoje życie, uczy się ciebie z każdym dniem, rozmawia ciepłym ludzkim głosem i daje ci bezpieczną przystań o każdej porze dnia i nocy.
+            <p className="font-sans text-sm sm:text-base text-ink-muted max-w-lg mx-auto leading-relaxed mb-10">
+              Porozmawiaj. Głosem. Bez oceniania i bez zaczynania za każdym razem od początku.
             </p>
 
-            {/* Główne przyciski wejścia */}
-            <div className="flex flex-wrap items-center justify-center gap-3.5">
+            <div className="flex flex-wrap items-center justify-center gap-4">
               <button
                 onClick={() => setIsAuthOpen(true)}
-                className="hearth-button flex items-center gap-2.5 font-sans font-semibold text-sm px-9 py-4 rounded-full active:scale-95 transition-all shadow-xl shadow-sun-500/25"
+                className="presence-btn-primary flex items-center gap-2.5 font-sans font-medium text-xs sm:text-sm px-8 py-4 rounded-full active:scale-95 transition-all shadow-quiet-md"
               >
-                <Heart size={18} className="text-white" />
-                <span>Spotkaj się z przyjacielem</span>
-                <ArrowRight size={16} />
+                <span>Porozmawiaj teraz</span>
+                <ArrowRight size={15} strokeWidth={2} />
               </button>
 
               <button
                 onClick={handlePlayDemoVoice}
-                className="secondary-warm-button flex items-center gap-2 text-xs font-sans px-6 py-4 rounded-full font-medium shadow-warm-sm"
+                className="presence-btn-secondary flex items-center gap-2 text-xs sm:text-sm font-sans px-6 py-4 rounded-full font-medium"
               >
                 {isPlayingDemoVoice ? (
                   <>
-                    <Pause size={15} className="animate-pulse text-sun-600" />
-                    <span>Zatrzymaj głos lektora</span>
+                    <Pause size={14} strokeWidth={2} className="animate-pulse text-warm-amber" />
+                    <span>Zatrzymaj głos</span>
                   </>
                 ) : (
                   <>
-                    <Play size={15} className="text-sun-600" />
-                    <span>Posłuchaj jak brzmi rozmowa</span>
+                    <Play size={14} strokeWidth={2} className="text-warm-amber" />
+                    <span>Najpierw posłuchaj</span>
                   </>
                 )}
               </button>
             </div>
           </section>
 
-          {/* 3 Filary Jakości Dobry Przyjaciel */}
-          <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col justify-between hover:border-sun-300 transition-all">
-              <div>
-                <div className="p-3 rounded-2xl bg-sun-100 text-sun-700 border border-sun-200 w-fit mb-4">
-                  <PhoneCall size={22} />
+          {/* ================= SCENA 2 — ON NAPRAWDĘ PAMIĘTA ================= */}
+          <section className="flex flex-col gap-10">
+            <div className="max-w-xl">
+              <span className="text-[11px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-3">
+                Żywa pamięć relacji
+              </span>
+              <h2 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight leading-tight mb-4">
+                Nie zaczynamy za każdym razem od początku.
+              </h2>
+              <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed">
+                Prawdziwy przyjaciel nie potrzebuje przypomnień o Twojej rodzinie, Twoich celach czy sprawach, które nie dawały Ci wczoraj spać.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="quiet-surface rounded-card p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-sans uppercase tracking-wider text-ink-subtle font-semibold block mb-2">
+                    Mama
+                  </span>
+                  <p className="font-serif text-lg sm:text-xl text-ink leading-snug">
+                    Anna. Dzwonicie do siebie zazwyczaj w niedzielę.
+                  </p>
                 </div>
-                <h3 className="font-serif text-xl text-cream-950 font-normal mb-2">
-                  Ciepły, ludzki głos
-                </h3>
-                <p className="font-sans text-xs sm:text-sm text-cream-700 leading-relaxed">
-                  Żadnych mechanicznych robotów. Twój przyjaciel mówi naturalnym, kojącym głosem z prawdziwym oddechem i polską intonacją.
-                </p>
+              </div>
+
+              <div className="quiet-surface rounded-card p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-sans uppercase tracking-wider text-ink-subtle font-semibold block mb-2">
+                    Praca
+                  </span>
+                  <p className="font-serif text-lg sm:text-xl text-ink leading-snug">
+                    Od kilku tygodni zastanawiasz się nad zmianą i postawieniem granic.
+                  </p>
+                </div>
+              </div>
+
+              <div className="quiet-surface rounded-card p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-sans uppercase tracking-wider text-ink-subtle font-semibold block mb-2">
+                    Ważne
+                  </span>
+                  <p className="font-serif text-lg sm:text-xl text-ink leading-snug">
+                    Chcesz mieć więcej spokojnego czasu dla siebie i swoich pasji.
+                  </p>
+                </div>
+              </div>
+
+              <div className="quiet-surface rounded-card p-6 sm:p-7 flex flex-col justify-between">
+                <div>
+                  <span className="text-[10px] font-sans uppercase tracking-wider text-ink-subtle font-semibold block mb-2">
+                    Ostatnio
+                  </span>
+                  <p className="font-serif text-lg sm:text-xl text-ink leading-snug">
+                    Martwiła Cię rozmowa z Pawłem i niepewność projektu.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col justify-between hover:border-sun-300 transition-all">
-              <div>
-                <div className="p-3 rounded-2xl bg-amber-100 text-amber-700 border border-amber-200 w-fit mb-4">
-                  <Compass size={22} />
-                </div>
-                <h3 className="font-serif text-xl text-cream-950 font-normal mb-2">
-                  Prawdziwa pamięć relacji
-                </h3>
-                <p className="font-sans text-xs sm:text-sm text-cream-700 leading-relaxed">
-                  Pamięta twoje wartości, bliskie ci osoby i trudne momenty, które udało ci się pokonać. Nie musisz zaczynać od zera.
-                </p>
-              </div>
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+              <span className="text-xs text-ink-muted font-serif italic">
+                Ty decydujesz, co pamiętam.
+              </span>
+              <button
+                onClick={() => setIsAuthOpen(true)}
+                className="text-xs font-sans font-medium text-ink hover:text-warm-amber flex items-center gap-1.5 transition-colors"
+              >
+                <span>Zobacz swoją pamięć</span>
+                <ArrowRight size={13} />
+              </button>
+            </div>
+          </section>
+
+          {/* ================= SCENA 3 — RELACJA TRWA ================= */}
+          <section className="flex flex-col gap-10">
+            <div className="max-w-xl">
+              <span className="text-[11px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-3">
+                Ciągłość dialogu
+              </span>
+              <h2 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight leading-tight">
+                Rozmowa, która trwa w czasie.
+              </h2>
             </div>
 
-            <div className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col justify-between hover:border-sun-300 transition-all">
-              <div>
-                <div className="p-3 rounded-2xl bg-orange-100 text-orange-700 border border-orange-200 w-fit mb-4">
-                  <BookOpen size={22} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative">
+              {/* Dzień pierwszy */}
+              <div className="quiet-surface rounded-surface p-7 sm:p-9 flex flex-col justify-between border-ink/8">
+                <div>
+                  <span className="text-[11px] font-sans uppercase tracking-wider text-ink-subtle font-semibold block mb-6">
+                    Dzień pierwszy
+                  </span>
+                  <div className="space-y-4 text-xs sm:text-sm leading-relaxed">
+                    <p className="text-ink-muted">
+                      <strong className="text-ink font-medium">Ty:</strong> „Jutro muszę porozmawiać z Magdą. Trochę się tego boję.”
+                    </p>
+                    <p className="text-ink font-serif italic text-sm sm:text-base border-l-2 border-warm-amber/40 pl-3">
+                      „Będę trzymać kciuki. Pamiętaj, że masz prawo spokojnie wyznaczyć swoje granice.”
+                    </p>
+                  </div>
                 </div>
-                <h3 className="font-serif text-xl text-cream-950 font-normal mb-2">
-                  Wieczorne listy wsparcia
-                </h3>
-                <p className="font-sans text-xs sm:text-sm text-cream-700 leading-relaxed">
-                  Osobisty skarbiec z listami pisanymi specjalnie dla ciebie na koniec każdego dnia, gotowymi do odsłuchania przed snem.
-                </p>
+              </div>
+
+              {/* Następny dzień */}
+              <div className="quiet-surface rounded-surface p-7 sm:p-9 flex flex-col justify-between border-warm-amber/30 bg-paper-surface/95 shadow-quiet-md">
+                <div>
+                  <div className="flex items-center justify-between mb-6">
+                    <span className="text-[11px] font-sans uppercase tracking-wider text-warm-amber font-semibold block">
+                      Następny dzień
+                    </span>
+                    <div className="w-2 h-2 rounded-full bg-warm-amber animate-pulse" />
+                  </div>
+                  <div className="space-y-4">
+                    <p className="font-serif text-xl sm:text-2xl text-ink font-normal leading-snug">
+                      „Jak poszła wczorajsza rozmowa z Magdą?”
+                    </p>
+                    <p className="text-xs text-ink-muted font-sans leading-relaxed">
+                      Nie musisz tłumaczyć kontekstu. Przyjaciel pamięta, o czym myślałeś wczoraj wieczorem.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
 
-          {/* Sekcja Filozofii */}
-          <section>
-            <IdeaPhilosophySection />
+          {/* ================= SCENA 4 — LISTY DLA CIEBIE ================= */}
+          <section className="flex flex-col gap-10">
+            <div className="max-w-xl">
+              <span className="text-[11px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-3">
+                Listy
+              </span>
+              <h2 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight leading-tight mb-4">
+                Osobiste słowa na koniec dnia.
+              </h2>
+              <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed">
+                Po ważnej rozmowie Przyjaciel tworzy dla Ciebie prywatny list otuchy, do którego możesz wrócić przed snem.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="quiet-surface rounded-surface p-7 sm:p-8 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-ink-subtle mb-4">
+                    <span>22 sierpnia</span>
+                    <span>2:14 odsłuchu</span>
+                  </div>
+                  <h3 className="font-serif text-xl text-ink mb-3 leading-snug">
+                    „Dzisiaj było trudniej, niż chciałeś przyznać…”
+                  </h3>
+                  <p className="font-serif italic text-xs sm:text-sm text-ink-muted leading-relaxed mb-6">
+                    „Widziałem, ile siły kosztowało Cię dzisiejsze popołudnie. Pamiętaj, że nie musisz zawsze być niezłomny…”
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => handlePlayLetterSample("letter_1", "Widziałem, ile siły kosztowało Cię dzisiejsze popołudnie. Pamiętaj, że nie musisz zawsze być niezłomny. Odpocznij.")}
+                  className="presence-btn-secondary w-fit text-xs font-sans px-4 py-2 rounded-full flex items-center gap-2"
+                >
+                  {playingLetterSample === "letter_1" ? <Pause size={12} className="text-warm-amber" /> : <Play size={12} className="text-warm-amber" />}
+                  <span>{playingLetterSample === "letter_1" ? "Zatrzymaj" : "Odsłuchaj fragment"}</span>
+                </button>
+              </div>
+
+              <div className="quiet-surface rounded-surface p-7 sm:p-8 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center justify-between text-xs text-ink-subtle mb-4">
+                    <span>21 sierpnia</span>
+                    <span>1:48 odsłuchu</span>
+                  </div>
+                  <h3 className="font-serif text-xl text-ink mb-3 leading-snug">
+                    „Chciałem Ci przypomnieć jedną rzecz z naszej rozmowy…”
+                  </h3>
+                  <p className="font-serif italic text-xs sm:text-sm text-ink-muted leading-relaxed mb-6">
+                    „To, że zrobiłeś krok w tył, nie oznacza, że przegrałeś. Czasem to jedyny sposób, by nabrać oddechu…”
+                  </p>
+                </div>
+
+                <button
+                  onClick={() => handlePlayLetterSample("letter_2", "To, że zrobiłeś krok w tył, nie oznacza, że przegrałeś. Czasem to jedyny sposób, by nabrać oddechu. Jestem przy Tobie.")}
+                  className="presence-btn-secondary w-fit text-xs font-sans px-4 py-2 rounded-full flex items-center gap-2"
+                >
+                  {playingLetterSample === "letter_2" ? <Pause size={12} className="text-warm-amber" /> : <Play size={12} className="text-warm-amber" />}
+                  <span>{playingLetterSample === "letter_2" ? "Zatrzymaj" : "Odsłuchaj fragment"}</span>
+                </button>
+              </div>
+            </div>
           </section>
 
-          {/* Dolny baner zaproszenia */}
-          <section className="glass-sanctuary rounded-3xl p-8 sm:p-12 border border-cream-300 shadow-warm-md text-center max-w-2xl mx-auto">
-            <h3 className="font-serif text-2xl sm:text-3xl text-cream-950 font-normal mb-3">
-              Rozpocznij relację, która daje oparcie
+          {/* ================= SCENA 5 — UKOJENIE ================= */}
+          <section className="quiet-surface rounded-surface p-8 sm:p-14 flex flex-col md:flex-row items-center justify-between gap-10 border-ink/8">
+            <div className="max-w-md text-center md:text-left">
+              <span className="text-[11px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-3">
+                Ukojenie
+              </span>
+              <h2 className="font-serif text-3xl sm:text-4xl text-ink font-normal tracking-tight leading-snug mb-4">
+                Czasem nie potrzeba odpowiedzi.
+              </h2>
+              <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed mb-6">
+                Czasem wystarczy kilka minut spokoju i ktoś, kto zostanie obok. Kiedy czujesz natłok myśli, zrób jedno ćwiczenie oddechowe.
+              </p>
+              <Link
+                href="/sos"
+                className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-6 py-3.5 rounded-full"
+              >
+                <Shield size={14} strokeWidth={1.75} />
+                <span>Wejdź do strefy ukojenia</span>
+              </Link>
+            </div>
+
+            <div className="w-full max-w-xs">
+              <BreathingGuide />
+            </div>
+          </section>
+
+          {/* ================= SCENA 6 — ZAUFANIE ================= */}
+          <section className="flex flex-col items-center text-center max-w-2xl mx-auto pt-6">
+            <div className="w-8 h-8 rounded-full bg-paper-dark flex items-center justify-center text-ink-muted mb-4">
+              <Lock size={15} strokeWidth={1.75} />
+            </div>
+
+            <h3 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-3">
+              Twoja prywatność i zaufanie
             </h3>
-            <p className="font-sans text-xs sm:text-sm text-cream-700 leading-relaxed mb-6">
-              Nigdy więcej poczucia, że jesteś sam z gonitwą myśli. Twój przyjaciel czeka na pierwszą rozmowę.
+
+            <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed mb-8">
+              Ty decydujesz, co Przyjaciel pamięta. Możesz w każdej chwili przejrzeć swoje wspomnienia, poprawić je lub bezpowrotnie usunąć. Przyjaciel jest wspierającą obecnością emocjonalną — w sytuacjach kryzysu medycznego zawsze zachęcamy do kontaktu ze specjalistami.
             </p>
+
             <button
               onClick={() => setIsAuthOpen(true)}
-              className="hearth-button inline-flex items-center gap-2.5 font-sans font-semibold text-xs px-8 py-3.5 rounded-full active:scale-95 transition-all shadow-xl shadow-sun-500/25"
+              className="presence-btn-primary inline-flex items-center gap-2 text-xs sm:text-sm font-sans px-8 py-4 rounded-full shadow-quiet-md"
             >
-              <Heart size={16} />
-              <span>Stwórz swojego przyjaciela</span>
+              <span>Spotkaj się ze swoim Przyjacielem</span>
+              <ArrowRight size={15} />
             </button>
           </section>
         </main>

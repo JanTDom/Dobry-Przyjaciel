@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { BreathingGuide } from "@/components/sos/BreathingGuide";
 import { GroundingExercise } from "@/components/sos/GroundingExercise";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
 import { AuthAndOnboardingModal } from "@/components/auth/AuthAndOnboardingModal";
-import { Phone, ShieldAlert, Heart } from "lucide-react";
+import { Phone, Shield, Play, Pause, Compass, ArrowLeft } from "lucide-react";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { getStoredProfile, saveStoredProfile, logoutUser } from "@/lib/storage";
 import { UserProfile } from "@/types";
@@ -15,6 +16,8 @@ import { voiceEngine } from "@/lib/voice-engine";
 
 export default function SOSPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [activeTab, setActiveTab] = useState<"breath" | "ground" | "voice" | "helpline">("breath");
+  const [isPlayingCalmVoice, setIsPlayingCalmVoice] = useState(false);
   const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -42,8 +45,26 @@ export default function SOSPage() {
     setIsLiveCallOpen(true);
   };
 
+  const handleToggleCalmVoice = () => {
+    if (isPlayingCalmVoice) {
+      voiceEngine.stopSpeaking();
+      setIsPlayingCalmVoice(false);
+    } else {
+      voiceEngine.unlock();
+      setIsPlayingCalmVoice(true);
+      voiceEngine.speak(
+        "Jestem przy Tobie. Oddychaj powoli i spokojnie. Nie musisz teraz niczego rozwiązywać ani udowadniać. Zostańmy w tej chwili przez kilka minut.",
+        () => {
+          setIsPlayingCalmVoice(false);
+        },
+        profile?.companionVoice || "nova",
+        true
+      );
+    }
+  };
+
   return (
-    <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
+    <div className="min-h-screen flex flex-col bg-paper text-ink">
       <TopNav
         onOpenLiveCall={handleOpenLiveCall}
         onOpenSettings={() => setIsSettingsOpen(true)}
@@ -55,55 +76,149 @@ export default function SOSPage() {
         companionGender={profile?.companionGender}
       />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16 animate-fade-in">
-        <div className="border-b border-cream-300 pb-4">
-          <div className="flex items-center gap-2 text-sun-700 text-xs font-sans uppercase tracking-wider mb-1 font-semibold">
-            <ShieldAlert size={16} />
-            <span>Strefa natychmiastowego ukojenia</span>
-          </div>
-          <h1 className="font-serif text-3xl sm:text-4xl text-cream-950 font-normal tracking-tight mb-2">
-            Oddychaj powoli. Jestem przy tobie
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-14 flex flex-col gap-10 pb-28 md:pb-16 animate-fade-in">
+        <div className="text-center max-w-xl mx-auto">
+          <span className="text-[11px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-3">
+            Ukojenie
+          </span>
+          <h1 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight leading-tight mb-3">
+            Jestem. Zostańmy tutaj przez chwilę.
           </h1>
-          <p className="font-sans text-xs sm:text-sm text-cream-700 max-w-lg leading-relaxed">
-            Kiedy lęk lub napięcie stają się przytłaczające, twoje ciało potrzebuje prostych, fizjologicznych sygnałów bezpieczeństwa.
+          <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed">
+            Nie musisz teraz niczego rozwiązywać ani tłumaczyć. Wybierz to, co pomoże Ci złapać oddech.
           </p>
         </div>
 
-        <BreathingGuide />
-        <GroundingExercise />
+        {/* 4 proste, spokojne wybory */}
+        <div className="flex flex-wrap items-center justify-center gap-2 max-w-lg mx-auto">
+          <button
+            onClick={() => setActiveTab("breath")}
+            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
+              activeTab === "breath"
+                ? "presence-btn-primary"
+                : "presence-btn-secondary"
+            }`}
+          >
+            Oddychaj ze mną
+          </button>
 
-        <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="p-2.5 rounded-2xl bg-rose-100 text-rose-700 border border-rose-200">
-              <Phone size={20} />
+          <button
+            onClick={() => setActiveTab("ground")}
+            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
+              activeTab === "ground"
+                ? "presence-btn-primary"
+                : "presence-btn-secondary"
+            }`}
+          >
+            Rozejrzyj się wokół
+          </button>
+
+          <button
+            onClick={() => setActiveTab("voice")}
+            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
+              activeTab === "voice"
+                ? "presence-btn-primary"
+                : "presence-btn-secondary"
+            }`}
+          >
+            Posłuchaj głosu
+          </button>
+
+          <button
+            onClick={() => setActiveTab("helpline")}
+            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
+              activeTab === "helpline"
+                ? "presence-btn-primary"
+                : "presence-btn-secondary"
+            }`}
+          >
+            Pomoc człowieka
+          </button>
+        </div>
+
+        {/* Zawartość wybranego trybu */}
+        <div className="w-full">
+          {activeTab === "breath" && (
+            <div className="flex flex-col items-center animate-fade-in">
+              <BreathingGuide />
             </div>
-            <div>
-              <h3 className="font-serif text-lg text-cream-950 font-medium">
-                Bezpłatne całodobowe linie wsparcia psychologicznego
-              </h3>
-              <p className="font-sans text-xs text-cream-600">
-                Jeśli czujesz, że potrzebujesz natychmiastowej rozmowy z człowiekiem
+          )}
+
+          {activeTab === "ground" && (
+            <div className="animate-fade-in">
+              <GroundingExercise />
+            </div>
+          )}
+
+          {activeTab === "voice" && (
+            <div className="quiet-surface rounded-surface p-8 sm:p-12 text-center max-w-lg mx-auto flex flex-col items-center animate-fade-in">
+              <p className="font-serif text-lg sm:text-xl text-ink leading-relaxed italic mb-8">
+                „Jestem przy Tobie. Oddychaj powoli i spokojnie. Nie musisz teraz niczego rozwiązywać ani udowadniać. Zostańmy w tej chwili przez kilka minut.”
               </p>
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-sans mt-4">
-            <div className="p-4 rounded-2xl bg-white border border-cream-300 flex items-center justify-between shadow-warm-sm">
-              <div>
-                <span className="text-cream-800 font-medium block">Kryzys emocjonalny (dorośli)</span>
-                <span className="text-sun-700 font-serif text-lg font-bold">116 123</span>
-              </div>
-              <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-medium">24/7 bezpłatnie</span>
+              <button
+                onClick={handleToggleCalmVoice}
+                className="presence-btn-primary flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full"
+              >
+                {isPlayingCalmVoice ? (
+                  <>
+                    <Pause size={14} className="animate-pulse text-warm-amber" />
+                    <span>Zatrzymaj</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={14} className="text-warm-amber" />
+                    <span>Odsłuchaj słowa ukojenia</span>
+                  </>
+                )}
+              </button>
             </div>
+          )}
 
-            <div className="p-4 rounded-2xl bg-white border border-cream-300 flex items-center justify-between shadow-warm-sm">
+          {activeTab === "helpline" && (
+            <div className="quiet-surface rounded-surface p-7 sm:p-9 flex flex-col gap-6 animate-fade-in max-w-xl mx-auto border-ink/8">
               <div>
-                <span className="text-cream-800 font-medium block">Dzieci i młodzież</span>
-                <span className="text-sun-700 font-serif text-lg font-bold">116 111</span>
+                <h3 className="font-serif text-xl text-ink font-normal mb-1">
+                  Bezpłatne całodobowe linie wsparcia
+                </h3>
+                <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                  Jeśli przeżywasz trudny kryzys i potrzebujesz natychmiastowej rozmowy ze specjalistą:
+                </p>
               </div>
-              <span className="text-[10px] text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full font-medium">24/7 bezpłatnie</span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-sans">
+                <a
+                  href="tel:116123"
+                  className="p-4 rounded-card bg-paper-dark/60 border border-ink/8 flex items-center justify-between hover:border-warm-amber/40 transition-colors group"
+                >
+                  <div>
+                    <span className="text-ink-muted block text-[11px]">Dorośli w kryzysie</span>
+                    <span className="text-ink font-serif text-lg font-semibold group-hover:text-warm-amber transition-colors">
+                      116 123
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium">
+                    24/7 bezpłatnie
+                  </span>
+                </a>
+
+                <a
+                  href="tel:116111"
+                  className="p-4 rounded-card bg-paper-dark/60 border border-ink/8 flex items-center justify-between hover:border-warm-amber/40 transition-colors group"
+                >
+                  <div>
+                    <span className="text-ink-muted block text-[11px]">Dzieci i młodzież</span>
+                    <span className="text-ink font-serif text-lg font-semibold group-hover:text-warm-amber transition-colors">
+                      116 111
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium">
+                    24/7 bezpłatnie
+                  </span>
+                </a>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </main>
 

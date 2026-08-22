@@ -52,56 +52,46 @@ export const TopNav: React.FC<TopNavProps> = ({
         </Link>
 
         {/* Nawigacja środkowa desktopowa */}
-        <nav className="hidden md:flex items-center gap-1.5 bg-cream-200/60 p-1.5 rounded-full border border-cream-300/80 shadow-warm-inner">
+        <nav className="hidden md:flex items-center gap-1 bg-paper-dark/60 p-1.5 rounded-full border border-ink/8 shadow-quiet-sm">
           <Link
             href="/"
             className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
               pathname === "/"
-                ? "bg-white text-cream-950 shadow-warm-sm"
-                : "text-cream-700 hover:text-cream-950 hover:bg-cream-100/60"
+                ? "bg-white text-ink shadow-quiet-sm"
+                : "text-ink-muted hover:text-ink hover:bg-white/40"
             }`}
           >
-            Przystań
+            Rozmowa
           </Link>
           <Link
             href="/memory"
             className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
               pathname === "/memory"
-                ? "bg-white text-cream-950 shadow-warm-sm"
-                : "text-cream-700 hover:text-cream-950 hover:bg-cream-100/60"
+                ? "bg-white text-ink shadow-quiet-sm"
+                : "text-ink-muted hover:text-ink hover:bg-white/40"
             }`}
           >
-            Pamięć relacji
+            Pamięć
           </Link>
           <Link
             href="/sanctuary"
             className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
               pathname === "/sanctuary"
-                ? "bg-white text-cream-950 shadow-warm-sm"
-                : "text-cream-700 hover:text-cream-950 hover:bg-cream-100/60"
+                ? "bg-white text-ink shadow-quiet-sm"
+                : "text-ink-muted hover:text-ink hover:bg-white/40"
             }`}
           >
-            Skarbiec siły
+            Listy
           </Link>
           <Link
             href="/sos"
             className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
               pathname === "/sos"
-                ? "bg-white text-cream-950 shadow-warm-sm"
-                : "text-cream-700 hover:text-cream-950 hover:bg-cream-100/60"
+                ? "bg-white text-ink shadow-quiet-sm"
+                : "text-ink-muted hover:text-ink hover:bg-white/40"
             }`}
           >
-            SOS Ukojenie
-          </Link>
-          <Link
-            href="/idea"
-            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
-              pathname === "/idea"
-                ? "bg-white text-cream-950 shadow-warm-sm"
-                : "text-cream-700 hover:text-cream-950 hover:bg-cream-100/60"
-            }`}
-          >
-            Filozofia
+            Ukojenie
           </Link>
         </nav>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { BookOpen, Sparkles, Play, Pause, Feather, Plus, Loader2 } from "lucide-react";
+import { Play, Pause, Feather, Plus, Loader2 } from "lucide-react";
 import { voiceEngine } from "@/lib/voice-engine";
 import { getStoredProfile, saveStoredProfile, getStoredMessages, getStoredVictoryLetters, getStoredAccessCode } from "@/lib/storage";
 import { VictoryLetter } from "@/types";
@@ -15,7 +15,7 @@ export const VictoryVault: React.FC = () => {
   const defaultWelcomeLetter: VictoryLetter = {
     id: "v_welcome",
     title: `List powitalny od ${profile?.companionName || "Przyjaciela"}`,
-    content: `Cieszę się, że tu jesteś. Ten skarbiec powstał po to, by przypominać ci o twojej sile w chwilach zwątpienia. Kiedy twój umysł wmawia ci, że stoisz w miejscu — pamiętaj, że każdy twój mały krok ma znaczenie. Jestem przy tobie i w miarę naszych rozmów będę pisać dla ciebie nowe listy wsparcia.`,
+    content: `Cieszę się, że tu jesteś. Ten zbiór listów powstał po to, by przypominać Ci o Twojej sile w chwilach zwątpienia. Kiedy Twój umysł wmawia Ci, że stoisz w miejscu — pamiętaj, że każdy Twój mały krok ma znaczenie. Jestem przy Tobie i w miarę naszych rozmów będę pisać dla Ciebie nowe listy otuchy.`,
     date: "Dzisiaj",
     tag: "Twoja bezpieczna przystań",
   };
@@ -88,19 +88,19 @@ export const VictoryVault: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-8">
       {/* Przycisk generowania nowego listu wsparcia */}
-      <div className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col sm:flex-row items-center justify-between gap-4 bg-gradient-to-r from-sun-50/70 via-cream-50/90 to-amber-50/70">
-        <div className="flex items-center gap-3.5 text-center sm:text-left">
-          <div className="p-3 rounded-2xl bg-sun-100 text-sun-700 border border-sun-300 shadow-sm">
-            <Feather size={22} />
+      <div className="quiet-surface rounded-surface p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 border-ink/8">
+        <div className="flex items-center gap-4 text-center sm:text-left">
+          <div className="w-12 h-12 rounded-full bg-paper-dark flex items-center justify-center text-warm-amber shrink-0">
+            <Feather size={20} strokeWidth={1.75} />
           </div>
           <div>
-            <h3 className="font-serif text-lg sm:text-xl text-cream-950 font-normal">
+            <h3 className="font-serif text-xl text-ink font-normal">
               Napisz dla mnie list na dzisiejszy wieczór
             </h3>
-            <p className="font-sans text-xs text-cream-600">
-              Twój przyjaciel stworzy osobisty list refleksyjny na podstawie tego, co dzisiaj przeżyłeś.
+            <p className="font-sans text-xs text-ink-muted leading-relaxed mt-0.5">
+              Twój Przyjaciel stworzy osobisty list refleksyjny na podstawie tego, o czym rozmawialiście.
             </p>
           </div>
         </div>
@@ -108,16 +108,16 @@ export const VictoryVault: React.FC = () => {
         <button
           onClick={handleGenerateEveningLetter}
           disabled={isGenerating || !profile}
-          className="hearth-button whitespace-nowrap px-6 py-3.5 rounded-full font-sans font-semibold text-xs flex items-center gap-2 shadow-lg shadow-sun-500/20 active:scale-95 transition-all disabled:opacity-50"
+          className="presence-btn-primary whitespace-nowrap px-6 py-3.5 rounded-full font-sans font-medium text-xs flex items-center gap-2 shadow-quiet-md active:scale-95 transition-all disabled:opacity-50"
         >
           {isGenerating ? (
             <>
-              <Loader2 size={16} className="animate-spin" />
-              <span>Piszę list dla ciebie...</span>
+              <Loader2 size={14} className="animate-spin" />
+              <span>Piszę list dla Ciebie...</span>
             </>
           ) : (
             <>
-              <Plus size={16} />
+              <Plus size={14} strokeWidth={2} />
               <span>Stwórz list wsparcia</span>
             </>
           )}
@@ -129,47 +129,45 @@ export const VictoryVault: React.FC = () => {
         {letters.map((l) => (
           <div
             key={l.id}
-            className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md flex flex-col justify-between hover:border-sun-300 transition-all"
+            className="quiet-surface rounded-surface p-7 sm:p-9 flex flex-col justify-between border-ink/8"
           >
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] font-sans px-3 py-1 rounded-full bg-sun-100 text-sun-800 border border-sun-200 font-semibold">
+              <div className="flex items-center justify-between text-xs text-ink-subtle mb-4 font-sans">
+                <span>{l.date}</span>
+                <span className="text-[10px] uppercase tracking-wider text-warm-amber font-semibold">
                   {l.tag}
-                </span>
-                <span className="text-xs text-cream-500 font-sans">
-                  {l.date}
                 </span>
               </div>
 
-              <h3 className="font-serif text-xl sm:text-2xl text-cream-950 font-normal mb-4 leading-snug">
+              <h3 className="font-serif text-xl sm:text-2xl text-ink font-normal mb-4 leading-snug">
                 {l.title}
               </h3>
 
-              <p className="font-serif text-base text-cream-800 leading-relaxed italic bg-cream-50/70 p-5 rounded-2xl border border-cream-200 mb-6 shadow-inner whitespace-pre-line">
+              <p className="font-serif text-base text-ink-muted leading-relaxed italic bg-paper-dark/40 p-6 rounded-card border border-ink/6 mb-6 whitespace-pre-line">
                 „{l.content}”
               </p>
             </div>
 
-            <div className="flex items-center justify-between pt-4 border-t border-cream-200">
+            <div className="flex items-center justify-between pt-4 border-t border-ink/8">
               <button
                 onClick={() => handleToggleVoice(l)}
-                className="flex items-center gap-2 text-xs font-sans text-sun-900 bg-sun-100 hover:bg-sun-200 px-4 py-2 rounded-full border border-sun-300 transition-all font-medium"
+                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-4 py-2 rounded-full font-medium"
               >
                 {playingId === l.id ? (
                   <>
-                    <Pause size={14} className="animate-pulse text-sun-600" />
-                    <span>Zatrzymaj czytanie</span>
+                    <Pause size={13} className="animate-pulse text-warm-amber" />
+                    <span>Zatrzymaj</span>
                   </>
                 ) : (
                   <>
-                    <Play size={14} className="text-sun-600" />
-                    <span>Odsłuchaj list głosem</span>
+                    <Play size={13} className="text-warm-amber" />
+                    <span>Odsłuchaj list</span>
                   </>
                 )}
               </button>
 
-              <span className="text-xs font-serif text-cream-600 italic font-medium">
-                Zawsze przy tobie, {profile?.companionName || "Przyjaciel"}
+              <span className="text-xs font-serif text-ink-muted italic">
+                Zawsze przy Tobie, {profile?.companionName || "Przyjaciel"}
               </span>
             </div>
           </div>

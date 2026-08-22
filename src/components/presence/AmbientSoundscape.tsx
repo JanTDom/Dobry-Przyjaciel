@@ -7,38 +7,38 @@ import { soundscapeEngine, SoundscapeType } from "@/lib/audio-synthesizer";
 export const AmbientSoundscape: React.FC = () => {
   const [active, setActive] = useState<SoundscapeType | null>(null);
   const [isMuted, setIsMuted] = useState(false);
-  const [volume, setVolume] = useState(0.4);
+  const [volume, setVolume] = useState(0.35);
 
   const soundscapes: { type: SoundscapeType; label: string; icon: React.ReactNode; desc: string }[] = [
     {
       type: "fireplace",
       label: "Ciepły kominek",
-      icon: <Flame size={18} className="text-sun-500" />,
-      desc: "Trzaskające drewno i kojące ciepło",
+      icon: <Flame size={16} strokeWidth={1.75} className="text-warm-amber" />,
+      desc: "Kojący trzask drewna",
     },
     {
       type: "rain",
-      label: "Kojący deszcz",
-      icon: <CloudRain size={18} className="text-sky-500" />,
-      desc: "Miękki szum letniego deszczu za oknem",
+      label: "Spokojny deszcz",
+      icon: <CloudRain size={16} strokeWidth={1.75} className="text-warm-dusk" />,
+      desc: "Miękki szum za oknem",
     },
     {
       type: "ocean",
       label: "Fale oceanu",
-      icon: <Waves size={18} className="text-teal-500" />,
-      desc: "Spokojny, miarowy oddech wody",
+      icon: <Waves size={16} strokeWidth={1.75} className="text-warm-sage" />,
+      desc: "Miarowy oddech wody",
     },
     {
       type: "alpha_waves",
       label: "Fale alfa 8Hz",
-      icon: <Sparkles size={18} className="text-amber-500" />,
-      desc: "Dźwięk wyciszający gonitwę myśli",
+      icon: <Sparkles size={16} strokeWidth={1.75} className="text-warm-amber" />,
+      desc: "Dźwięk wyciszający myśli",
     },
     {
       type: "forest",
       label: "Nocny las",
-      icon: <Trees size={18} className="text-emerald-500" />,
-      desc: "Cichy szum drzew i świerszcze pod gwiazdami",
+      icon: <Trees size={16} strokeWidth={1.75} className="text-warm-sage" />,
+      desc: "Cichy szum drzew nocą",
     },
   ];
 
@@ -65,27 +65,22 @@ export const AmbientSoundscape: React.FC = () => {
   };
 
   return (
-    <div className="sanctuary-card rounded-3xl p-5 sm:p-6 border border-cream-300 shadow-warm-md">
+    <div className="quiet-surface rounded-surface p-5 sm:p-6 border border-ink/8">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-sun-100 text-sun-600 border border-sun-200">
-            <Sparkles size={18} />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-cream-900 font-sans">Kojące tło dźwiękowe</h3>
-            <p className="text-xs text-cream-600 font-sans">Wybierz dźwięk, który pomoże ci się wyciszyć i zrelaksować</p>
-          </div>
+        <div>
+          <h3 className="text-xs font-medium text-ink font-sans">Kojące tło dźwiękowe</h3>
+          <p className="text-[11px] text-ink-muted font-sans">Dźwięki otoczenia w tle rozmowy</p>
         </div>
 
         {/* Sterowanie głośnością */}
         {active && (
-          <div className="flex items-center gap-2 bg-cream-100 px-3 py-1.5 rounded-full border border-cream-300">
+          <div className="flex items-center gap-2 bg-paper-dark/60 px-3 py-1.5 rounded-full border border-ink/8">
             <button
               onClick={handleToggleMute}
-              className="text-cream-600 hover:text-cream-900 transition-colors"
+              className="text-ink-muted hover:text-ink transition-colors"
               title={isMuted ? "Włącz dźwięk" : "Wycisz"}
             >
-              {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
             </button>
             <input
               type="range"
@@ -94,34 +89,34 @@ export const AmbientSoundscape: React.FC = () => {
               step="0.05"
               value={volume}
               onChange={handleVolumeChange}
-              className="w-18 h-1.5 bg-cream-300 rounded-lg appearance-none cursor-pointer accent-sun-500"
+              className="w-16 h-1 bg-ink/15 rounded-lg appearance-none cursor-pointer accent-warm-amber"
             />
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
         {soundscapes.map((s) => {
           const isSelected = active === s.type;
           return (
             <button
               key={s.type}
               onClick={() => handleSelect(s.type)}
-              className={`flex flex-col text-left p-3.5 rounded-2xl transition-all border ${
+              className={`flex flex-col text-left p-3 rounded-card transition-all border ${
                 isSelected
-                  ? "bg-sun-50 border-sun-400 shadow-md shadow-sun-500/10 ring-2 ring-sun-400/30"
-                  : "bg-white hover:bg-cream-50 border-cream-300 hover:border-cream-400 shadow-warm-sm"
+                  ? "bg-paper-surface border-warm-amber ring-1 ring-warm-amber/30 shadow-quiet-sm"
+                  : "bg-paper hover:bg-paper-dark border-ink/8 hover:border-ink/15"
               }`}
             >
-              <div className="flex items-center gap-2.5 mb-2">
-                <div className={`p-2 rounded-xl ${isSelected ? "bg-sun-100" : "bg-cream-100"}`}>
+              <div className="flex items-center gap-2 mb-1">
+                <div className={`p-1.5 rounded-lg ${isSelected ? "bg-paper-dark" : "bg-paper-dark/60"}`}>
                   {s.icon}
                 </div>
-                <span className={`text-xs font-semibold font-sans ${isSelected ? "text-sun-900" : "text-cream-900"}`}>
+                <span className={`text-xs font-medium font-sans ${isSelected ? "text-ink" : "text-ink-muted"}`}>
                   {s.label}
                 </span>
               </div>
-              <span className="text-[11px] text-cream-600 font-sans line-clamp-1">
+              <span className="text-[10px] text-ink-subtle font-sans line-clamp-1">
                 {s.desc}
               </span>
             </button>

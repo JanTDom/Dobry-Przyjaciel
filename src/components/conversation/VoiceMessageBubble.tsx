@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, Pause, Sun, Sparkles } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import { Message } from "@/types";
 import { voiceEngine } from "@/lib/voice-engine";
 
@@ -12,7 +12,7 @@ interface VoiceMessageBubbleProps {
 
 export const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({
   message,
-  companionName = "Mira",
+  companionName = "Agata",
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const isCompanion = message.sender === "companion";
@@ -22,10 +22,16 @@ export const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({
       voiceEngine.stopSpeaking();
       setIsPlaying(false);
     } else {
+      voiceEngine.unlock();
       setIsPlaying(true);
-      voiceEngine.speak(message.text, () => {
-        setIsPlaying(false);
-      });
+      voiceEngine.speak(
+        message.text,
+        () => {
+          setIsPlaying(false);
+        },
+        "nova",
+        true
+      );
     }
   };
 
@@ -35,64 +41,64 @@ export const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({
 
   return (
     <div
-      className={`flex flex-col gap-1.5 max-w-xl w-full ${
+      className={`flex flex-col gap-1 max-w-xl w-full ${
         isCompanion ? "items-start" : "items-end ml-auto"
       }`}
     >
       {/* Informacja o nadawcy */}
       <div className="flex items-center gap-2 px-1">
-        <span className="text-xs font-sans text-cream-600 font-medium">
+        <span className="text-[11px] font-sans text-ink-muted font-medium">
           {isCompanion ? companionName : "Ty"}
         </span>
-        <span className="text-[10px] text-cream-500 font-sans">
+        <span className="text-[10px] text-ink-subtle font-sans">
           {timeString}
         </span>
       </div>
 
       {/* Ciało wiadomości */}
       <div
-        className={`p-4 md:p-5 rounded-3xl relative transition-all shadow-warm-sm ${
+        className={`p-4 md:p-5 rounded-2xl relative transition-all shadow-quiet-sm ${
           isCompanion
-            ? "bg-white border border-amber-200/90 text-cream-900 rounded-tl-sm"
-            : "bg-gradient-to-br from-sun-100 to-amber-100 border border-sun-200 text-cream-950 rounded-tr-sm"
+            ? "bg-paper-surface border border-ink/10 text-ink rounded-tl-none"
+            : "bg-paper-dark border border-ink/8 text-ink rounded-tr-none"
         }`}
       >
-        <p className="font-serif text-base leading-relaxed whitespace-pre-wrap text-cream-900">
+        <p className="font-serif text-sm sm:text-base leading-relaxed whitespace-pre-wrap text-ink">
           {message.text}
         </p>
 
         {/* Odtwarzacz głosu przyjaciela */}
         {isCompanion && (
-          <div className="mt-3 pt-3 border-t border-cream-200 flex items-center justify-between gap-3">
+          <div className="mt-3 pt-3 border-t border-ink/8 flex items-center justify-between gap-3">
             <button
               onClick={handlePlayVoice}
-              className="flex items-center gap-2 text-xs font-sans text-sun-900 bg-sun-100 hover:bg-sun-200 px-3.5 py-1.5 rounded-full border border-sun-300 transition-all font-medium"
+              className="presence-btn-secondary flex items-center gap-1.5 text-xs font-sans px-3 py-1 rounded-full font-medium"
             >
               {isPlaying ? (
                 <>
-                  <Pause size={13} className="animate-pulse text-sun-600" />
-                  <span>Zatrzymaj głos</span>
+                  <Pause size={12} className="animate-pulse text-warm-amber" />
+                  <span>Zatrzymaj</span>
                 </>
               ) : (
                 <>
-                  <Play size={13} className="text-sun-600" />
-                  <span>Odsłuchaj głosem</span>
+                  <Play size={12} className="text-warm-amber" />
+                  <span>Odsłuchaj</span>
                 </>
               )}
             </button>
 
             {/* Wizualizacja fali dźwiękowej */}
             <div className="flex items-center gap-1">
-              {[4, 12, 8, 16, 10, 6, 14, 8].map((h, i) => (
+              {[4, 10, 7, 14, 9, 5, 12, 7].map((h, i) => (
                 <div
                   key={i}
-                  className={`w-1 rounded-full transition-all duration-300 ${
+                  className={`w-0.5 rounded-full transition-all duration-300 ${
                     isPlaying
-                      ? "bg-sun-500 animate-pulse"
-                      : "bg-cream-300"
+                      ? "bg-warm-amber animate-pulse"
+                      : "bg-ink/20"
                   }`}
                   style={{
-                    height: isPlaying ? `${Math.max(4, h * (i % 2 === 0 ? 1.4 : 0.8))}px` : "6px",
+                    height: isPlaying ? `${Math.max(4, h * (i % 2 === 0 ? 1.3 : 0.8))}px` : "5px",
                   }}
                 />
               ))}

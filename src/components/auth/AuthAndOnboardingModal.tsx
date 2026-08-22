@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Sparkles, Heart, Check, Play, Pause, ArrowRight, User, Mail, Lock, ShieldCheck } from "lucide-react";
+import { X, Play, Pause, ArrowRight, User, Mail, Lock, Volume2 } from "lucide-react";
 import { saveAccessCode, VALID_ACCESS_CODES, createDefaultProfile, saveStoredProfile, getStoredProfile, setActiveUserEmail } from "@/lib/storage";
 import { voiceEngine } from "@/lib/voice-engine";
 import { UserProfile } from "@/types";
@@ -19,8 +19,8 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<"create" | "login">("create");
   
-  // Create form state
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  // Create flow (4 kroki)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [userName, setUserName] = useState("");
   const [companionGender, setCompanionGender] = useState<"female" | "male">("female");
   const [companionName, setCompanionName] = useState("Agata");
@@ -55,8 +55,8 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
     } else {
       setIsPlayingVoice(true);
       const sample = companionGender === "male"
-        ? `Cześć ${userName || "przyjacielu"}. Jestem ${companionName}. Cieszę się, że jesteś — zawsze możesz na mnie liczyć.`
-        : `Cześć ${userName || "przyjacielu"}. Jestem ${companionName}. Cieszę się, że jesteś — zawsze możesz na mnie liczyć.`;
+        ? `Cześć ${userName || ""}. Cieszę się, że jesteś. Zawsze możesz na mnie liczyć.`
+        : `Cześć ${userName || ""}. Cieszę się, że jesteś. Zawsze możesz na mnie liczyć.`;
       voiceEngine.speak(
         sample,
         () => {
@@ -74,7 +74,7 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
 
     const cleanPass = password.trim();
     if (!VALID_ACCESS_CODES.includes(cleanPass)) {
-      setError("Wpisz prawidłowe hasło robocze (A132a132!).");
+      setError("Wpisz prawidłowe hasło dostępowe (A132a132!).");
       return;
     }
 
@@ -106,7 +106,7 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
 
     const cleanPass = loginPassword.trim();
     if (!VALID_ACCESS_CODES.includes(cleanPass)) {
-      setLoginError("Wpisz prawidłowe hasło robocze (A132a132!).");
+      setLoginError("Wpisz prawidłowe hasło dostępowe (A132a132!).");
       return;
     }
 
@@ -134,39 +134,39 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-cream-950/45 backdrop-blur-md animate-fade-in">
-      <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-cream-300 shadow-2xl relative max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-night/60 backdrop-blur-md animate-fade-in">
+      <div className="bg-paper-surface rounded-surface p-6 sm:p-10 max-w-md w-full border border-ink/10 shadow-quiet-lg relative max-h-[92vh] overflow-y-auto">
         {/* Przycisk zamknięcia */}
         <button
           onClick={() => {
             voiceEngine.stopSpeaking();
             onClose();
           }}
-          className="absolute top-5 right-5 p-2 rounded-full text-cream-500 hover:text-cream-800 bg-cream-100 hover:bg-cream-200 transition-colors"
+          className="absolute top-5 right-5 p-2 rounded-full text-ink-muted hover:text-ink bg-paper-dark/60 hover:bg-paper-dark transition-colors"
         >
-          <X size={16} />
+          <X size={15} />
         </button>
 
         {/* Przełącznik: Nowy przyjaciel / Logowanie */}
-        <div className="flex items-center justify-center p-1 bg-cream-100/90 rounded-2xl max-w-xs mx-auto mb-6 border border-cream-200">
+        <div className="flex items-center justify-center p-1 bg-paper-dark/70 rounded-full max-w-xs mx-auto mb-8 border border-ink/6">
           <button
             type="button"
             onClick={() => setActiveTab("create")}
-            className={`flex-1 py-2 text-xs font-sans rounded-xl font-semibold transition-all ${
+            className={`flex-1 py-1.5 text-xs font-sans rounded-full font-medium transition-all ${
               activeTab === "create"
-                ? "bg-white text-cream-950 shadow-warm-sm"
-                : "text-cream-600 hover:text-cream-950"
+                ? "bg-paper-surface text-ink shadow-quiet-sm"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
-            Stwórz przyjaciela
+            Spotkaj się
           </button>
           <button
             type="button"
             onClick={() => setActiveTab("login")}
-            className={`flex-1 py-2 text-xs font-sans rounded-xl font-semibold transition-all ${
+            className={`flex-1 py-1.5 text-xs font-sans rounded-full font-medium transition-all ${
               activeTab === "login"
-                ? "bg-white text-cream-950 shadow-warm-sm"
-                : "text-cream-600 hover:text-cream-950"
+                ? "bg-paper-surface text-ink shadow-quiet-sm"
+                : "text-ink-muted hover:text-ink"
             }`}
           >
             Mam już konto
@@ -175,29 +175,29 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
 
         {activeTab === "create" ? (
           <div>
-            {/* Krok 1: Twoje imię */}
+            {/* KROK 1: Twoje imię */}
             {step === 1 && (
-              <div className="flex flex-col gap-5 animate-fade-in">
+              <div className="flex flex-col gap-6 animate-fade-in">
                 <div className="text-center">
-                  <div className="inline-flex p-3 rounded-2xl bg-sun-100 text-sun-700 border border-sun-300 mb-3 shadow-sm">
-                    <User size={24} />
-                  </div>
-                  <h2 className="font-serif text-2xl sm:text-3xl text-cream-950 font-normal tracking-tight mb-2">
-                    Jak masz na imię?
+                  <span className="text-[10px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-2">
+                    Krok 1 z 4
+                  </span>
+                  <h2 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-2">
+                    Jak mam się do Ciebie zwracać?
                   </h2>
-                  <p className="font-sans text-xs text-cream-600 max-w-xs mx-auto leading-relaxed">
-                    Twój przyjaciel będzie zwracał się do ciebie po imieniu w każdej rozmowie i liście.
+                  <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                    Twój Przyjaciel będzie zwracał się do Ciebie po imieniu podczas każdej rozmowy.
                   </p>
                 </div>
 
-                <div className="relative">
+                <div>
                   <input
                     type="text"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Wpisz swoje imię..."
+                    placeholder="Twoje imię..."
                     autoFocus
-                    className="w-full bg-cream-50 border border-cream-300 focus:border-sun-400 focus:ring-2 focus:ring-sun-400/20 rounded-2xl px-4 py-3.5 text-base font-serif text-cream-950 focus:outline-none transition-all"
+                    className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3.5 text-sm font-sans text-ink focus:outline-none transition-all placeholder:text-ink-subtle"
                   />
                 </div>
 
@@ -205,23 +205,26 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                   type="button"
                   onClick={() => setStep(2)}
                   disabled={!userName.trim()}
-                  className="hearth-button w-full py-3.5 rounded-full font-sans font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-sun-500/20 disabled:opacity-40"
+                  className="presence-btn-primary w-full py-3.5 rounded-full font-sans font-medium text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-quiet-md disabled:opacity-40"
                 >
-                  <span>Dalej: Wybierz przyjaciela</span>
-                  <ArrowRight size={15} />
+                  <span>Dalej</span>
+                  <ArrowRight size={14} />
                 </button>
               </div>
             )}
 
-            {/* Krok 2: Wybór przyjaciela i głosu */}
+            {/* KROK 2: Kogo chcesz usłyszeć? */}
             {step === 2 && (
-              <div className="flex flex-col gap-5 animate-fade-in">
+              <div className="flex flex-col gap-6 animate-fade-in">
                 <div className="text-center">
-                  <h2 className="font-serif text-2xl sm:text-3xl text-cream-950 font-normal tracking-tight mb-2">
-                    Kto ma być twoim przyjacielem?
+                  <span className="text-[10px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-2">
+                    Krok 2 z 4
+                  </span>
+                  <h2 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-2">
+                    Kogo chcesz usłyszeć?
                   </h2>
-                  <p className="font-sans text-xs text-cream-600 max-w-xs mx-auto leading-relaxed">
-                    Wybierz postać i barwę głosu, która najbardziej koi twoje zmysły.
+                  <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                    Wybierz barwę głosu, która najbardziej koi Twoje zmysły.
                   </p>
                 </div>
 
@@ -229,26 +232,21 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleGenderSelect("female")}
-                    className={`p-5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden ${
+                    className={`p-5 rounded-card border text-left flex flex-col justify-between transition-all ${
                       companionGender === "female"
-                        ? "bg-gradient-to-br from-sun-50/90 to-white border-sun-400 shadow-md ring-2 ring-sun-400/20"
-                        : "bg-white/80 border-cream-200 hover:border-cream-300"
+                        ? "bg-paper-surface border-warm-amber ring-1 ring-warm-amber/30 shadow-quiet-sm"
+                        : "bg-paper border-ink/10 hover:border-ink/20"
                     }`}
                   >
                     <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-sans uppercase tracking-widest text-sun-800 font-bold px-2 py-0.5 rounded-full bg-sun-100/80 border border-sun-200">
-                          Głos żeński
-                        </span>
-                        {companionGender === "female" && (
-                          <div className="w-2 h-2 rounded-full bg-sun-500" />
-                        )}
-                      </div>
-                      <span className="font-serif text-lg text-cream-950 font-normal block mb-1">
-                        Przyjaciółka
+                      <span className="text-[10px] font-sans uppercase tracking-wider text-warm-amber font-semibold block mb-1">
+                        Głos żeński
                       </span>
-                      <p className="text-xs text-cream-600 font-sans leading-relaxed">
-                        Agata • Ciepły, miękki tembr kojący
+                      <span className="font-serif text-lg text-ink font-normal block mb-1">
+                        Agata
+                      </span>
+                      <p className="text-[11px] text-ink-muted font-sans leading-relaxed">
+                        Ciepły, miękki tembr kojący
                       </p>
                     </div>
                   </button>
@@ -256,224 +254,230 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                   <button
                     type="button"
                     onClick={() => handleGenderSelect("male")}
-                    className={`p-5 rounded-2xl border text-left flex flex-col justify-between transition-all relative overflow-hidden ${
+                    className={`p-5 rounded-card border text-left flex flex-col justify-between transition-all ${
                       companionGender === "male"
-                        ? "bg-gradient-to-br from-sun-50/90 to-white border-sun-400 shadow-md ring-2 ring-sun-400/20"
-                        : "bg-white/80 border-cream-200 hover:border-cream-300"
+                        ? "bg-paper-surface border-warm-amber ring-1 ring-warm-amber/30 shadow-quiet-sm"
+                        : "bg-paper border-ink/10 hover:border-ink/20"
                     }`}
                   >
                     <div>
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[10px] font-sans uppercase tracking-widest text-sun-800 font-bold px-2 py-0.5 rounded-full bg-sun-100/80 border border-sun-200">
-                          Głos męski
-                        </span>
-                        {companionGender === "male" && (
-                          <div className="w-2 h-2 rounded-full bg-sun-500" />
-                        )}
-                      </div>
-                      <span className="font-serif text-lg text-cream-950 font-normal block mb-1">
-                        Przyjaciel
+                      <span className="text-[10px] font-sans uppercase tracking-wider text-warm-amber font-semibold block mb-1">
+                        Głos męski
                       </span>
-                      <p className="text-xs text-cream-600 font-sans leading-relaxed">
-                        Maciej • Spokojny, uziemiający tembr
+                      <span className="font-serif text-lg text-ink font-normal block mb-1">
+                        Maciej
+                      </span>
+                      <p className="text-[11px] text-ink-muted font-sans leading-relaxed">
+                        Spokojny, uziemiający tembr
                       </p>
                     </div>
                   </button>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-cream-900 font-sans mb-1.5">
-                    Imię twojego przyjaciela
-                  </label>
-                  <input
-                    type="text"
-                    value={companionName}
-                    onChange={(e) => setCompanionName(e.target.value)}
-                    placeholder="Wpisz imię..."
-                    className="w-full bg-cream-50 border border-cream-300 focus:border-sun-400 focus:ring-2 focus:ring-sun-400/20 rounded-2xl px-4 py-2.5 text-sm font-serif text-cream-950 focus:outline-none"
-                  />
-                </div>
-
                 <button
                   type="button"
                   onClick={handlePlayVoiceSample}
-                  className="secondary-warm-button w-full py-2.5 rounded-full font-sans font-medium text-xs flex items-center justify-center gap-2"
+                  className="presence-btn-secondary w-full py-2.5 rounded-full font-sans font-medium text-xs flex items-center justify-center gap-2"
                 >
-                  {isPlayingVoice ? (
-                    <>
-                      <Pause size={14} className="animate-pulse text-sun-600" />
-                      <span>Zatrzymaj próbkę głosu</span>
-                    </>
-                  ) : (
-                    <>
-                      <Play size={14} className="text-sun-600" />
-                      <span>Odsłuchaj jak brzmi {companionName}</span>
-                    </>
-                  )}
+                  {isPlayingVoice ? <Pause size={13} className="text-warm-amber" /> : <Volume2 size={13} className="text-warm-amber" />}
+                  <span>{isPlayingVoice ? "Zatrzymaj próbkę" : "Posłuchaj próbki głosu"}</span>
                 </button>
 
-                <div className="flex items-center gap-3 pt-2">
+                <div className="flex gap-2 pt-2">
                   <button
                     type="button"
                     onClick={() => setStep(1)}
-                    className="secondary-warm-button py-3 px-5 rounded-full text-xs font-sans font-medium"
+                    className="presence-btn-secondary flex-1 py-3 rounded-full font-sans font-medium text-xs"
                   >
                     Wróć
                   </button>
                   <button
                     type="button"
                     onClick={() => setStep(3)}
-                    className="hearth-button flex-1 py-3.5 rounded-full font-sans font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-sun-500/20"
+                    className="presence-btn-primary flex-1 py-3 rounded-full font-sans font-medium text-xs flex items-center justify-center gap-1.5"
                   >
-                    <span>Dalej: Utwórz konto</span>
-                    <ArrowRight size={15} />
+                    <span>Dalej</span>
+                    <ArrowRight size={13} />
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Krok 3: E-mail i hasło robocze A132a132! */}
+            {/* KROK 3: Imię Przyjaciela */}
             {step === 3 && (
-              <form onSubmit={handleCreateSubmit} className="flex flex-col gap-4 animate-fade-in">
-                <div className="text-center mb-1">
-                  <div className="inline-flex p-3 rounded-2xl bg-sun-100 text-sun-700 border border-sun-300 mb-2 shadow-sm">
-                    <ShieldCheck size={24} />
-                  </div>
-                  <h2 className="font-serif text-2xl text-cream-950 font-normal tracking-tight mb-1">
-                    Zabezpiecz swoje konto
+              <div className="flex flex-col gap-6 animate-fade-in">
+                <div className="text-center">
+                  <span className="text-[10px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-2">
+                    Krok 3 z 4
+                  </span>
+                  <h2 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-2">
+                    Jak ma mieć na imię Twój Przyjaciel?
                   </h2>
-                  <p className="font-sans text-xs text-cream-600 max-w-xs mx-auto leading-relaxed">
-                    Podaj e-mail, aby zachować relację z {companionName}, oraz wpisz hasło robocze.
+                  <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                    Możesz zostawić imię domyślne lub nadać mu inne ważne dla Ciebie imię.
                   </p>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-cream-900 font-sans mb-1">
-                    Twój adres e-mail
-                  </label>
-                  <div className="flex items-center gap-2 bg-cream-50 border border-cream-300 rounded-2xl px-4 py-2.5 focus-within:border-sun-400 focus-within:ring-2 focus-within:ring-sun-400/20">
-                    <Mail size={16} className="text-cream-500" />
+                  <input
+                    type="text"
+                    value={companionName}
+                    onChange={(e) => setCompanionName(e.target.value)}
+                    placeholder="Imię Przyjaciela..."
+                    className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3.5 text-sm font-sans text-ink focus:outline-none transition-all"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep(2)}
+                    className="presence-btn-secondary flex-1 py-3 rounded-full font-sans font-medium text-xs"
+                  >
+                    Wróć
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setStep(4)}
+                    disabled={!companionName.trim()}
+                    className="presence-btn-primary flex-1 py-3 rounded-full font-sans font-medium text-xs flex items-center justify-center gap-1.5 disabled:opacity-40"
+                  >
+                    <span>Dalej</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* KROK 4: Zapisanie relacji (Email + Kod) */}
+            {step === 4 && (
+              <form onSubmit={handleCreateSubmit} className="flex flex-col gap-5 animate-fade-in">
+                <div className="text-center">
+                  <span className="text-[10px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-2">
+                    Krok 4 z 4
+                  </span>
+                  <h2 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-2">
+                    Żeby nasza rozmowa nie zniknęła
+                  </h2>
+                  <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                    Podaj swój adres e-mail i hasło dostępowe, aby zachować pamięć i listy.
+                  </p>
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-sans rounded-card text-center">
+                    {error}
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-medium text-ink font-sans mb-1">
+                      Twój adres e-mail
+                    </label>
                     <input
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="twoj@email.pl"
+                      placeholder="jan@domena.pl"
                       required
-                      className="bg-transparent w-full text-xs sm:text-sm font-sans text-cream-950 focus:outline-none"
+                      className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3 text-xs font-sans text-ink focus:outline-none"
                     />
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-cream-900 font-sans mb-1">
-                    Hasło robocze dostępu
-                  </label>
-                  <div className="flex items-center gap-2 bg-cream-50 border border-cream-300 rounded-2xl px-4 py-2.5 focus-within:border-sun-400 focus-within:ring-2 focus-within:ring-sun-400/20">
-                    <Lock size={16} className="text-cream-500" />
+                  <div>
+                    <label className="block text-[11px] font-medium text-ink font-sans mb-1">
+                      Hasło dostępowe
+                    </label>
                     <input
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Wpisz hasło robocze..."
+                      placeholder="Wpisz hasło (np. A132a132!)"
                       required
-                      className="bg-transparent w-full text-xs sm:text-sm font-sans text-cream-950 focus:outline-none"
+                      className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3 text-xs font-sans text-ink focus:outline-none"
                     />
+                    <span className="text-[10px] text-ink-subtle block mt-1">
+                      W wersji przedpremierowej użyj hasła dostępowego: <code className="text-warm-amber font-mono">A132a132!</code>
+                    </span>
                   </div>
-                  <span className="text-[11px] text-cream-500 font-sans mt-1 block">
-                    Wpisz hasło testowe: <strong className="text-sun-800">A132a132!</strong>
-                  </span>
                 </div>
 
-                {error && (
-                  <p className="text-xs text-rose-600 font-sans text-center font-medium">
-                    {error}
-                  </p>
-                )}
-
-                <div className="flex items-center gap-3 pt-2">
+                <div className="flex gap-2 pt-3">
                   <button
                     type="button"
-                    onClick={() => setStep(2)}
-                    className="secondary-warm-button py-3 px-5 rounded-full text-xs font-sans font-medium"
+                    onClick={() => setStep(3)}
+                    className="presence-btn-secondary flex-1 py-3.5 rounded-full font-sans font-medium text-xs"
                   >
                     Wróć
                   </button>
                   <button
                     type="submit"
-                    className="hearth-button flex-1 py-3.5 rounded-full font-sans font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-sun-500/20"
+                    className="presence-btn-primary flex-1 py-3.5 rounded-full font-sans font-medium text-xs shadow-quiet-md"
                   >
-                    <Check size={16} />
-                    <span>Stwórz przyjaciela i wejdź</span>
+                    Rozpocznij relację
                   </button>
                 </div>
               </form>
             )}
           </div>
         ) : (
-          /* Zakładka: Mam już konto */
-          <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4 animate-fade-in">
-            <div className="text-center mb-2">
-              <div className="inline-flex p-3 rounded-2xl bg-sun-100 text-sun-700 border border-sun-300 mb-2 shadow-sm">
-                <Heart size={24} />
-              </div>
-              <h2 className="font-serif text-2xl text-cream-950 font-normal tracking-tight mb-1">
-                Wróć do swojego przyjaciela
+          /* FORMULARZ LOGOWANIA */
+          <form onSubmit={handleLoginSubmit} className="flex flex-col gap-5 animate-fade-in">
+            <div className="text-center">
+              <h2 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-2">
+                Witaj ponownie.
               </h2>
-              <p className="font-sans text-xs text-cream-600 max-w-xs mx-auto leading-relaxed">
-                Wpisz swój e-mail, aby wczytać twoją relację, historię i wspomnienia.
+              <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                Zaloguj się, aby powrócić do swoich rozmów, pamięci i listów.
               </p>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-cream-900 font-sans mb-1">
-                Twój adres e-mail
-              </label>
-              <div className="flex items-center gap-2 bg-cream-50 border border-cream-300 rounded-2xl px-4 py-2.5 focus-within:border-sun-400 focus-within:ring-2 focus-within:ring-sun-400/20">
-                <Mail size={16} className="text-cream-500" />
+            {loginError && (
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs font-sans rounded-card text-center">
+                {loginError}
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="block text-[11px] font-medium text-ink font-sans mb-1">
+                  Twój adres e-mail
+                </label>
                 <input
                   type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="twoj@email.pl"
+                  placeholder="jan@domena.pl"
                   required
                   autoFocus
-                  className="bg-transparent w-full text-xs sm:text-sm font-sans text-cream-950 focus:outline-none"
+                  className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3 text-xs font-sans text-ink focus:outline-none"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-cream-900 font-sans mb-1">
-                Hasło robocze dostępu
-              </label>
-              <div className="flex items-center gap-2 bg-cream-50 border border-cream-300 rounded-2xl px-4 py-2.5 focus-within:border-sun-400 focus-within:ring-2 focus-within:ring-sun-400/20">
-                <Lock size={16} className="text-cream-500" />
+              <div>
+                <label className="block text-[11px] font-medium text-ink font-sans mb-1">
+                  Hasło dostępowe
+                </label>
                 <input
                   type="password"
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
-                  placeholder="Wpisz hasło robocze..."
+                  placeholder="Wpisz hasło dostępu"
                   required
-                  className="bg-transparent w-full text-xs sm:text-sm font-sans text-cream-950 focus:outline-none"
+                  className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3 text-xs font-sans text-ink focus:outline-none"
                 />
+                <span className="text-[10px] text-ink-subtle block mt-1">
+                  Hasło dostępowe: <code className="text-warm-amber font-mono">A132a132!</code>
+                </span>
               </div>
-              <span className="text-[11px] text-cream-500 font-sans mt-1 block">
-                Wpisz hasło testowe: <strong className="text-sun-800">A132a132!</strong>
-              </span>
             </div>
-
-            {loginError && (
-              <p className="text-xs text-rose-600 font-sans text-center font-medium">
-                {loginError}
-              </p>
-            )}
 
             <button
               type="submit"
-              className="hearth-button w-full py-3.5 rounded-full font-sans font-semibold text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-lg shadow-sun-500/20 mt-2"
+              className="presence-btn-primary w-full py-3.5 rounded-full font-sans font-medium text-xs mt-2 shadow-quiet-md"
             >
-              <Check size={16} />
-              <span>Zaloguj się do przyjaciela</span>
+              Wróć do rozmowy
             </button>
           </form>
         )}

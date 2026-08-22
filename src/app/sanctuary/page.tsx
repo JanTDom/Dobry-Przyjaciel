@@ -11,7 +11,7 @@ import { UserProfile } from "@/types";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 import { voiceEngine } from "@/lib/voice-engine";
-import { BookOpen, Heart } from "lucide-react";
+import { BookOpen } from "lucide-react";
 
 export default function SanctuaryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -44,7 +44,7 @@ export default function SanctuaryPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-cream-100 text-cream-900">
+    <div className="min-h-screen flex flex-col bg-paper text-ink">
       <TopNav
         onOpenLiveCall={handleOpenLiveCall}
         onOpenPricing={() => setIsPricingOpen(true)}
@@ -57,35 +57,40 @@ export default function SanctuaryPage() {
         companionGender={profile?.companionGender}
       />
 
-      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 flex flex-col gap-8 pb-28 md:pb-16 animate-fade-in">
-        <div className="border-b border-cream-300 pb-4">
-          <h1 className="font-serif text-3xl sm:text-4xl text-cream-950 font-normal tracking-tight mb-2">
-            Skarbiec twojej siły i listy wsparcia
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-14 flex flex-col gap-10 pb-28 md:pb-16 animate-fade-in">
+        <div className="max-w-2xl">
+          <span className="text-[11px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-3">
+            Prywatna korespondencja
+          </span>
+          <h1 className="font-serif text-3xl sm:text-5xl text-ink font-normal tracking-tight leading-tight mb-3">
+            Listy od Twojego Przyjaciela.
           </h1>
-          <p className="font-sans text-xs sm:text-sm text-cream-700 max-w-lg leading-relaxed">
-            Wracaj do tych słów zawsze, kiedy poczujesz zwątpienie, zmęczenie lub samotność. Zostały napisane specjalnie dla ciebie.
+          <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed">
+            Wracaj do tych słów zawsze, kiedy poczujesz zwątpienie, zmęczenie lub samotność. Zostały napisane specjalnie dla Ciebie na podstawie Twoich przeżyć.
           </p>
         </div>
 
         {profile ? (
           <VictoryVault />
         ) : (
-          <div className="glass-sanctuary rounded-3xl p-8 sm:p-12 border border-cream-300 shadow-warm-md text-center max-w-lg mx-auto">
-            <div className="inline-flex p-3.5 rounded-2xl bg-sun-100 text-sun-700 border border-sun-300 mb-4 shadow-sm">
-              <BookOpen size={24} />
+          <div className="quiet-surface rounded-surface p-10 sm:p-14 text-center max-w-lg mx-auto flex flex-col items-center">
+            <div className="w-12 h-12 rounded-full bg-paper-dark flex items-center justify-center text-warm-amber mb-4">
+              <BookOpen size={22} strokeWidth={1.75} />
             </div>
-            <h3 className="font-serif text-2xl text-cream-950 font-normal mb-2">
-              Twój osobisty skarbiec listów
-            </h3>
-            <p className="font-sans text-xs text-cream-600 leading-relaxed mb-6">
-              Stwórz swojego przyjaciela, aby otrzymać osobisty list powitalny i tworzyć dedykowane listy wsparcia na każdy wieczór.
+
+            <h2 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-2">
+              Pierwszy list jeszcze przed nami.
+            </h2>
+
+            <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed mb-8 max-w-sm">
+              Stwórz relację ze swoim Przyjacielem, aby otrzymać osobisty list powitalny i tworzyć dedykowane słowa wsparcia na każdy wieczór.
             </p>
+
             <button
               onClick={() => setIsAuthOpen(true)}
-              className="hearth-button inline-flex items-center gap-2 font-sans font-semibold text-xs px-7 py-3 rounded-full"
+              className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full"
             >
-              <Heart size={15} />
-              <span>Spotkaj się z przyjacielem</span>
+              <span>Spotkaj się z Przyjacielem</span>
             </button>
           </div>
         )}
