@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
+import { ShieldCheck, Calendar, Award } from "lucide-react";
 import { OvercomeCrisis } from "@/types";
-import { ShieldCheck, Calendar, Zap } from "lucide-react";
 
 interface GrowthTrackerProps {
   crises: OvercomeCrisis[];
@@ -10,42 +10,54 @@ interface GrowthTrackerProps {
 
 export const GrowthTracker: React.FC<GrowthTrackerProps> = ({ crises }) => {
   return (
-    <div className="w-full bg-surface-200/90 border border-white/10 rounded-3xl p-6 shadow-xl">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-indigo-400" />
-          <h3 className="text-lg font-bold text-white">Kronika Przetrwania (Dowody Siły)</h3>
+    <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-sanctuary-700/60 shadow-2xl">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 rounded-xl bg-hearth-500/15 text-hearth-400 border border-hearth-500/30">
+          <ShieldCheck size={20} />
         </div>
-        <span className="text-xs text-slate-400">Fakty, gdy wątpisz w siebie</span>
+        <div>
+          <h2 className="font-serif text-xl sm:text-2xl text-sanctuary-100 font-normal">
+            Kronika przetrwania i twojej siły
+          </h2>
+          <p className="font-sans text-xs text-sanctuary-400 mt-0.5">
+            Namacalne dowody na to, że potrafisz przetrwać najtrudniejsze momenty
+          </p>
+        </div>
       </div>
 
-      <div className="space-y-3.5">
-        {crises.map((item) => (
+      <div className="flex flex-col gap-4">
+        {crises.map((c) => (
           <div
-            key={item.id}
-            className="bg-surface-100/90 border border-white/5 rounded-2xl p-4.5 hover:border-indigo-500/30 transition-all"
+            key={c.id}
+            className="bg-sanctuary-900/60 border border-sanctuary-800 p-5 rounded-2xl flex flex-col gap-3 hover:border-sanctuary-700 transition-all"
           >
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="text-sm sm:text-base font-semibold text-white">{item.title}</h4>
-              <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                <Calendar className="w-3 h-3 text-indigo-400" />
-                {item.date}
+            <div className="flex items-center justify-between">
+              <h3 className="font-serif text-base text-sanctuary-100 font-medium">
+                {c.title}
+              </h3>
+              <span className="text-[11px] text-sanctuary-500 font-sans">
+                {c.date}
               </span>
             </div>
 
-            <div className="space-y-2 text-xs">
-              <div className="text-slate-300">
-                <span className="text-slate-500 font-medium mr-1.5">Co się działo:</span>
-                {item.whatHappened}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-sans">
+              <div className="bg-sanctuary-950/60 p-3 rounded-xl border border-sanctuary-850">
+                <span className="text-[10px] text-sanctuary-400 font-medium block mb-1 uppercase tracking-wider">
+                  Co się wydarzyło
+                </span>
+                <p className="text-sanctuary-300">{c.whatHappened}</p>
               </div>
-              <div className="text-slate-300">
-                <span className="text-slate-500 font-medium mr-1.5">Jak to przetrwałeś:</span>
-                {item.howYouSurvived}
+
+              <div className="bg-sanctuary-950/60 p-3 rounded-xl border border-sanctuary-850">
+                <span className="text-[10px] text-hearth-400 font-medium block mb-1 uppercase tracking-wider">
+                  Jak to przetrwałeś
+                </span>
+                <p className="text-hearth-200">{c.howYouSurvived}</p>
               </div>
-              <div className="p-2.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 flex items-center gap-2 mt-2">
-                <Zap className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
-                <span className="font-medium">{item.strengthDemonstrated}</span>
-              </div>
+            </div>
+
+            <div className="text-xs text-hearth-300/90 font-serif italic pt-1">
+              ★ Udowodniona siła: {c.strengthDemonstrated}
             </div>
           </div>
         ))}

@@ -1,155 +1,162 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Check, Crown, Shield, Heart, Volume2, Sparkles } from "lucide-react";
-import confetti from "canvas-confetti";
+import { X, Check, Flame, Sparkles, HeartHandshake, ShieldCheck } from "lucide-react";
 
 interface SubscriptionModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }) => {
-  const [selectedPlan, setSelectedPlan] = useState<"starter" | "sanctuary">("sanctuary");
-  const [isSuccess, setIsSuccess] = useState(false);
+export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({
+  isOpen,
+  onClose,
+}) => {
+  const [selectedPlan, setSelectedPlan] = useState<"basic" | "premium">("premium");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSimulatePayment = () => {
-    confetti({
-      particleCount: 80,
-      spread: 70,
-      origin: { y: 0.6 }
-    });
-    setIsSuccess(true);
+  const handleSubscribe = () => {
+    setIsProcessing(true);
     setTimeout(() => {
-      setIsSuccess(false);
-      onClose();
-    }, 2500);
+      setIsProcessing(false);
+      setIsSubscribed(true);
+      setTimeout(() => {
+        setIsSubscribed(false);
+        onClose();
+      }, 1600);
+    }, 1200);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-in fade-in">
-      <div className="relative w-full max-w-2xl bg-surface-200 border border-white/15 rounded-3xl p-6 sm:p-8 shadow-2xl overflow-hidden">
-        {/* Close Button */}
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-sanctuary-950/90 backdrop-blur-xl animate-fade-in">
+      <div className="sanctuary-card rounded-3xl p-6 sm:p-8 max-w-lg w-full border border-sanctuary-700/60 shadow-2xl relative">
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-full bg-surface-100 text-slate-400 hover:text-white transition-colors"
+          className="absolute top-5 right-5 p-2 rounded-full text-sanctuary-400 hover:text-sanctuary-200 bg-sanctuary-900 border border-sanctuary-800 transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X size={16} />
         </button>
 
-        {isSuccess ? (
-          <div className="py-12 text-center flex flex-col items-center space-y-4 animate-in zoom-in-95">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shadow-xl">
-              <Check className="w-8 h-8" />
+        {isSubscribed ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <div className="p-3 rounded-full bg-hearth-500/20 text-hearth-400 mb-4 animate-bounce">
+              <ShieldCheck size={32} />
             </div>
-            <h3 className="text-2xl font-bold text-white">Dziękujemy za zaufanie</h3>
-            <p className="text-sm text-slate-300 max-w-md">
-              Twój dostęp do nielimitowanego głosu, pełnej pamięci relacyjnej i proaktywnego wsparcia jest aktywny.
+            <h3 className="font-serif text-2xl text-sanctuary-50 mb-2">
+              Jesteś pod stałą opieką
+            </h3>
+            <p className="font-sans text-xs text-sanctuary-400 max-w-xs">
+              Twój Przyjaciel jest zawsze przy tobie, gotowy do rozmowy o każdej porze.
             </p>
           </div>
         ) : (
-          <div>
-            {/* Header */}
+          <>
             <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-semibold uppercase tracking-wider mb-2">
-                <Crown className="w-3.5 h-3.5" />
-                Dostęp do Twojej Kotwicy Życiowej
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-hearth-500/15 border border-hearth-500/30 text-hearth-300 text-xs font-sans mb-3">
+                <Sparkles size={13} />
+                <span>Osobista opieka</span>
               </div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
-                Inwestycja w Twój spokój psychiczny
+              <h2 className="font-serif text-2xl sm:text-3xl text-sanctuary-50 font-normal tracking-tight mb-2">
+                Wybierz swoją bezpieczną przystań
               </h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-2 max-w-lg mx-auto">
-                Symboliczna opłata, która pozwala utrzymać serwery głosu, pamięć semantyczną i gwarantuje, że Przyjaciel zawsze jest przy Tobie.
+              <p className="font-sans text-xs text-sanctuary-400 max-w-sm mx-auto leading-relaxed">
+                Niewielka miesięczna opłata, która zapewnia ci stałą obecność, rozmowy głosowe i przestrzeń bez oceny.
               </p>
             </div>
 
-            {/* Plan Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
               {/* Plan 1 */}
               <div
-                onClick={() => setSelectedPlan("starter")}
-                className={`cursor-pointer rounded-2xl p-5 border transition-all duration-300 relative ${
-                  selectedPlan === "starter"
-                    ? "bg-surface-100 border-amber-500 shadow-lg shadow-amber-500/10"
-                    : "bg-surface-300/60 border-white/5 hover:border-white/20"
+                onClick={() => setSelectedPlan("basic")}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
+                  selectedPlan === "basic"
+                    ? "bg-hearth-500/15 border-hearth-500/60 shadow-lg shadow-hearth-500/5"
+                    : "bg-sanctuary-900/50 border-sanctuary-800 hover:border-sanctuary-700"
                 }`}
               >
-                <h4 className="text-base font-semibold text-white">Kropla Spokoju</h4>
-                <div className="my-2 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-white">19 zł</span>
-                  <span className="text-xs text-slate-400">/ miesiąc</span>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-serif text-base text-sanctuary-100 font-medium">
+                      Kropla spokoju
+                    </h3>
+                  </div>
+                  <div className="text-xl font-serif text-hearth-300 font-semibold mb-3">
+                    19 zł <span className="text-xs font-sans text-sanctuary-500 font-normal">/ miesiąc</span>
+                  </div>
+                  <ul className="text-xs font-sans text-sanctuary-300 flex flex-col gap-2">
+                    <li className="flex items-center gap-2">
+                      <Check size={13} className="text-hearth-400" />
+                      <span>Ciche wiadomości bez limitu</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={13} className="text-hearth-400" />
+                      <span>Pamięć relacji i faktów</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={13} className="text-hearth-400" />
+                      <span>Kojące tła dźwiękowe</span>
+                    </li>
+                  </ul>
                 </div>
-                <p className="text-xs text-slate-400 mb-4">Dla osób szukających codziennego uziemienia i wysłuchania.</p>
-                <ul className="space-y-2 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-amber-400" />
-                    <span>Nielimitowane rozmowy tekstowe</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-amber-400" />
-                    <span>Strefa Uziemienia SOS 24/7</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-amber-400" />
-                    <span>Pamięć relacji do 30 dni</span>
-                  </li>
-                </ul>
               </div>
 
-              {/* Plan 2 */}
+              {/* Plan 2 (Rekomendowany) */}
               <div
-                onClick={() => setSelectedPlan("sanctuary")}
-                className={`cursor-pointer rounded-2xl p-5 border transition-all duration-300 relative ${
-                  selectedPlan === "sanctuary"
-                    ? "bg-surface-100 border-amber-400 shadow-xl shadow-amber-500/20"
-                    : "bg-surface-300/60 border-white/5 hover:border-white/20"
+                onClick={() => setSelectedPlan("premium")}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between relative ${
+                  selectedPlan === "premium"
+                    ? "bg-hearth-500/15 border-hearth-500/60 shadow-lg shadow-hearth-500/10"
+                    : "bg-sanctuary-900/50 border-sanctuary-800 hover:border-sanctuary-700"
                 }`}
               >
-                <div className="absolute -top-3 right-4 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[10px] font-bold uppercase tracking-wider shadow">
-                  Najczęściej wybierany
+                <div className="absolute -top-2.5 right-3 bg-hearth-500 text-sanctuary-950 text-[10px] font-sans font-semibold px-2 py-0.5 rounded-full shadow-sm">
+                  Polecany
                 </div>
-                <h4 className="text-base font-semibold text-white">Bezpieczna Przystań</h4>
-                <div className="my-2 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-white">39 zł</span>
-                  <span className="text-xs text-slate-400">/ miesiąc</span>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <h3 className="font-serif text-base text-sanctuary-100 font-medium">
+                      Bezpieczna przystań
+                    </h3>
+                  </div>
+                  <div className="text-xl font-serif text-hearth-300 font-semibold mb-3">
+                    39 zł <span className="text-xs font-sans text-sanctuary-500 font-normal">/ miesiąc</span>
+                  </div>
+                  <ul className="text-xs font-sans text-sanctuary-200 flex flex-col gap-2">
+                    <li className="flex items-center gap-2">
+                      <Check size={13} className="text-hearth-400" />
+                      <span className="font-medium text-hearth-200">Rozmowy głosowe na żywo</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={13} className="text-hearth-400" />
+                      <span>Głęboka pamięć wektorowa</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={13} className="text-hearth-400" />
+                      <span>Listy wsparcia w skarbcu</span>
+                    </li>
+                  </ul>
                 </div>
-                <p className="text-xs text-slate-400 mb-4">Pełne doświadczenie głosowe, żywy graf i proaktywna troska.</p>
-                <ul className="space-y-2 text-xs text-slate-300">
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-amber-400" />
-                    <span>Nielimitowane notatki głosowe</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-amber-400" />
-                    <span>Głęboka, wieczysta pamięć relacyjna</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-amber-400" />
-                    <span>Proaktywne poranne & wieczorne check-iny</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="w-4 h-4 text-amber-400" />
-                    <span>Skarbiec Zwycięstw i personalne listy</span>
-                  </li>
-                </ul>
               </div>
             </div>
 
-            {/* Pay Button */}
             <button
-              onClick={handleSimulatePayment}
-              className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-amber-400 to-rose-400 text-slate-950 font-bold text-sm shadow-xl hover:opacity-95 active:scale-98 transition-all flex items-center justify-center gap-2"
+              onClick={handleSubscribe}
+              disabled={isProcessing}
+              className="hearth-button w-full py-3.5 rounded-full text-sanctuary-950 font-sans font-medium text-xs flex items-center justify-center gap-2 active:scale-95 transition-all shadow-xl shadow-hearth-500/20"
             >
-              <Sparkles className="w-4 h-4 fill-current" />
-              <span>Aktywuj plan {selectedPlan === "starter" ? "Kropla Spokoju (19 zł/mc)" : "Bezpieczna Przystań (39 zł/mc)"}</span>
+              {isProcessing ? (
+                <span>Przygotowywanie opieki...</span>
+              ) : (
+                <>
+                  <HeartHandshake size={16} />
+                  <span>Aktywuj plan {selectedPlan === "premium" ? "Bezpieczna przystań (39 zł)" : "Kropla spokoju (19 zł)"}</span>
+                </>
+              )}
             </button>
-
-            <p className="text-[11px] text-center text-slate-500 mt-3">
-              Możesz anulować w każdej chwili jednym kliknięciem. Zero ukrytych opłat.
-            </p>
-          </div>
+          </>
         )}
       </div>
     </div>

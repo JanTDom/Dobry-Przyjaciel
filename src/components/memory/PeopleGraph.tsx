@@ -1,60 +1,71 @@
 "use client";
 
 import React from "react";
+import { Users, Heart, AlertCircle, HelpCircle } from "lucide-react";
 import { PersonInLife } from "@/types";
-import { Users, User, ShieldAlert, HeartHandshake, HelpCircle } from "lucide-react";
 
 interface PeopleGraphProps {
   people: PersonInLife[];
 }
 
 export const PeopleGraph: React.FC<PeopleGraphProps> = ({ people }) => {
-  const getSentimentBadge = (sentiment: PersonInLife["sentiment"]) => {
-    switch (sentiment) {
-      case "supportive":
-        return { label: "Oparcie", color: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" };
-      case "stressful":
-        return { label: "Źródło presji", color: "bg-rose-500/15 text-rose-300 border-rose-500/30" };
-      case "complicated":
-        return { label: "Złożona relacja", color: "bg-amber-500/15 text-amber-300 border-amber-500/30" };
-      default:
-        return { label: "Neutralna", color: "bg-slate-500/15 text-slate-300 border-slate-500/30" };
-    }
-  };
-
   return (
-    <div className="w-full bg-surface-200/90 border border-white/10 rounded-3xl p-6 shadow-xl">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Users className="w-5 h-5 text-amber-400" />
-          <h3 className="text-lg font-bold text-white">Mapa Twoich Relacji</h3>
+    <div className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-sanctuary-700/60 shadow-2xl">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 rounded-xl bg-hearth-500/15 text-hearth-400 border border-hearth-500/30">
+          <Users size={20} />
         </div>
-        <span className="text-xs text-slate-400">Postacie, o których rozmawiamy</span>
+        <div>
+          <h2 className="font-serif text-xl sm:text-2xl text-sanctuary-100 font-normal">
+            Ważne osoby w twoim życiu
+          </h2>
+          <p className="font-sans text-xs text-sanctuary-400 mt-0.5">
+            Mapa relacji, które kształtują twoje emocje i codzienne samopoczucie
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-        {people.map((person) => {
-          const badge = getSentimentBadge(person.sentiment);
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {people.map((p) => {
+          const isSupport = p.sentiment === "supportive";
+          const isStress = p.sentiment === "stressful";
+
           return (
             <div
-              key={person.id}
-              className="bg-surface-100/90 border border-white/5 rounded-2xl p-4 flex flex-col justify-between hover:border-white/20 transition-all"
+              key={p.id}
+              className="bg-sanctuary-900/60 border border-sanctuary-800 p-5 rounded-2xl flex flex-col justify-between hover:border-sanctuary-700 transition-all"
             >
               <div>
-                <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <div>
-                    <h4 className="text-base font-semibold text-white">{person.name}</h4>
-                    <span className="text-xs text-slate-400">{person.relation}</span>
+                    <h3 className="font-serif text-lg text-sanctuary-100 font-medium">
+                      {p.name}
+                    </h3>
+                    <span className="text-xs text-sanctuary-400 font-sans">
+                      {p.relation}
+                    </span>
                   </div>
-                  <span className={`text-[10px] font-medium px-2.5 py-0.5 rounded-full border ${badge.color}`}>
-                    {badge.label}
+
+                  <span
+                    className={`text-[10px] font-sans px-2.5 py-1 rounded-full border ${
+                      isSupport
+                        ? "bg-hearth-500/15 text-hearth-300 border-hearth-500/30"
+                        : isStress
+                        ? "bg-rosewood-600/20 text-rosewood-400 border-rosewood-500/30"
+                        : "bg-sanctuary-800 text-sanctuary-400 border-sanctuary-700"
+                    }`}
+                  >
+                    {isSupport ? "Wsparcie" : isStress ? "Wymaga granic" : "Złożona"}
                   </span>
                 </div>
-                <p className="text-xs text-slate-300 leading-relaxed mt-2">{person.notes}</p>
+
+                <p className="font-sans text-xs text-sanctuary-300 leading-relaxed mb-4">
+                  {p.notes}
+                </p>
               </div>
 
-              <div className="text-[10px] text-slate-500 mt-3 pt-2 border-t border-white/5">
-                Ostatnio wspomniany: {person.lastMentioned}
+              <div className="text-[10px] text-sanctuary-500 font-sans border-t border-sanctuary-800/80 pt-2">
+                Ostatnio wspomniane: {p.lastMentioned}
               </div>
             </div>
           );

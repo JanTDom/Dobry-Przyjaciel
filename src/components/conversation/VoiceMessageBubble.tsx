@@ -1,144 +1,102 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Play, Pause, Volume2, ChevronDown, ChevronUp, Sparkles } from "lucide-react";
+import React, { useState } from "react";
+import { Play, Pause, Flame, Sparkles } from "lucide-react";
 import { Message } from "@/types";
 import { voiceEngine } from "@/lib/voice-engine";
 
 interface VoiceMessageBubbleProps {
   message: Message;
   companionName?: string;
-  onActionClick?: (action: string) => void;
 }
 
 export const VoiceMessageBubble: React.FC<VoiceMessageBubbleProps> = ({
   message,
   companionName = "Mira",
-  onActionClick
 }) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [isExpanded, setIsExpanded] = useState(true);
-
   const isCompanion = message.sender === "companion";
-  const hasVoice = Boolean(message.voiceMeta);
-  const duration = message.voiceMeta?.durationSeconds || 8;
-  const waveform = message.voiceMeta?.waveform || [20, 40, 65, 85, 70, 50, 40, 60, 80, 50, 30];
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
+  const handlePlayVoice = () => {
     if (isPlaying) {
-      const step = 100 / (duration * 10);
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            setIsPlaying(false);
-            return 0;
-          }
-          return prev + step;
-        });
-      }, 100);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, duration]);
-
-  const handleTogglePlay = () => {
-    if (isPlaying) {
-      voiceEngine?.stop();
+      voiceEngine.stopSpeaking();
       setIsPlaying(false);
-      setProgress(0);
     } else {
       setIsPlaying(true);
-      setProgress(0);
-      if (isCompanion) {
-        voiceEngine?.speak(message.text, () => {
-          setIsPlaying(false);
-          setProgress(0);
-        });
-      }
+      voiceEngine.speak(message.text, () => {
+        setIsPlaying(false);
+      });
     }
   };
 
+  const timeString = message.createdAt
+    ? new Date(message.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : message.timestamp || "Teraz";
+
   return (
     <div
-      className={`flex flex-col mb-4 max-w-2xl transition-all duration-300 ${
-        isCompanion ? "self-start mr-auto" : "self-end ml-auto"
+      className={`flex flex-col gap-2 max-w-xl w-full ${
+        isCompanion ? "items-start" : "items-end ml-auto"
       }`}
     >
-      {/* Sender Header */}
-      <div className={`flex items-center gap-2 mb-1.5 px-1 text-xs ${isCompanion ? "text-warm-300" : "text-slate-400 justify-end"}`}>
-        <span className="font-semibold tracking-wide flex items-center gap-1">
-          {isCompanion && <Sparkles className="w-3 h-3 text-amber-400" />}
+      {/* Informacja o nadawcy */}
+      <div className="flex items-center gap-2 px-1">
+        <span className="text-xs font-sans text-sanctuary-400 font-medium">
           {isCompanion ? companionName : "Ty"}
         </span>
-        <span className="text-[11px] opacity-60">{message.timestamp}</span>
+        <span className="text-[10px] text-sanctuary-500 font-sans">
+          {timeString}
+        </span>
       </div>
 
-      {/* Bubble Container */}
+      {/* Ciało wiadomości */}
       <div
-        className={`relative rounded-2xl p-4 shadow-xl border backdrop-blur-xl transition-all ${
+        className={`p-4 md:p-5 rounded-2xl relative transition-all ${
           isCompanion
-            ? "bg-surface-100/90 border-white/10 text-slate-100 rounded-tl-sm hover:border-amber-500/30"
-            : "bg-amber-600/90 text-amber-50 border-amber-400/30 rounded-tr-sm self-end"
+            ? "sanctuary-card border-sanctuary-700/60 text-sanctuary-100 rounded-tl-sm"
+            : "bg-gradient-to-br from-hearth-800/60 to-hearth-900/80 border border-hearth-600/30 text-sanctuary-100 rounded-tr-sm"
         }`}
       >
-        {/* Voice player bar (if voice note) */}
-        {hasVoice && (
-          <div className="mb-3 pb-3 border-b border-white/10 flex items-center gap-3">
+        <p className="font-serif text-base leading-relaxed whitespace-pre-wrap">
+          {message.text}
+        </p>
+
+        {/* Odtwarzacz głosu przyjaciela */}
+        {isCompanion && (
+          <div className="mt-3 pt-3 border-t border-sanctuary-800/80 flex items-center justify-between gap-3">
             <button
-              onClick={handleTogglePlay}
-              className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-95 shadow-md ${
-                isCompanion
-                  ? "bg-amber-500 text-slate-950 hover:bg-amber-400"
-                  : "bg-white text-amber-800 hover:bg-amber-100"
-              }`}
+              onClick={handlePlayVoice}
+              className="flex items-center gap-2 text-xs font-sans text-hearth-300 hover:text-hearth-200 bg-hearth-500/10 hover:bg-hearth-500/20 px-3 py-1.5 rounded-full border border-hearth-500/30 transition-all"
             >
-              {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+              {isPlaying ? (
+                <>
+                  <Pause size={13} className="animate-pulse text-hearth-400" />
+                  <span>Zatrzymaj głos</span>
+                </>
+              ) : (
+                <>
+                  <Play size={13} className="text-hearth-400" />
+                  <span>Odsłuchaj głosem</span>
+                </>
+              )}
             </button>
 
-            {/* Audio Waveform visualization */}
-            <div className="flex-1 flex items-center gap-1 h-8 px-2 bg-surface-300/40 rounded-xl">
-              {waveform.map((height, idx) => {
-                const barPercent = (idx / waveform.length) * 100;
-                const isPlayed = progress >= barPercent;
-                return (
-                  <div
-                    key={idx}
-                    style={{ height: `${Math.max(15, height)}%` }}
-                    className={`flex-1 rounded-full transition-all duration-150 ${
-                      isPlayed
-                        ? "bg-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.6)]"
-                        : "bg-white/20"
-                    }`}
-                  />
-                );
-              })}
+            {/* Wizualizacja fali dźwiękowej */}
+            <div className="flex items-center gap-1">
+              {[4, 12, 8, 16, 10, 6, 14, 8].map((h, i) => (
+                <div
+                  key={i}
+                  className={`w-1 rounded-full transition-all duration-300 ${
+                    isPlaying
+                      ? "bg-hearth-400 animate-pulse"
+                      : "bg-sanctuary-700"
+                  }`}
+                  style={{
+                    height: isPlaying ? `${Math.max(4, h * (i % 2 === 0 ? 1.4 : 0.8))}px` : "6px",
+                  }}
+                />
+              ))}
             </div>
-
-            <div className="text-[11px] font-mono opacity-70 whitespace-nowrap flex items-center gap-1">
-              <Volume2 className="w-3 h-3 text-amber-400" />
-              <span>{Math.round(duration)}s</span>
-            </div>
-          </div>
-        )}
-
-        {/* Text Content */}
-        <div className="text-[14px] leading-relaxed tracking-normal font-normal text-slate-200">
-          {message.text}
-        </div>
-
-        {/* Action pills / Quick responses */}
-        {message.suggestedActions && message.suggestedActions.length > 0 && (
-          <div className="mt-3.5 pt-3 border-t border-white/10 flex flex-wrap gap-2">
-            {message.suggestedActions.map((action, idx) => (
-              <button
-                key={idx}
-                onClick={() => onActionClick && onActionClick(action.action)}
-                className="px-3 py-1.5 rounded-full text-xs font-medium bg-amber-500/15 hover:bg-amber-500/30 text-amber-200 border border-amber-500/30 transition-all active:scale-95 flex items-center gap-1.5 shadow-sm"
-              >
-                <span>{action.label}</span>
-              </button>
-            ))}
           </div>
         )}
       </div>

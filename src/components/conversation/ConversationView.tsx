@@ -1,49 +1,59 @@
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { Message, UserProfile } from "@/types";
 import { VoiceMessageBubble } from "./VoiceMessageBubble";
-import { Sparkles, Compass } from "lucide-react";
+import { Flame, Sparkles, Heart } from "lucide-react";
 
 interface ConversationViewProps {
   messages: Message[];
   profile: UserProfile;
-  onActionClick: (action: string) => void;
+  onOpenLiveCall: () => void;
 }
 
 export const ConversationView: React.FC<ConversationViewProps> = ({
   messages,
   profile,
-  onActionClick
+  onOpenLiveCall,
 }) => {
-  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  return (
-    <div className="w-full flex-1 overflow-y-auto px-2 sm:px-4 py-4 flex flex-col space-y-2 custom-scrollbar">
-      {/* Intimate Greeting Banner */}
-      <div className="text-center my-4 py-3 px-4 rounded-2xl bg-surface-200/50 border border-white/5 max-w-md mx-auto backdrop-blur-md">
-        <div className="flex items-center justify-center gap-1.5 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-1">
-          <Compass className="w-3.5 h-3.5" />
-          <span>DobryPrzyjaciel.pl &bull; Dzień {profile.daysTogether}</span>
+  if (messages.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center text-center p-8 sanctuary-card rounded-3xl border border-sanctuary-800/80 my-4 max-w-lg mx-auto">
+        <div className="h-12 w-12 rounded-full bg-hearth-500/10 flex items-center justify-center text-hearth-400 mb-4 border border-hearth-500/20">
+          <Flame size={24} />
         </div>
-        <p className="text-xs text-slate-400 leading-relaxed">
-          Wszystko, co tu mówisz, zostaje między Wami. {profile.companionName} pamięta Twoją drogę i wspiera Cię w każdym kroku.
+        <h3 className="font-serif text-xl text-sanctuary-100 mb-2">
+          Twoja przestrzeń spokoju i rozmowy
+        </h3>
+        <p className="font-sans text-xs text-sanctuary-400 leading-relaxed mb-6 max-w-sm">
+          Nie musisz być dzisiaj silny. Możesz po prostu ze mną porozmawiać głosem lub napisać to, co leży ci na sercu.
         </p>
+        <button
+          onClick={onOpenLiveCall}
+          className="hearth-button text-sanctuary-950 font-sans font-medium text-xs px-6 py-3 rounded-full flex items-center gap-2"
+        >
+          <Sparkles size={14} />
+          <span>Rozpocznij rozmowę na żywo</span>
+        </button>
       </div>
+    );
+  }
 
+  return (
+    <div className="flex flex-col gap-6 py-4 overflow-y-auto max-w-2xl mx-auto w-full px-2">
       {messages.map((msg) => (
         <VoiceMessageBubble
           key={msg.id}
           message={msg}
           companionName={profile.companionName}
-          onActionClick={onActionClick}
         />
       ))}
-
       <div ref={bottomRef} className="h-4" />
     </div>
   );

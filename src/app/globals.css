@@ -3,34 +3,85 @@
 @tailwind utilities;
 
 :root {
-  --background: #07090E;
-  --foreground: #F8FAFC;
+  --bg-sanctuary: #090706;
+  --color-hearth: #F59E0B;
+  --color-warm-velvet: #1C1410;
+  --font-serif: "Newsreader", "Playfair Display", "Georgia", serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
+@layer base {
+  body {
+    @apply bg-sanctuary-950 text-sanctuary-200 antialiased selection:bg-hearth-500/30 selection:text-hearth-100;
+    font-family: var(--font-sans);
+    background-color: #090706;
+    background-image: 
+      radial-gradient(at 50% 0%, rgba(245, 158, 11, 0.07) 0px, transparent 60%),
+      radial-gradient(at 100% 100%, rgba(180, 83, 9, 0.05) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, rgba(38, 28, 22, 0.4) 0px, transparent 50%);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, .font-serif-accent {
+    font-family: var(--font-serif);
+    letter-spacing: -0.015em;
+  }
 }
 
-/* Custom Scrollbar */
-.custom-scrollbar::-webkit-scrollbar {
+/* Custom smooth scrollbar */
+::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: rgba(15, 18, 28, 0.4);
+::-webkit-scrollbar-track {
+  background: #090706;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #261C16;
   border-radius: 9999px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(251, 191, 36, 0.2);
-  border-radius: 9999px;
+::-webkit-scrollbar-thumb:hover {
+  background: #3D2E25;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(251, 191, 36, 0.4);
+/* Glass & Sanctuary Card utilities */
+.sanctuary-card {
+  background: linear-gradient(180deg, rgba(28, 20, 16, 0.85) 0%, rgba(19, 14, 11, 0.95) 100%);
+  border: 1px solid rgba(61, 46, 37, 0.5);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(12px);
+}
+
+.sanctuary-card-hover {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.sanctuary-card-hover:hover {
+  border-color: rgba(245, 158, 11, 0.4);
+  box-shadow: 0 12px 40px 0 rgba(245, 158, 11, 0.08);
+  transform: translateY(-2px);
+}
+
+.hearth-button {
+  background: linear-gradient(135deg, #F59E0B 0%, #D97706 60%, #B45309 100%);
+  box-shadow: 0 4px 20px -2px rgba(245, 158, 11, 0.4);
+  transition: all 0.25s ease;
+}
+
+.hearth-button:hover {
+  box-shadow: 0 6px 28px 0 rgba(245, 158, 11, 0.6);
+  transform: translateY(-1px) scale(1.01);
+}
+
+.hearth-button:active {
+  transform: translateY(1px) scale(0.99);
+}
+
+/* Soft text glow */
+.text-hearth-glow {
+  text-shadow: 0 0 24px rgba(245, 158, 11, 0.4);
 }

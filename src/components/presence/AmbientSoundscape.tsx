@@ -1,101 +1,133 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { CloudRain, Waves, Sparkles, Trees, Volume2, VolumeX } from "lucide-react";
-import { ambientEngine } from "@/lib/audio-synthesizer";
-import { AmbientSoundType } from "@/types";
+import React, { useState } from "react";
+import { Flame, CloudRain, Waves, Sparkles, Trees, Volume2, VolumeX } from "lucide-react";
+import { soundscapeEngine, SoundscapeType } from "@/lib/audio-synthesizer";
 
 export const AmbientSoundscape: React.FC = () => {
-  const [activeSound, setActiveSound] = useState<AmbientSoundType>("none");
-  const [volume, setVolume] = useState<number>(0.35);
-  const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [active, setActive] = useState<SoundscapeType | null>(null);
+  const [isMuted, setIsMuted] = useState(false);
+  const [volume, setVolume] = useState(0.4);
 
-  const soundOptions: { type: AmbientSoundType; label: string; icon: React.ReactNode; desc: string }[] = [
-    { type: "none", label: "Cisza", icon: <VolumeX className="w-3.5 h-3.5" />, desc: "Tylko głos" },
-    { type: "rain", label: "Cichy Deszcz", icon: <CloudRain className="w-3.5 h-3.5" />, desc: "Krople na szybie" },
-    { type: "ocean", label: "Fale Oceanu", icon: <Waves className="w-3.5 h-3.5" />, desc: "Spokojny przypływ" },
-    { type: "alpha_drone", label: "Fale Alfa 8Hz", icon: <Sparkles className="w-3.5 h-3.5" />, desc: "Redukcja lęku" },
-    { type: "night_forest", label: "Nocny Las", icon: <Trees className="w-3.5 h-3.5" />, desc: "Kojąca atmosfera" },
+  const soundscapes: { type: SoundscapeType; label: string; icon: React.ReactNode; desc: string }[] = [
+    {
+      type: "fireplace",
+      label: "Ciepły kominek",
+      icon: <Flame size={16} className="text-hearth-400" />,
+      desc: "Trzaskające drewno i kojące ciepło",
+    },
+    {
+      type: "rain",
+      label: "Kojący deszcz",
+      icon: <CloudRain size={16} className="text-hearth-300" />,
+      desc: "Miękki szum letniego deszczu za oknem",
+    },
+    {
+      type: "ocean",
+      label: "Fale oceanu",
+      icon: <Waves size={16} className="text-hearth-400" />,
+      desc: "Spokojny, miarowy oddech wody",
+    },
+    {
+      type: "alpha_waves",
+      label: "Fale alfa 8Hz",
+      icon: <Sparkles size={16} className="text-hearth-300" />,
+      desc: "Dźwięk wyciszający gonitwę myśli",
+    },
+    {
+      type: "forest",
+      label: "Nocny las",
+      icon: <Trees size={16} className="text-hearth-400" />,
+      desc: "Cichy szum drzew i świerszcze pod gwiazdami",
+    },
   ];
 
-  const handleSelectSound = (type: AmbientSoundType) => {
-    if (activeSound === type) {
-      ambientEngine?.stop();
-      setActiveSound("none");
+  const handleSelect = (type: SoundscapeType) => {
+    if (active === type) {
+      soundscapeEngine.stop();
+      setActive(null);
     } else {
-      ambientEngine?.play(type);
-      setActiveSound(type);
+      soundscapeEngine.play(type);
+      soundscapeEngine.setVolume(volume);
+      setActive(type);
     }
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseFloat(e.target.value);
     setVolume(val);
-    if (!isMuted) {
-      ambientEngine?.setVolume(val);
-    }
+    soundscapeEngine.setVolume(val);
   };
 
-  const toggleMute = () => {
-    if (isMuted) {
-      ambientEngine?.setVolume(volume);
-      setIsMuted(false);
-    } else {
-      ambientEngine?.setVolume(0);
-      setIsMuted(true);
-    }
+  const handleToggleMute = () => {
+    const muted = soundscapeEngine.toggleMute();
+    setIsMuted(muted);
   };
 
   return (
-    <div className="w-full bg-surface-200/70 backdrop-blur-xl border border-white/5 rounded-2xl p-3 px-4 shadow-lg flex flex-wrap items-center justify-between gap-3 text-xs">
-      <div className="flex items-center gap-2">
-        <span className="text-warm-300 font-medium text-xs tracking-wider uppercase flex items-center gap-1.5">
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          Kojące Tło:
-        </span>
+    <div className="sanctuary-card rounded-2xl p-5 border border-sanctuary-700/60 shadow-xl">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <div className="p-1.5 rounded-lg bg-hearth-500/10 text-hearth-400">
+            <Flame size={16} />
+          </div>
+          <div>
+            <h3 className="text-sm font-medium text-sanctuary-100 font-sans">Kojące tło dźwiękowe</h3>
+            <p className="text-xs text-sanctuary-400 font-sans">Wybierz dźwięk, który pomoże ci się wyciszyć</p>
+          </div>
+        </div>
+
+        {/* Sterowanie głośnością */}
+        {active && (
+          <div className="flex items-center gap-2 bg-sanctuary-900/90 px-3 py-1.5 rounded-full border border-sanctuary-700/50">
+            <button
+              onClick={handleToggleMute}
+              className="text-sanctuary-400 hover:text-hearth-300 transition-colors"
+              title={isMuted ? "Włącz dźwięk" : "Wycisz"}
+            >
+              {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
+            </button>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={volume}
+              onChange={handleVolumeChange}
+              className="w-16 h-1 bg-sanctuary-700 rounded-lg appearance-none cursor-pointer accent-hearth-500"
+            />
+          </div>
+        )}
       </div>
 
-      <div className="flex items-center gap-1.5 flex-wrap">
-        {soundOptions.map((opt) => {
-          const isSelected = activeSound === opt.type;
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+        {soundscapes.map((s) => {
+          const isSelected = active === s.type;
           return (
             <button
-              key={opt.type}
-              onClick={() => handleSelectSound(opt.type)}
-              title={opt.desc}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-300 ${
+              key={s.type}
+              onClick={() => handleSelect(s.type)}
+              className={`flex flex-col text-left p-3 rounded-xl transition-all border ${
                 isSelected
-                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-inner font-medium"
-                  : "bg-surface-100/60 text-slate-400 hover:text-slate-200 border border-white/5 hover:border-white/10"
+                  ? "bg-hearth-500/15 border-hearth-500/50 shadow-md shadow-hearth-500/10"
+                  : "bg-sanctuary-900/40 border-sanctuary-800 hover:border-sanctuary-700 hover:bg-sanctuary-850/60"
               }`}
             >
-              {opt.icon}
-              <span>{opt.label}</span>
-              {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />}
+              <div className="flex items-center gap-2 mb-1.5">
+                <div className={`p-1.5 rounded-lg ${isSelected ? "bg-hearth-500/20" : "bg-sanctuary-800"}`}>
+                  {s.icon}
+                </div>
+                <span className={`text-xs font-medium font-sans ${isSelected ? "text-hearth-200" : "text-sanctuary-200"}`}>
+                  {s.label}
+                </span>
+              </div>
+              <span className="text-[11px] text-sanctuary-400 font-sans line-clamp-1">
+                {s.desc}
+              </span>
             </button>
           );
         })}
       </div>
-
-      {activeSound !== "none" && (
-        <div className="flex items-center gap-2 pl-2 border-l border-white/10">
-          <button
-            onClick={toggleMute}
-            className="text-slate-400 hover:text-slate-200 transition-colors p-1"
-          >
-            {isMuted ? <VolumeX className="w-3.5 h-3.5 text-rose-400" /> : <Volume2 className="w-3.5 h-3.5 text-amber-300" />}
-          </button>
-          <input
-            type="range"
-            min="0.05"
-            max="0.8"
-            step="0.02"
-            value={isMuted ? 0 : volume}
-            onChange={handleVolumeChange}
-            className="w-16 sm:w-20 accent-amber-400 cursor-pointer h-1.5 bg-surface-50 rounded-lg appearance-none"
-          />
-        </div>
-      )}
     </div>
   );
 };

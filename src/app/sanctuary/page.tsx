@@ -1,40 +1,58 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
 import { VictoryVault } from "@/components/sanctuary/VictoryVault";
-import { getStoredProfile, INITIAL_USER_PROFILE } from "@/lib/storage";
+import { getStoredProfile } from "@/lib/storage";
 import { UserProfile } from "@/types";
-import { BookOpen, Sparkles, ChevronLeft } from "lucide-react";
-import Link from "next/link";
+import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
+import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 
 export default function SanctuaryPage() {
-  const [profile, setProfile] = useState<UserProfile>(INITIAL_USER_PROFILE);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
+  const [isPricingOpen, setIsPricingOpen] = useState(false);
 
   useEffect(() => {
     setProfile(getStoredProfile());
   }, []);
 
-  return (
-    <div className="w-full flex-1 flex flex-col space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-2"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          <span>Powrót do Przyjaciela</span>
-        </Link>
-        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-          <BookOpen className="w-7 h-7 text-calmTeal-400" />
-          Skarbiec Zwycięstw & Listy Wsparcia
-        </h1>
-        <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Prywatne listy i przypomnienia od {profile.companionName}, które pozwalają odzyskać grunt pod nogami.
-        </p>
-      </div>
+  if (!profile) return null;
 
-      <VictoryVault profile={profile} />
+  return (
+    <div className="min-h-screen flex flex-col bg-sanctuary-950 text-sanctuary-100">
+      <TopNav
+        onOpenLiveCall={() => setIsLiveCallOpen(true)}
+        onOpenPricing={() => setIsPricingOpen(true)}
+      />
+
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col gap-8 pb-28 md:pb-16">
+        <div className="border-b border-sanctuary-800 pb-4">
+          <h1 className="font-serif text-3xl sm:text-4xl text-sanctuary-50 font-normal tracking-tight mb-2">
+            Skarbiec twojej siły i listy wsparcia
+          </h1>
+          <p className="font-sans text-xs sm:text-sm text-sanctuary-400 max-w-lg leading-relaxed">
+            Wracaj do tych słów zawsze, kiedy poczujesz zwątpienie, zmęczenie lub samotność. Zostały napisane specjalnie dla ciebie.
+          </p>
+        </div>
+
+        <VictoryVault />
+      </main>
+
+      <BottomNav />
+
+      <LiveVoiceCallModal
+        isOpen={isLiveCallOpen}
+        onClose={() => setIsLiveCallOpen(false)}
+        profile={profile}
+        onNewMessage={() => {}}
+      />
+
+      <SubscriptionModal
+        isOpen={isPricingOpen}
+        onClose={() => setIsPricingOpen(false)}
+      />
     </div>
   );
 }

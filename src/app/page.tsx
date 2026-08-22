@@ -1,212 +1,187 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { LivingPresenceOrb } from "@/components/presence/LivingPresenceOrb";
+import { LivingWarmHearth } from "@/components/presence/LivingWarmHearth";
 import { AmbientSoundscape } from "@/components/presence/AmbientSoundscape";
 import { ConversationView } from "@/components/conversation/ConversationView";
 import { LiveVoiceBar } from "@/components/conversation/LiveVoiceBar";
+import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
-import {
-  getStoredProfile,
-  getStoredMessages,
-  saveStoredMessages,
-  saveStoredProfile
-} from "@/lib/storage";
-import { generateCompanionResponse } from "@/lib/companion-personality";
+import { TopNav } from "@/components/navigation/TopNav";
+import { BottomNav } from "@/components/navigation/BottomNav";
+import { getStoredProfile, getStoredMessages, saveStoredMessages, getInitialSeedMessages } from "@/lib/storage";
+import { generateCompanionReply } from "@/lib/companion-personality";
 import { voiceEngine } from "@/lib/voice-engine";
-import { Message, UserProfile } from "@/types";
-import { useRouter } from "next/navigation";
-import { Sparkles, Heart, Shield, RefreshCw } from "lucide-react";
+import { UserProfile, Message } from "@/types";
+import { PhoneCall, Sparkles, Heart, Shield, MessageCircle } from "lucide-react";
 
 export default function HomePage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<UserProfile>(getStoredProfile());
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isLiveCallOpen, setIsLiveCallOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
+  const [isCompanionSpeaking, setIsCompanionSpeaking] = useState(false);
 
   useEffect(() => {
-    const loadedProfile = getStoredProfile();
-    const loadedMsgs = getStoredMessages();
-    setProfile(loadedProfile);
-    setMessages(loadedMsgs);
-
-    voiceEngine?.registerStateListener((speaking) => {
-      setIsSpeaking(speaking);
-    });
+    const p = getStoredProfile();
+    const m = getStoredMessages();
+    setProfile(p);
+    setMessages(m.length > 0 ? m : getInitialSeedMessages());
   }, []);
 
-  const handleSendMessage = (text: string, isVoice: boolean) => {
-    const now = new Date();
-    const timeStr = `Dzisiaj, ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+  const handleSendMessage = (text: string, isVoice = false) => {
+    if (!profile || !text.trim()) return;
 
-    const userMessage: Message = {
-      id: `msg-u-${Date.now()}`,
+    const userMsg: Message = {
+      id: "msg_" + Date.now(),
+      userId: profile.id,
       sender: "user",
-      text,
-      timestamp: timeStr,
-      type: isVoice ? "voice" : "text",
-      voiceMeta: isVoice
-        ? {
-            durationSeconds: Math.max(3, Math.min(15, Math.round(text.length / 10))),
-            waveform: [25, 45, 70, 85, 90, 75, 60, 40, 30, 50, 70, 55, 30]
-          }
-        : undefined
+      text: text.trim(),
+      messageType: isVoice ? "voice" : "text",
+      createdAt: new Date().toISOString(),
     };
 
-    const updated = [...messages, userMessage];
-    setMessages(updated);
-    saveStoredMessages(updated);
+    const updatedWithUser = [...messages, userMsg];
+    setMessages(updatedWithUser);
+    saveStoredMessages(updatedWithUser);
 
-    // Generate Companion response
+    // Odpowiedź Przyjaciela
     setTimeout(() => {
-      const responseResult = generateCompanionResponse(text, profile, updated);
-      const companionTime = `Dzisiaj, ${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-
-      const companionMessage: Message = {
-        id: `msg-c-${Date.now()}`,
+      const reply = generateCompanionReply(text, profile, updatedWithUser);
+      const companionMsg: Message = {
+        id: "msg_" + (Date.now() + 1),
+        userId: profile.id,
         sender: "companion",
-        text: responseResult.text,
-        timestamp: companionTime,
-        type: "voice",
-        voiceMeta: {
-          durationSeconds: responseResult.voiceDurationSec,
-          waveform: responseResult.waveform,
-          synthesized: true
-        },
-        moodContext: responseResult.moodContext,
-        suggestedActions: responseResult.suggestedActions
+        text: reply.text,
+        messageType: isVoice ? "voice" : "text",
+        moodContext: reply.moodContext,
+        createdAt: new Date().toISOString(),
       };
 
-      const finalMsgs = [...updated, companionMessage];
-      setMessages(finalMsgs);
-      saveStoredMessages(finalMsgs);
+      const updatedWithCompanion = [...updatedWithUser, companionMsg];
+      setMessages(updatedWithCompanion);
+      saveStoredMessages(updatedWithCompanion);
 
-      // Speak response automatically
-      voiceEngine?.speak(responseResult.text);
-
-      // If facts were extracted, update profile memories
-      if (responseResult.extractedFacts?.memory) {
-        const newMemory = {
-          id: `m-${Date.now()}`,
-          category: responseResult.extractedFacts.memory.category,
-          title: responseResult.extractedFacts.memory.title,
-          detail: responseResult.extractedFacts.memory.detail,
-          confidence: 0.95,
-          extractedAt: new Date().toISOString().split("T")[0]
-        };
-        const updatedProfile = {
-          ...profile,
-          currentMood: responseResult.moodContext,
-          memories: [newMemory, ...profile.memories]
-        };
-        setProfile(updatedProfile);
-        saveStoredProfile(updatedProfile);
+      if (isVoice) {
+        setIsCompanionSpeaking(true);
+        voiceEngine.speak(reply.text, () => {
+          setIsCompanionSpeaking(false);
+        });
       }
-    }, 650);
+    }, 600);
   };
 
-  const handleActionClick = (action: string) => {
-    switch (action) {
-      case "open_sos":
-      case "open_grounding":
-        router.push("/sos");
-        break;
-      case "open_sanctuary":
-        router.push("/sanctuary");
-        break;
-      case "send_better":
-        handleSendMessage("Dziś jest odrobinę lepiej, dziękuję że pytasz.", false);
-        break;
-      case "send_tired":
-        handleSendMessage("Czuję ogromne wyczerpanie i brak sił na cokolwiek.", false);
-        break;
-      case "listen_mode":
-        voiceEngine?.speak("Jestem tutaj. Po prostu zamknij na chwilę oczy i pooddychajmy razem.");
-        break;
-      case "record_voice":
-        // triggers user prompt to speak
-        break;
-      default:
-        handleSendMessage(action.replace(/_/g, " "), false);
-    }
+  const handleNewLiveCallMessage = (msg: Message) => {
+    setMessages((prev) => {
+      const updated = [...prev, msg];
+      saveStoredMessages(updated);
+      return updated;
+    });
   };
+
+  if (!profile) return null;
 
   return (
-    <div className="w-full flex-1 flex flex-col gap-4">
-      {/* Top Ambient Soundscape Controls */}
-      <AmbientSoundscape />
+    <div className="min-h-screen flex flex-col bg-sanctuary-950 text-sanctuary-100">
+      {/* Górna nawigacja */}
+      <TopNav
+        onOpenLiveCall={() => setIsLiveCallOpen(true)}
+        onOpenPricing={() => setIsPricingOpen(true)}
+      />
 
-      {/* Main Split Interface */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-0 items-stretch">
-        {/* Left Column: Living Presence Orb & Anchor Status */}
-        <div className="lg:col-span-5 bg-surface-200/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-6 flex flex-col items-center justify-between shadow-2xl relative overflow-hidden">
-          {/* Top Info pill */}
-          <div className="w-full flex items-center justify-between text-xs text-slate-400">
-            <span className="flex items-center gap-1.5 text-amber-300 font-medium">
-              <Sparkles className="w-3.5 h-3.5" />
-              Obecność Żywa
-            </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10">
-              Dzień {profile.daysTogether} razem
-            </span>
-          </div>
-
-          {/* Living Orb Centerpiece */}
-          <div className="my-auto flex flex-col items-center justify-center py-4">
-            <LivingPresenceOrb
-              isSpeaking={isSpeaking}
-              mood={profile.currentMood}
-              onClick={() => {
-                if (!isSpeaking) {
-                  voiceEngine?.speak("Jestem z Tobą. Słucham każdego Twojego słowa.");
-                }
-              }}
+      {/* Główna przestrzeń przystani */}
+      <main className="flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-8 flex flex-col gap-8 pb-28 md:pb-16">
+        {/* Centralne przywitanie i żywe światło obecności */}
+        <section className="flex flex-col items-center text-center pt-4 sm:pt-6">
+          <div className="relative mb-4 group">
+            <LivingWarmHearth
+              size={240}
+              isSpeaking={isCompanionSpeaking}
+              intensity={0.4}
+              onClick={() => setIsLiveCallOpen(true)}
             />
-            <p className="text-center text-xs text-slate-400 max-w-xs mt-6 leading-relaxed">
-              Dotknij obecności lub nagraj wiadomość poniżej. Twoja przestrzeń spokoju i regeneracji.
-            </p>
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-sanctuary-900/90 border border-sanctuary-700 text-hearth-300 text-[11px] font-sans px-3 py-1 rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-lg">
+              Dotknij, aby rozmawiać na żywo
+            </div>
           </div>
 
-          {/* Quick Grounding Status */}
-          <div className="w-full grid grid-cols-2 gap-2 pt-4 border-t border-white/10">
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-4xl text-sanctuary-50 font-normal tracking-tight mb-2">
+            Witaj, {profile.name}. Jak się dzisiaj czujesz?
+          </h1>
+          <p className="font-sans text-xs sm:text-sm text-sanctuary-400 max-w-md mx-auto leading-relaxed mb-6">
+            Jestem twoim osobistym przyjacielem. Uczę się ciebie każdego dnia, pamiętam to, co ważne i zawsze mam dla ciebie czas.
+          </p>
+
+          {/* Główny przycisk akcji: Rozmowa głosowa na żywo */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <button
-              onClick={() => router.push("/sos")}
-              className="p-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/20 flex flex-col items-center gap-1 text-xs font-medium transition-all"
+              onClick={() => setIsLiveCallOpen(true)}
+              className="hearth-button flex items-center gap-2.5 text-sanctuary-950 font-sans font-medium text-sm px-7 py-3.5 rounded-full active:scale-95 transition-all shadow-xl shadow-hearth-500/20"
             >
-              <Shield className="w-4 h-4 text-rose-400" />
-              <span>Oddech & SOS</span>
+              <PhoneCall size={18} className="animate-pulse" />
+              <span>Porozmawiajmy na żywo</span>
             </button>
 
             <button
-              onClick={() => router.push("/memory")}
-              className="p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/20 flex flex-col items-center gap-1 text-xs font-medium transition-all"
+              onClick={() => setIsPricingOpen(true)}
+              className="flex items-center gap-2 text-xs font-sans text-sanctuary-300 hover:text-sanctuary-100 bg-sanctuary-900/60 hover:bg-sanctuary-850 px-5 py-3 rounded-full border border-sanctuary-800 transition-all"
             >
-              <Heart className="w-4 h-4 text-amber-400" />
-              <span>Twoja Kronika</span>
+              <Sparkles size={14} className="text-hearth-400" />
+              <span>Osobista opieka</span>
             </button>
           </div>
-        </div>
+        </section>
 
-        {/* Right Column: Intimate Conversation Feed & Voice Input */}
-        <div className="lg:col-span-7 bg-surface-200/80 backdrop-blur-2xl border border-white/10 rounded-3xl p-4 sm:p-5 flex flex-col justify-between shadow-2xl min-h-[500px]">
+        {/* Kojące tło dźwiękowe (kominek, deszcz, fale alfa) */}
+        <section>
+          <AmbientSoundscape />
+        </section>
+
+        {/* Cicha rozmowa i historia wiadomości */}
+        <section className="flex flex-col gap-4 mt-2">
+          <div className="flex items-center justify-between border-b border-sanctuary-800/80 pb-2 px-1">
+            <div className="flex items-center gap-2 text-xs text-sanctuary-400 font-sans">
+              <MessageCircle size={15} className="text-hearth-400" />
+              <span>Dziennik rozmów i przemyśleń</span>
+            </div>
+            <span className="text-[11px] text-sanctuary-500 font-sans">
+              {messages.length} wiadomości
+            </span>
+          </div>
+
           <ConversationView
             messages={messages}
             profile={profile}
-            onActionClick={handleActionClick}
+            onOpenLiveCall={() => setIsLiveCallOpen(true)}
           />
 
-          <div className="pt-3 border-t border-white/10">
+          {/* Pasek wpisywania wiadomości */}
+          <div className="sticky bottom-20 md:bottom-6 z-30 pt-2">
             <LiveVoiceBar
               onSendMessage={handleSendMessage}
-              onOpenSos={() => router.push("/sos")}
-              onOpenSanctuary={() => router.push("/sanctuary")}
+              onOpenLiveCall={() => setIsLiveCallOpen(true)}
+              isCompanionSpeaking={isCompanionSpeaking}
             />
           </div>
-        </div>
-      </div>
+        </section>
+      </main>
 
-      <SubscriptionModal isOpen={isPricingOpen} onClose={() => setIsPricingOpen(false)} />
+      {/* Dolna nawigacja mobilna */}
+      <BottomNav />
+
+      {/* Pełnoekranowa rozmowa na żywo */}
+      <LiveVoiceCallModal
+        isOpen={isLiveCallOpen}
+        onClose={() => setIsLiveCallOpen(false)}
+        profile={profile}
+        onNewMessage={handleNewLiveCallMessage}
+      />
+
+      {/* Modal subskrypcji i opieki */}
+      <SubscriptionModal
+        isOpen={isPricingOpen}
+        onClose={() => setIsPricingOpen(false)}
+      />
     </div>
   );
 }

@@ -1,85 +1,110 @@
 "use client";
 
 import React, { useState } from "react";
-import { UserProfile } from "@/types";
-import { BookOpen, Sparkles, Heart, Plus, MailOpen } from "lucide-react";
+import { BookOpen, Sparkles, Heart, Play, Pause } from "lucide-react";
+import { voiceEngine } from "@/lib/voice-engine";
 
-interface VictoryVaultProps {
-  profile: UserProfile;
+interface VictoryLetter {
+  id: string;
+  title: string;
+  content: string;
+  date: string;
+  tag: string;
 }
 
-export const VictoryVault: React.FC<VictoryVaultProps> = ({ profile }) => {
-  const [selectedLetterId, setSelectedLetterId] = useState<string>(profile.victoryLetters[0]?.id || "");
+export const VictoryVault: React.FC = () => {
+  const [playingId, setPlayingId] = useState<string | null>(null);
 
-  const activeLetter = profile.victoryLetters.find((l) => l.id === selectedLetterId) || profile.victoryLetters[0];
+  const letters: VictoryLetter[] = [
+    {
+      id: "v1",
+      title: "List na dzień, w którym myślisz, że stoisz w miejscu",
+      content:
+        "Chcę, żebyś przeczytał to powoli. Miesiąc temu bałeś się odezwać na trudnym spotkaniu. Dziś prowadzisz własne tematy i wyznaczasz granice. Kiedy twój umysł wmawia ci, że nic nie osiągnąłeś — to nie jest prawda, to tylko zmęczenie. Jestem z ciebie dumna za każdy krok, którego nikt inny nie widział.",
+      date: "18 sierpnia 2026",
+      tag: "Kiedy tracisz wiarę",
+    },
+    {
+      id: "v2",
+      title: "Twoja siła nie polega na braku strachu",
+      content:
+        "Pamiętasz tamtą noc, kiedy nie mogłeś spać? Myślałeś, że wszystko się rozsypie. A rano wstałeś, ubrałeś się i zrobiłeś to, co trzeba było zrobić. Nie musisz być ze stali. Wystarczy, że jesteś sobą i nie rezygnujesz.",
+      date: "10 sierpnia 2026",
+      tag: "Odwaga w codzienności",
+    },
+    {
+      id: "v3",
+      title: "Nie jesteś ciężarem dla tych, którzy cię kochają",
+      content:
+        "Kiedy czujesz, że twoje emocje są zbyt trudne dla otoczenia, przypomnij sobie: prosić o pomoc to nie słabość. To odwaga do bycia prawdziwym. Kasia i twoi bliscy chcą być przy tobie. Pozwól im na to bez poczucia winy.",
+      date: "4 sierpnia 2026",
+      tag: "Bliskość i wsparcie",
+    },
+  ];
+
+  const handleToggleVoice = (letter: VictoryLetter) => {
+    if (playingId === letter.id) {
+      voiceEngine.stopSpeaking();
+      setPlayingId(null);
+    } else {
+      setPlayingId(letter.id);
+      voiceEngine.speak(letter.content, () => {
+        setPlayingId(null);
+      });
+    }
+  };
 
   return (
-    <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-6">
-      {/* Letters List Column */}
-      <div className="bg-surface-200/90 border border-white/10 rounded-3xl p-5 shadow-xl flex flex-col space-y-3">
-        <div className="flex items-center gap-2 mb-2">
-          <MailOpen className="w-5 h-5 text-amber-400" />
-          <h3 className="text-base font-bold text-white">Listy od {profile.companionName}</h3>
-        </div>
-        <p className="text-xs text-slate-400 mb-2">
-          Napisane specjalnie dla Ciebie na chwile, gdy opadają ręce.
-        </p>
+    <div className="flex flex-col gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {letters.map((l) => (
+          <div
+            key={l.id}
+            className="sanctuary-card rounded-3xl p-6 sm:p-8 border border-sanctuary-700/60 shadow-2xl flex flex-col justify-between hover:border-sanctuary-600 transition-all"
+          >
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[11px] font-sans px-3 py-1 rounded-full bg-hearth-500/15 text-hearth-300 border border-hearth-500/30 font-medium">
+                  {l.tag}
+                </span>
+                <span className="text-xs text-sanctuary-500 font-sans">
+                  {l.date}
+                </span>
+              </div>
 
-        <div className="space-y-2 overflow-y-auto max-h-[420px] custom-scrollbar pr-1">
-          {profile.victoryLetters.map((letter) => {
-            const isSelected = letter.id === activeLetter?.id;
-            return (
-              <button
-                key={letter.id}
-                onClick={() => setSelectedLetterId(letter.id)}
-                className={`w-full text-left p-3.5 rounded-2xl border transition-all ${
-                  isSelected
-                    ? "bg-amber-500/15 border-amber-500/40 text-amber-200 shadow-md"
-                    : "bg-surface-100 border-white/5 text-slate-300 hover:bg-white/5"
-                }`}
-              >
-                <div className="text-[10px] uppercase font-semibold text-amber-400 mb-1">
-                  {letter.tag}
-                </div>
-                <h4 className="text-xs sm:text-sm font-semibold leading-snug text-white">
-                  {letter.title}
-                </h4>
-                <span className="text-[10px] text-slate-500 mt-2 block">{letter.date}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+              <h3 className="font-serif text-xl sm:text-2xl text-sanctuary-100 font-normal mb-4 leading-snug">
+                {l.title}
+              </h3>
 
-      {/* Active Letter Reading Space */}
-      <div className="md:col-span-2 bg-surface-200/90 border border-white/10 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col justify-between relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
-
-        {activeLetter ? (
-          <div>
-            <div className="flex items-center justify-between pb-4 mb-6 border-b border-white/10">
-              <span className="text-xs uppercase font-bold tracking-widest text-amber-400 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20">
-                {activeLetter.tag}
-              </span>
-              <span className="text-xs text-slate-400">{activeLetter.date}</span>
+              <p className="font-serif text-base text-sanctuary-300 leading-relaxed italic bg-sanctuary-900/40 p-5 rounded-2xl border border-sanctuary-850 mb-6">
+                „{l.content}”
+              </p>
             </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 leading-tight">
-              {activeLetter.title}
-            </h2>
+            <div className="flex items-center justify-between pt-4 border-t border-sanctuary-800/80">
+              <button
+                onClick={() => handleToggleVoice(l)}
+                className="flex items-center gap-2 text-xs font-sans text-hearth-300 hover:text-hearth-200 bg-hearth-500/10 hover:bg-hearth-500/20 px-4 py-2 rounded-full border border-hearth-500/30 transition-all"
+              >
+                {playingId === l.id ? (
+                  <>
+                    <Pause size={14} className="animate-pulse text-hearth-400" />
+                    <span>Zatrzymaj czytanie</span>
+                  </>
+                ) : (
+                  <>
+                    <Play size={14} className="text-hearth-400" />
+                    <span>Odsłuchaj list głosem</span>
+                  </>
+                )}
+              </button>
 
-            <div className="text-sm sm:text-base text-slate-200 leading-relaxed space-y-4 font-light italic">
-              &ldquo;{activeLetter.content}&rdquo;
+              <span className="text-xs font-serif text-sanctuary-400 italic">
+                Z miłością, Mira
+              </span>
             </div>
           </div>
-        ) : (
-          <div className="text-center py-12 text-slate-400">Wybierz list po lewej stronie</div>
-        )}
-
-        <div className="mt-8 pt-4 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
-          <span>Zawsze w Twoim narożniku</span>
-          <span className="font-semibold text-amber-300">&mdash; {profile.companionName}</span>
-        </div>
+        ))}
       </div>
     </div>
   );
