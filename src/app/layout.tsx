@@ -25,6 +25,38 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://dobryprzyjaciel.pl/#org",
+        "name": "Dobry Przyjaciel",
+        "legalName": "Multinewsroom Jan Domaniewski",
+        "vatID": "PL5252189241",
+        "url": "https://dobryprzyjaciel.pl/",
+        "email": "kontakt@multinewsroom.pl",
+        "address": {
+          "@type": "PostalAddress",
+          "streetAddress": "ul. Barcicka 44",
+          "postalCode": "01-839",
+          "addressLocality": "Warszawa",
+          "addressCountry": "PL",
+        },
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://dobryprzyjaciel.pl/#website",
+        "url": "https://dobryprzyjaciel.pl/",
+        "name": "Dobry Przyjaciel",
+        "inLanguage": "pl-PL",
+        "publisher": {
+          "@id": "https://dobryprzyjaciel.pl/#org",
+        },
+      },
+    ],
+  };
+
   return (
     <html lang="pl">
       <head>
@@ -37,6 +69,10 @@ export default function RootLayout({
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
       </head>
       <body className="bg-paper text-ink min-h-screen antialiased font-sans">
         {children}

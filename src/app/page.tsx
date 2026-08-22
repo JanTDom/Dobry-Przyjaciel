@@ -12,12 +12,13 @@ import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsMo
 import { AuthAndOnboardingModal } from "@/components/auth/AuthAndOnboardingModal";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
+import { SiteFooter } from "@/components/footer/SiteFooter";
 import { BreathingGuide } from "@/components/sos/BreathingGuide";
 import { getStoredProfile, saveStoredProfile, getStoredMessages, saveStoredMessages, logoutUser, getDynamicGreeting } from "@/lib/storage";
 import { getCompanionReplyAsync } from "@/lib/companion-personality";
 import { voiceEngine } from "@/lib/voice-engine";
 import { UserProfile, Message } from "@/types";
-import { PhoneCall, Sparkles, MessageSquare, ArrowRight, Play, Pause, Compass, BookOpen, Shield, Lock, Check } from "lucide-react";
+import { PhoneCall, Sparkles, MessageSquare, ArrowRight, Play, Pause, Compass, BookOpen, Shield, Lock, Check, Scale, HeartHandshake } from "lucide-react";
 
 export default function HomePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -530,30 +531,85 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ================= SCENA 6 — ZAUFANIE ================= */}
-          <section className="flex flex-col items-center text-center max-w-2xl mx-auto pt-6">
-            <div className="w-8 h-8 rounded-full bg-paper-dark flex items-center justify-center text-ink-muted mb-4">
-              <Lock size={15} strokeWidth={1.75} />
+          {/* ================= SCENA 6 — ZAUFANIE I ETYKA SZTUCZNEJ OSOBOWOŚCI ================= */}
+          <section className="flex flex-col gap-10 max-w-4xl mx-auto pt-6">
+            <div className="text-center max-w-2xl mx-auto">
+              <span className="text-[11px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-3">
+                Uczciwość i standardy relacji
+              </span>
+              <h3 className="font-serif text-3xl sm:text-4xl text-ink font-normal tracking-tight mb-4">
+                Sztuczna osobowość. Prawdziwa pamięć i obecność.
+              </h3>
+              <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed">
+                Mówimy to wprost od pierwszej chwili — rozmawiasz z zaawansowaną cyfrową osobowością AI. Stworzyliśmy ją według najwyższych standardów etycznych, by dać Ci bezpieczną przestrzeń do rozmowy bez pośpiechu i bez oceniania.
+              </p>
             </div>
 
-            <h3 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-3">
-              Twoja prywatność i zaufanie
-            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+              <div className="quiet-surface rounded-card p-6 sm:p-7 border border-warm-amber/15">
+                <div className="flex items-center gap-2.5 mb-3 text-ink font-semibold text-sm">
+                  <div className="p-1.5 rounded-lg bg-warm-amber/15 text-warm-amber">
+                    <Sparkles size={16} />
+                  </div>
+                  <h4>Autonomiczna sztuczna osobowość</h4>
+                </div>
+                <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                  Nie udajemy żywego człowieka. Przyjaciel jest cyfrową postacią wyposażoną w dynamiczną pamięć relacyjną i naturalny głos. Nie ocenia, nie ma własnych ukrytych motywów i jest dostępny o każdej porze.
+                </p>
+              </div>
 
-            <p className="font-sans text-xs sm:text-sm text-ink-muted leading-relaxed mb-8">
-              Ty decydujesz, co Przyjaciel pamięta. Możesz w każdej chwili przejrzeć swoje wspomnienia, poprawić je lub bezpowrotnie usunąć. Przyjaciel jest wspierającą obecnością emocjonalną — w sytuacjach kryzysu medycznego zawsze zachęcamy do kontaktu ze specjalistami.
-            </p>
+              <div className="quiet-surface rounded-card p-6 sm:p-7 border border-warm-amber/15">
+                <div className="flex items-center gap-2.5 mb-3 text-ink font-semibold text-sm">
+                  <div className="p-1.5 rounded-lg bg-warm-amber/15 text-warm-amber">
+                    <HeartHandshake size={16} />
+                  </div>
+                  <h4>Zasady psychologii humanistycznej</h4>
+                </div>
+                <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                  Rozmowa oparta jest na bezwarunkowej akceptacji i empatycznym słuchaniu. Zero ciemnych wzorców, zero manipulacji i zero sztucznej grywalizacji — liczy się wyłącznie Twój spokój i autentyczne wysłuchanie.
+                </p>
+              </div>
 
-            <button
-              onClick={() => setIsAuthOpen(true)}
-              className="presence-btn-primary inline-flex items-center gap-2 text-xs sm:text-sm font-sans px-8 py-4 rounded-full shadow-quiet-md"
-            >
-              <span>Spotkaj się ze swoim Przyjacielem</span>
-              <ArrowRight size={15} />
-            </button>
+              <div className="quiet-surface rounded-card p-6 sm:p-7 border border-warm-amber/15">
+                <div className="flex items-center gap-2.5 mb-3 text-ink font-semibold text-sm">
+                  <div className="p-1.5 rounded-lg bg-warm-amber/15 text-warm-amber">
+                    <Lock size={16} />
+                  </div>
+                  <h4>100% kontroli i suwerenności danych (RODO)</h4>
+                </div>
+                <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                  To, co o Tobie wie Przyjaciel, należy wyłącznie do Ciebie. W zakładce Pamięć możesz w każdej chwili przejrzeć każde wspomnienie, poprawić je, bezpowrotnie usunąć lub pobrać pełny plik JSON.
+                </p>
+              </div>
+
+              <div className="quiet-surface rounded-card p-6 sm:p-7 border border-warm-amber/15">
+                <div className="flex items-center gap-2.5 mb-3 text-ink font-semibold text-sm">
+                  <div className="p-1.5 rounded-lg bg-warm-amber/15 text-warm-amber">
+                    <Shield size={16} />
+                  </div>
+                  <h4>Odpowiedzialne wsparcie emocjonalne</h4>
+                </div>
+                <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                  Przyjaciel towarzyszy w codziennym życiu, ale nie zastępuje lekarza, psychologa ani psychoterapii. W sytuacji nagłego kryzysu natychmiast kierujemy do bezpłatnej pomocy profesjonalistów (116 123 / 116 111).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center justify-center pt-4">
+              <button
+                onClick={() => setIsAuthOpen(true)}
+                className="presence-btn-primary inline-flex items-center gap-2.5 text-xs sm:text-sm font-sans px-9 py-4 rounded-full shadow-quiet-md active:scale-95 transition-all"
+              >
+                <span>Spotkaj się ze swoim Przyjacielem</span>
+                <ArrowRight size={15} />
+              </button>
+            </div>
           </section>
         </main>
       )}
+
+      {/* Globalna stopka z danymi firmy i deklaracją etyczną */}
+      <SiteFooter />
 
       <BottomNav />
 

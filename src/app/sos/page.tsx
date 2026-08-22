@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
+import { SiteFooter } from "@/components/footer/SiteFooter";
 import { BreathingGuide } from "@/components/sos/BreathingGuide";
 import { GroundingExercise } from "@/components/sos/GroundingExercise";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
@@ -221,6 +222,8 @@ export default function SOSPage() {
           )}
         </div>
       </main>
+
+      <SiteFooter />
 
       <BottomNav />
 

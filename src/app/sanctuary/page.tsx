@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { TopNav } from "@/components/navigation/TopNav";
 import { BottomNav } from "@/components/navigation/BottomNav";
+import { SiteFooter } from "@/components/footer/SiteFooter";
 import { VictoryVault } from "@/components/sanctuary/VictoryVault";
 import { CompanionSettingsModal } from "@/components/profile/CompanionSettingsModal";
 import { AuthAndOnboardingModal } from "@/components/auth/AuthAndOnboardingModal";
@@ -95,6 +96,8 @@ export default function SanctuaryPage() {
           </div>
         )}
       </main>
+
+      <SiteFooter />
 
       <BottomNav />
 
