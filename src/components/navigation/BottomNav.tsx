@@ -16,7 +16,7 @@ export const BottomNav: React.FC = () => {
   ];
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-paper/95 backdrop-blur-2xl border-t border-ink/8 px-4 py-2 pb-safe shadow-quiet-lg">
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-paper/95 backdrop-blur-2xl border-t border-warm-amber/15 px-4 py-2 pb-safe shadow-quiet-lg">
       <div className="flex items-center justify-around max-w-md mx-auto">
         {links.map((link) => {
           const isActive = pathname === link.href;
