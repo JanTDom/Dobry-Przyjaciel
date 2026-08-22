@@ -128,7 +128,7 @@ class VoiceEngine {
     }
   }
 
-  public async speak(text: string, onEnd?: () => void, voiceName: string = "nova") {
+  public async speak(text: string, onEnd?: () => void, voiceName: string = "nova", isPreview: boolean = false) {
     this.stopSpeaking();
 
     if (this.recognition && this.isContinuousMode) {
@@ -151,7 +151,7 @@ class VoiceEngine {
           "Content-Type": "application/json",
           "x-access-code": storedCode,
         },
-        body: JSON.stringify({ text, voice: voiceName, accessCode: storedCode }),
+        body: JSON.stringify({ text, voice: voiceName, accessCode: storedCode, isPreview }),
       });
 
       if (res.ok) {
@@ -164,50 +164,23 @@ class VoiceEngine {
           this.handlePlaybackEnd(onEnd);
         };
 
-        audio.onerror = () => {
-          this.speakWithLocalFallback(text, onEnd, voiceName);
+        audio.onerror = (e) => {
+          console.error("Audio playback error:", e);
+          this.handlePlaybackEnd(onEnd);
         };
 
         await audio.play();
         return;
+      } else {
+        const errJson = await res.json().catch(() => ({}));
+        console.warn("OpenAI TTS API returned error:", errJson);
       }
-    } catch {
-      // Fallback
+    } catch (err) {
+      console.error("OpenAI TTS fetch failed:", err);
     }
 
-    this.speakWithLocalFallback(text, onEnd, voiceName);
-  }
-
-  private speakWithLocalFallback(text: string, onEnd?: () => void, voiceName: string = "nova") {
-    if (!this.synth) {
-      this.handlePlaybackEnd(onEnd);
-      return;
-    }
-
-    this.synth.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "pl-PL";
-    utterance.rate = 0.94;
-    utterance.pitch = voiceName === "echo" || voiceName === "onyx" ? 0.85 : 0.98;
-
-    const voices = this.synth.getVoices();
-    const isMale = voiceName === "echo" || voiceName === "onyx";
-
-    const polishVoice = isMale
-      ? voices.find((v) => v.lang.startsWith("pl") && (v.name.includes("Jan") || v.name.includes("Marek") || v.name.includes("Male"))) || voices.find((v) => v.lang.startsWith("pl"))
-      : voices.find((v) => v.lang.startsWith("pl") && (v.name.includes("Zosia") || v.name.includes("Maja") || v.name.includes("Natural") || v.name.includes("Google") || v.name.includes("Paulina"))) || voices.find((v) => v.lang.startsWith("pl"));
-
-    if (polishVoice) utterance.voice = polishVoice;
-
-    utterance.onend = () => {
-      this.handlePlaybackEnd(onEnd);
-    };
-
-    utterance.onerror = () => {
-      this.handlePlaybackEnd(onEnd);
-    };
-
-    this.synth.speak(utterance);
+    // Jeśli API zawiodło, zakończ bez włączania robotycznego głosu
+    this.handlePlaybackEnd(onEnd);
   }
 
   private handlePlaybackEnd(onEnd?: () => void) {

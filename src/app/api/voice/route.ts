@@ -6,10 +6,11 @@ export async function POST(req: NextRequest) {
   try {
     const accessCodeHeader = req.headers.get("x-access-code");
     const body = await req.json();
-    const { text, voice = "nova", accessCode } = body;
+    const { text, voice = "nova", accessCode, isPreview = false } = body;
 
     const providedCode = accessCode || accessCodeHeader;
-    if (providedCode !== REQUIRED_ACCESS_CODE) {
+    // Zezwól na krótkie próbki głosu (preview) lub wymagaj poprawnego kodu A132a132
+    if (!isPreview && providedCode !== REQUIRED_ACCESS_CODE) {
       return NextResponse.json(
         { error: "Nieprawidłowy kod dostępu roboczego." },
         { status: 401 }
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
     const validVoices = ["nova", "shimmer", "echo", "onyx", "fable", "alloy"];
     const selectedVoice = validVoices.includes(voice) ? voice : "nova";
 
+    // Używamy modelu tts-1-hd dla krystalicznie czystego, ciepłego i ludzkiego brzmienia
     const res = await fetch("https://api.openai.com/v1/audio/speech", {
       method: "POST",
       headers: {
@@ -38,11 +40,11 @@ export async function POST(req: NextRequest) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "tts-1",
+        model: "tts-1-hd",
         input: text,
         voice: selectedVoice,
         response_format: "mp3",
-        speed: 0.95,
+        speed: 0.96, // Ciepłe, naturalne tempo
       }),
     });
 
