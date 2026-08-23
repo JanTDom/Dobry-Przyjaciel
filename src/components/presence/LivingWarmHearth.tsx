@@ -1,202 +1,281 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useMemo, useId } from "react";
+import { motion } from "framer-motion";
 
 interface LivingWarmHearthProps {
   isListening?: boolean;
   isSpeaking?: boolean;
-  intensity?: number;
+  isRecording?: boolean;
+  isThinking?: boolean;
   size?: number;
-  className?: string;
-  onClick?: () => void;
+  intensity?: number;
 }
+
+const RING_BAR_COUNT = 36;
 
 export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
   isListening = false,
   isSpeaking = false,
+  isRecording = false,
+  isThinking = false,
+  size = 280,
   intensity = 0.5,
-  size = 300,
-  className = "",
-  onClick,
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animFrameRef = useRef<number | null>(null);
+  const filterId = useId().replace(/:/g, "_");
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+  // Wyliczenie dynamicznej intensywności
+  const effectiveIntensity = isRecording
+    ? 0.95
+    : isSpeaking
+    ? 0.85
+    : isThinking
+    ? 0.6
+    : isListening
+    ? 0.5
+    : Math.max(0.3, intensity);
 
-    let time = 0;
-    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
+  // Generowanie unoszących się iskier i drobinek ciepłego światła
+  const embers = useMemo(
+    () =>
+      Array.from({ length: 16 }, (_, i) => ({
+        id: i,
+        left: 44 + Math.sin(i * 1.5) * 28 + (i % 3) * 4,
+        delay: (i * 0.45) % 3.5,
+        duration: 2.8 + (i % 4) * 0.7,
+        size: 2 + (i % 3) * 1.5,
+        drift: ((i % 5) - 2) * 12,
+      })),
+    []
+  );
 
-    // Nastrojowe cząsteczki złotego pyłu słonecznego (Golden Sun Motes)
-    const particleCount = 42;
-    const particles = Array.from({ length: particleCount }, () => ({
-      x: (Math.random() - 0.5) * (size * 0.7),
-      y: (Math.random() - 0.5) * (size * 0.7),
-      radius: 1.2 + Math.random() * 2.6,
-      speedY: -0.15 - Math.random() * 0.4,
-      speedX: (Math.random() - 0.5) * 0.25,
-      alpha: 0.3 + Math.random() * 0.7,
-      decay: 0.002 + Math.random() * 0.004,
-      hue: 40 + Math.random() * 12, // Świetliste słoneczne złoto (40-52)
-    }));
+  // Audio-reaktywny wieniec promieni wokół paleniska
+  const bars = useMemo(
+    () =>
+      Array.from({ length: RING_BAR_COUNT }, (_, i) => ({
+        id: i,
+        angle: (360 / RING_BAR_COUNT) * i,
+        base: 0.4 + (i % 3) * 0.2,
+        delay: (i * 0.08) % 1.2,
+        duration: 1.1 + (i % 4) * 0.3,
+      })),
+    []
+  );
 
-    const render = () => {
-      time += 0.018;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.save();
-      ctx.scale(dpr, dpr);
-
-      // Słońce jest zawsze idealnie stabilne w centrum
-      const targetX = size / 2;
-      const targetY = size / 2;
-
-      // Harmoniczny rytm oddechu i reakcja na głos
-      const pulseSpeed = isSpeaking ? 3.6 : isListening ? 2.4 : 1.2;
-      const basePulse = Math.sin(time * pulseSpeed) * 0.08;
-      const voiceReaction = (isSpeaking || isListening ? 0.20 : 0) + intensity * 0.16;
-      const scaleFactor = 1 + basePulse + voiceReaction;
-
-      // 1. Zewnętrzna, świetlista aura ciepła (Radiant Amber & Honey Sun Glow)
-      const maxHaloRadius = (size * 0.48) * scaleFactor;
-      const haloGrad = ctx.createRadialGradient(
-        targetX,
-        targetY,
-        maxHaloRadius * 0.10,
-        targetX,
-        targetY,
-        maxHaloRadius
-      );
-      haloGrad.addColorStop(0, "rgba(254, 215, 170, 0.65)");
-      haloGrad.addColorStop(0.35, "rgba(251, 191, 36, 0.32)");
-      haloGrad.addColorStop(0.70, "rgba(245, 158, 11, 0.12)");
-      haloGrad.addColorStop(1, "rgba(254, 243, 199, 0)");
-
-      ctx.fillStyle = haloGrad;
-      ctx.beginPath();
-      ctx.arc(targetX, targetY, maxHaloRadius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 2. Ciepłe, złote promienie słoneczne (Luminous Amber Solar Rays)
-      const rayCount = 14;
-      for (let r = 0; r < rayCount; r++) {
-        const angle = (r / rayCount) * Math.PI * 2 + time * 0.15;
-        const waveOffset = Math.sin(time * 2.0 + r * 1.5) * 8;
-        const rayLen = (size * 0.40) * scaleFactor + waveOffset;
-        const rx = targetX + Math.cos(angle) * rayLen;
-        const ry = targetY + Math.sin(angle) * rayLen;
-
-        const rayAlpha = 0.12 + Math.sin(time * 1.4 + r) * 0.06 + (isSpeaking ? 0.10 : 0);
-        ctx.strokeStyle = `rgba(245, 158, 11, ${rayAlpha})`;
-        ctx.lineWidth = 12;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(targetX, targetY);
-        ctx.lineTo(rx, ry);
-        ctx.stroke();
-      }
-
-      // 3. Organiczna, falująca korona słońca (Living Sun Corona)
-      const coronaRadius = (size * 0.27) * scaleFactor;
-      ctx.beginPath();
-      for (let i = 0; i <= Math.PI * 2; i += 0.08) {
-        const organicNoise = Math.sin(i * 6 + time * 3.0) * (4 + (isSpeaking ? 6 : 1.5)) +
-                             Math.cos(i * 4 - time * 2.0) * 2.5;
-        const r = coronaRadius + organicNoise;
-        const cx = targetX + Math.cos(i) * r;
-        const cy = targetY + Math.sin(i) * r;
-        if (i === 0) ctx.moveTo(cx, cy);
-        else ctx.lineTo(cx, cy);
-      }
-      ctx.closePath();
-
-      const coronaGrad = ctx.createRadialGradient(
-        targetX,
-        targetY,
-        coronaRadius * 0.05,
-        targetX,
-        targetY,
-        coronaRadius * 1.05
-      );
-      coronaGrad.addColorStop(0, "rgba(255, 255, 255, 1)");
-      coronaGrad.addColorStop(0.30, "rgba(254, 240, 138, 0.98)");
-      coronaGrad.addColorStop(0.65, "rgba(251, 191, 36, 0.85)");
-      coronaGrad.addColorStop(0.90, "rgba(245, 158, 11, 0.55)");
-      coronaGrad.addColorStop(1, "rgba(217, 119, 6, 0)");
-      ctx.fillStyle = coronaGrad;
-      ctx.fill();
-
-      // 4. Lśniące, perłowo-słoneczne jądro (Radiant Diamond Core)
-      const coreRadius = (size * 0.12) * scaleFactor;
-      const coreGrad = ctx.createRadialGradient(
-        targetX,
-        targetY,
-        0,
-        targetX,
-        targetY,
-        coreRadius
-      );
-      coreGrad.addColorStop(0, "#FFFFFF");
-      coreGrad.addColorStop(0.45, "#FFFBEB");
-      coreGrad.addColorStop(0.85, "rgba(253, 224, 71, 0.95)");
-      coreGrad.addColorStop(1, "rgba(245, 158, 11, 0.3)");
-
-      ctx.fillStyle = coreGrad;
-      ctx.beginPath();
-      ctx.arc(targetX, targetY, coreRadius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 5. Cząsteczki unoszącego się złotego pyłu (Floating Sun Sparks)
-      particles.forEach((p) => {
-        p.y += p.speedY * (isSpeaking ? 1.8 : 1);
-        p.x += p.speedX;
-        p.alpha -= p.decay;
-
-        if (p.alpha <= 0 || p.y < -size * 0.4) {
-          p.x = (Math.random() - 0.5) * (size * 0.55);
-          p.y = (Math.random() - 0.5) * (size * 0.35) + 15;
-          p.alpha = 0.4 + Math.random() * 0.6;
-        }
-
-        const dist = Math.sqrt(p.x * p.x + p.y * p.y);
-        const maxDist = size * 0.45;
-        const edgeFade = Math.max(0, 1 - dist / maxDist);
-
-        ctx.fillStyle = `hsla(${p.hue}, 95%, 60%, ${p.alpha * edgeFade})`;
-        ctx.beginPath();
-        ctx.arc(targetX + p.x, targetY + p.y, p.radius, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      ctx.restore();
-      animFrameRef.current = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      if (animFrameRef.current) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
-    };
-  }, [isListening, isSpeaking, intensity, size]);
+  const scaleRatio = size / 300;
 
   return (
     <div
-      onClick={onClick}
-      className={`relative inline-flex items-center justify-center select-none cursor-pointer ${className}`}
+      className="relative flex items-center justify-center select-none"
       style={{ width: size, height: size }}
     >
-      <canvas
-        ref={canvasRef}
-        style={{ width: size, height: size }}
-        className="transition-transform duration-700 hover:scale-[1.03] pointer-events-none drop-shadow-[0_8px_30px_rgba(245,158,11,0.25)]"
+      {/* 1. Zewnętrzna, głęboka poświata bursztynowo-złota (Volumetric Bloom) */}
+      <motion.div
+        aria-hidden
+        className="absolute rounded-full pointer-events-none"
+        style={{
+          width: size * 1.25,
+          height: size * 1.25,
+          background: isRecording
+            ? "radial-gradient(circle, rgba(239, 68, 68, 0.35) 0%, rgba(245, 158, 11, 0.20) 40%, transparent 70%)"
+            : "radial-gradient(circle, rgba(245, 158, 11, 0.35) 0%, rgba(251, 191, 36, 0.20) 45%, rgba(217, 119, 6, 0.08) 65%, transparent 75%)",
+          filter: "blur(28px)",
+        }}
+        animate={{
+          scale: isRecording
+            ? [1, 1.15, 0.98, 1.12, 1]
+            : isSpeaking
+            ? [1, 1.12, 0.96, 1.08, 1]
+            : isListening
+            ? [1, 1.05, 1]
+            : [1, 1.03, 1],
+          opacity: [0.65, 0.9, 0.65],
+        }}
+        transition={{
+          duration: isRecording ? 1.4 : isSpeaking ? 2.2 : 4.5,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
       />
+
+      {/* 2. Promienisty wieniec reaktywnych słupków światła */}
+      <div
+        className="absolute pointer-events-none"
+        style={{ width: size * 0.9, height: size * 0.9 }}
+        aria-hidden
+      >
+        {bars.map((bar) => (
+          <motion.span
+            key={bar.id}
+            className={`absolute left-1/2 top-1/2 rounded-full ${
+              isRecording ? "bg-red-500/70" : "bg-amber-400/60"
+            }`}
+            style={{
+              width: 2.5 * scaleRatio,
+              height: 12 * scaleRatio,
+              transformOrigin: `50% ${(size * 0.42)}px`,
+              transform: `rotate(${bar.angle}deg) translateY(-${size * 0.42}px)`,
+            }}
+            animate={{
+              scaleY: isRecording
+                ? [bar.base, bar.base + 1.2, bar.base]
+                : isSpeaking
+                ? [bar.base, bar.base + 0.9, bar.base]
+                : isListening
+                ? [bar.base, bar.base + 0.4, bar.base]
+                : [bar.base, bar.base + 0.15, bar.base],
+              opacity: isRecording
+                ? [0.4, 0.95, 0.4]
+                : isSpeaking
+                ? [0.35, 0.85, 0.35]
+                : [0.2, 0.5, 0.2],
+            }}
+            transition={{
+              duration: bar.duration,
+              delay: bar.delay,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </div>
+
+      {/* 3. Środkowy pierścień aury z delikatną złotą obwódką */}
+      <motion.div
+        aria-hidden
+        className="absolute rounded-full border pointer-events-none"
+        style={{
+          width: size * 0.68,
+          height: size * 0.68,
+          borderColor: isRecording ? "rgba(239, 68, 68, 0.4)" : "rgba(251, 191, 36, 0.4)",
+          background: isRecording
+            ? "radial-gradient(circle, rgba(239, 68, 68, 0.15) 0%, transparent 80%)"
+            : "radial-gradient(circle, rgba(251, 191, 36, 0.18) 0%, transparent 80%)",
+        }}
+        animate={{
+          scale: isSpeaking ? [1, 1.06, 1] : [1, 1.03, 1],
+          opacity: [0.5, 0.85, 0.5],
+        }}
+        transition={{
+          duration: isSpeaking ? 1.8 : 3.6,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+
+      {/* 4. Żywy, organiczny rdzeń ognia z filtrem turbulencji SVG */}
+      <motion.div
+        className="relative rounded-full pointer-events-none overflow-hidden"
+        style={{
+          width: size * 0.56,
+          height: size * 0.56,
+          background: isRecording
+            ? "radial-gradient(circle at 50% 45%, #FFFFFF 0%, #FCA5A5 20%, #EF4444 50%, #B91C1C 75%, transparent 100%)"
+            : "radial-gradient(circle at 50% 42%, #FFFBEB 0%, #FEF08A 22%, #F59E0B 52%, #D97706 78%, rgba(180, 83, 9, 0.4) 95%, transparent 100%)",
+          boxShadow: isRecording
+            ? "0 0 50px 10px rgba(239, 68, 68, 0.6), 0 0 90px 30px rgba(245, 158, 11, 0.35)"
+            : "0 0 55px 12px rgba(245, 158, 11, 0.65), 0 0 100px 35px rgba(251, 191, 36, 0.4)",
+        }}
+        animate={{
+          scale: isRecording
+            ? [1, 1.14, 0.97, 1.08, 1]
+            : isSpeaking
+            ? [1, 1.09, 0.98, 1.06, 1]
+            : isListening
+            ? [1, 1.04, 0.99, 1.03, 1]
+            : [1, 1.02, 1],
+        }}
+        transition={{
+          duration: isRecording ? 1.6 : isSpeaking ? 2.4 : 4.2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      >
+        {/* SVG z organicznym płomieniem i filtrem turbulencji */}
+        <svg
+          className="absolute inset-0 h-full w-full"
+          viewBox="0 0 160 160"
+        >
+          <defs>
+            <filter id={`hearth-flame-${filterId}`} x="-20%" y="-20%" width="140%" height="140%">
+              <feTurbulence
+                type="fractalNoise"
+                baseFrequency="0.015 0.04"
+                numOctaves="2"
+                seed="5"
+                result="noise"
+              >
+                <animate
+                  attributeName="baseFrequency"
+                  dur={isSpeaking ? "4s" : "7s"}
+                  values="0.015 0.04;0.022 0.06;0.015 0.04"
+                  repeatCount="indefinite"
+                />
+              </feTurbulence>
+              <feDisplacementMap
+                in="SourceGraphic"
+                in2="noise"
+                scale="12"
+                xChannelSelector="R"
+                yChannelSelector="G"
+              />
+            </filter>
+            <radialGradient id={`flame-grad-${filterId}`} cx="50%" cy="40%" r="55%">
+              <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.95" />
+              <stop offset="25%" stopColor="#FEF08A" stopOpacity="0.9" />
+              <stop offset="60%" stopColor="#F59E0B" stopOpacity="0.75" />
+              <stop offset="90%" stopColor="#D97706" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#92400E" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+
+          <g filter={`url(#hearth-flame-${filterId})`}>
+            <ellipse
+              cx="80"
+              cy="80"
+              rx="65"
+              ry="65"
+              fill={`url(#flame-grad-${filterId})`}
+            />
+            <ellipse
+              cx="80"
+              cy="74"
+              rx="40"
+              ry="38"
+              fill="#FFFFFF"
+              fillOpacity="0.5"
+            />
+          </g>
+        </svg>
+
+        {/* 5. Unoszące się iskrzące drobiny (Floating Embers) */}
+        {embers.map((ember) => (
+          <motion.span
+            key={ember.id}
+            className={`absolute rounded-full pointer-events-none ${
+              isRecording ? "bg-white shadow-[0_0_6px_#EF4444]" : "bg-amber-100 shadow-[0_0_8px_#FBBF24]"
+            }`}
+            style={{
+              left: `${ember.left}%`,
+              bottom: "15%",
+              width: ember.size * scaleRatio,
+              height: ember.size * scaleRatio,
+            }}
+            animate={{
+              y: [0, -size * 0.45, -size * 0.7],
+              x: [0, ember.drift, ember.drift * 1.6],
+              opacity: [0, 0.95, 0],
+              scale: [0.6, 1.2, 0.4],
+            }}
+            transition={{
+              duration: ember.duration,
+              delay: ember.delay,
+              repeat: Infinity,
+              ease: "easeOut",
+            }}
+          />
+        ))}
+      </motion.div>
     </div>
   );
 };

@@ -12,7 +12,7 @@ import { UserProfile } from "@/types";
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 import { voiceEngine } from "@/lib/voice-engine";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Sparkles } from "lucide-react";
 
 export default function SanctuaryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -89,8 +89,9 @@ export default function SanctuaryPage() {
 
             <button
               onClick={() => setIsAuthOpen(true)}
-              className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full"
+              className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full active:scale-95 shadow-quiet-sm transition-all"
             >
+              <Sparkles size={14} className="text-warm-honey" />
               <span>Spotkaj się z Przyjacielem</span>
             </button>
           </div>

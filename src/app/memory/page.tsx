@@ -11,7 +11,7 @@ import { UserProfile, LifeMemoryFact, PersonInLife, OvercomeCrisis } from "@/typ
 import { LiveVoiceCallModal } from "@/components/conversation/LiveVoiceCallModal";
 import { SubscriptionModal } from "@/components/pricing/SubscriptionModal";
 import { voiceEngine } from "@/lib/voice-engine";
-import { Compass, Users, Heart, Shield, Trash2, Download, Lock, Check } from "lucide-react";
+import { Compass, Users, Heart, Shield, Trash2, Download, Lock, Check, PhoneCall, Sparkles } from "lucide-react";
 
 export default function MemoryPage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -352,9 +352,10 @@ export default function MemoryPage() {
 
               <button
                 onClick={handleOpenLiveCall}
-                className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full"
+                className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full active:scale-95 shadow-quiet-sm transition-all"
               >
-                <span>Porozmawiajmy teraz</span>
+                <PhoneCall size={14} className="animate-pulse text-warm-honey" />
+                <span>Porozmawiajmy na żywo</span>
               </button>
             </div>
           )
@@ -375,8 +376,9 @@ export default function MemoryPage() {
 
             <button
               onClick={() => setIsAuthOpen(true)}
-              className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full"
+              className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full active:scale-95 shadow-quiet-sm transition-all"
             >
+              <Sparkles size={14} className="text-warm-honey" />
               <span>Spotkaj się z Przyjacielem</span>
             </button>
           </div>
