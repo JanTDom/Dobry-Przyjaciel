@@ -301,7 +301,7 @@ export default function HomePage() {
             {/* Interaktywny selektor stanu emocjonalnego już na landing page */}
             <div className="w-full mt-4">
               <EmotionalWeatherSelector
-                companionName="Agata"
+                companionName="Twój Przyjaciel"
                 onSelectMoodAction={() => setIsAuthOpen(true)}
               />
             </div>

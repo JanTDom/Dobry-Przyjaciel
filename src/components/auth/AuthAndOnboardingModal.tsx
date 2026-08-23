@@ -40,10 +40,8 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
   const handleGenderSelect = (gender: "female" | "male") => {
     setCompanionGender(gender);
     if (gender === "male") {
-      setCompanionName("Maciej");
       setCompanionVoice("echo");
     } else {
-      setCompanionName("Agata");
       setCompanionVoice("nova");
     }
   };
@@ -54,9 +52,7 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
       setIsPlayingVoice(false);
     } else {
       setIsPlayingVoice(true);
-      const sample = companionGender === "male"
-        ? `Cześć ${userName || ""}. Cieszę się, że jesteś. Zawsze możesz na mnie liczyć.`
-        : `Cześć ${userName || ""}. Cieszę się, że jesteś. Zawsze możesz na mnie liczyć.`;
+      const sample = "Cześć. Cieszę się, że rozmawiamy. Zawsze możesz na mnie liczyć.";
       voiceEngine.speak(
         sample,
         () => {
@@ -242,11 +238,11 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                       <span className="text-[10px] font-sans uppercase tracking-wider text-warm-amber font-semibold block mb-1">
                         Głos żeński
                       </span>
-                      <span className="font-serif text-lg text-ink font-normal block mb-1">
-                        Agata
+                      <span className="font-serif text-base text-ink font-normal block mb-1">
+                        Ciepły i kojący
                       </span>
                       <p className="text-[11px] text-ink-muted font-sans leading-relaxed">
-                        Ciepły, miękki tembr kojący
+                        Bliski, łagodny ton
                       </p>
                     </div>
                   </button>
@@ -264,11 +260,11 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                       <span className="text-[10px] font-sans uppercase tracking-wider text-warm-amber font-semibold block mb-1">
                         Głos męski
                       </span>
-                      <span className="font-serif text-lg text-ink font-normal block mb-1">
-                        Maciej
+                      <span className="font-serif text-base text-ink font-normal block mb-1">
+                        Głęboki i spokojny
                       </span>
                       <p className="text-[11px] text-ink-muted font-sans leading-relaxed">
-                        Spokojny, uziemiający tembr
+                        Wyważony, uziemiający ton
                       </p>
                     </div>
                   </button>
@@ -280,7 +276,7 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                   className="presence-btn-secondary w-full py-2.5 rounded-full font-sans font-medium text-xs flex items-center justify-center gap-2"
                 >
                   {isPlayingVoice ? <Pause size={13} className="text-warm-amber" /> : <Volume2 size={13} className="text-warm-amber" />}
-                  <span>{isPlayingVoice ? "Zatrzymaj próbkę" : "Posłuchaj próbki głosu"}</span>
+                  <span>{isPlayingVoice ? "Zatrzymaj próbkę" : "Posłuchaj próbki brzmienia"}</span>
                 </button>
 
                 <div className="flex gap-2 pt-2">
@@ -311,10 +307,10 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                     Krok 3 z 4
                   </span>
                   <h2 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight mb-2">
-                    Jak ma mieć na imię Twój Przyjaciel?
+                    Jak chcesz nazwać swojego Przyjaciela?
                   </h2>
                   <p className="font-sans text-xs text-ink-muted leading-relaxed">
-                    Możesz zostawić imię domyślne lub nadać mu inne ważne dla Ciebie imię.
+                    Wpisz dowolne imię, pod którym chcesz zwracać się do swojej sztucznej osobowości.
                   </p>
                 </div>
 
@@ -323,7 +319,7 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                     type="text"
                     value={companionName}
                     onChange={(e) => setCompanionName(e.target.value)}
-                    placeholder="Imię Przyjaciela..."
+                    placeholder="Wpisz wybrane imię..."
                     className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3.5 text-sm font-sans text-ink focus:outline-none transition-all"
                   />
                 </div>

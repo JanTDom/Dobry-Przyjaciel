@@ -16,37 +16,37 @@ interface VoiceOption {
 
 const VOICES: VoiceOption[] = [
   {
-    id: "v_agata",
-    name: "Agata",
+    id: "v_warm_female",
+    name: "Tembr ciepły i kojący",
     gender: "female",
-    tone: "Ciepły, kojący, obecny",
+    tone: "Ciepły, bliski, spokojna obecność",
     sampleText: "Jestem przy Tobie. Nie musisz dziś niczego udowadniać — usiądź wygodnie i odpocznij.",
     voiceName: "nova",
     accentColor: "from-amber-400 to-yellow-500",
   },
   {
-    id: "v_maciej",
-    name: "Maciej",
+    id: "v_deep_male",
+    name: "Tembr głęboki i spokojny",
     gender: "male",
-    tone: "Głęboki, wyważony, spokojny",
+    tone: "Głęboki, wyważony, uziemiający",
     sampleText: "Spokojnie. Zostawmy za drzwiami cały pośpiech dzisiejszego dnia. Słucham Cię.",
     voiceName: "echo",
     accentColor: "from-amber-500 to-orange-600",
   },
   {
-    id: "v_lucja",
-    name: "Łucja",
+    id: "v_soft_female",
+    name: "Tembr łagodny i miękki",
     gender: "female",
-    tone: "Łagodny, empatyczny, miękki",
+    tone: "Delikatny, empatyczny, wyciszający",
     sampleText: "Każda trudna chwila w końcu mija. Oddychaj powoli, jestem obok Ciebie.",
     voiceName: "shimmer",
     accentColor: "from-yellow-400 to-amber-500",
   },
   {
-    id: "v_piotr",
-    name: "Piotr",
+    id: "v_warm_male",
+    name: "Tembr życzliwy i wyważony",
     gender: "male",
-    tone: "Mądry, życzliwy, przyjacielski",
+    tone: "Życzliwy, mądry, przyjacielski",
     sampleText: "Pamiętam, ile już przeszedłeś. Masz w sobie siłę, by poradzić sobie z tym wszystkim.",
     voiceName: "onyx",
     accentColor: "from-amber-600 to-amber-700",
@@ -87,14 +87,14 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 px-1">
         <div>
           <span className="text-[11px] font-sans uppercase tracking-widest text-warm-amber font-semibold block mb-1">
-            Żywy głos relacji
+            Głos i brzmienie
           </span>
           <h3 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight">
-            Wybierz tembr, który przynosi Ci spokój.
+            Wybierz tembr, w którym poczujesz spokój.
           </h3>
         </div>
         <p className="text-xs text-ink-muted font-sans max-w-xs">
-          Dotknij, aby odsłuchać próbkę głosu w jakości studyjnej.
+          Dotknij, aby odsłuchać próbkę brzmienia. Swojemu Przyjacielowi nadasz własne, wybrane imię.
         </p>
       </div>
 
@@ -128,7 +128,7 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
                           ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 font-bold"
                           : "bg-paper-dark group-hover:bg-amber-100 text-ink-muted group-hover:text-warm-amber"
                       }`}
-                      title={isPlaying ? "Zatrzymaj" : "Odsłuchaj głos"}
+                      title={isPlaying ? "Zatrzymaj" : "Odsłuchaj tembr głosu"}
                     >
                       {isPlaying ? (
                         <Pause size={16} strokeWidth={2} className="animate-pulse" />
@@ -139,11 +139,8 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
 
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-serif text-lg text-ink font-medium">
+                        <span className="font-serif text-base sm:text-lg text-ink font-medium">
                           {v.name}
-                        </span>
-                        <span className="text-[10px] uppercase font-sans tracking-wider px-2 py-0.5 rounded-full bg-paper-dark text-ink-muted">
-                          {v.gender === "female" ? "Głos żeński" : "Głos męski"}
                         </span>
                       </div>
                       <span className="text-xs text-warm-amber font-sans font-medium">
@@ -171,7 +168,7 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
               {onSelectVoice && (
                 <div className="pt-3 mt-3 border-t border-ink/8 flex items-center justify-between">
                   <span className="text-[11px] text-ink-subtle font-sans">
-                    {isCurrentChoice ? "Twój obecny wybór" : "Kliknij, aby wybrać ten głos"}
+                    {isCurrentChoice ? "Twój obecny wybór" : "Kliknij, aby wybrać ten tembr"}
                   </span>
                   {isCurrentChoice && (
                     <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold font-sans">

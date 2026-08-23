@@ -46,14 +46,8 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
   const handleGenderChange = (gender: "female" | "male") => {
     setCompanionGender(gender);
     if (gender === "male") {
-      if (companionName === "Agata" || femaleSuggestions.includes(companionName)) {
-        setCompanionName("Maciej");
-      }
       setCompanionVoice("echo");
     } else {
-      if (companionName === "Maciej" || maleSuggestions.includes(companionName)) {
-        setCompanionName("Agata");
-      }
       setCompanionVoice("nova");
     }
   };
@@ -70,7 +64,7 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
   const setIsPlayingVoiceSample = (state: boolean) => {
     setIsPlayingSample(state);
     if (state) {
-      const greeting = `Cześć ${userName}. Jestem ${companionName}. Cieszę się, że rozmawiamy — zawsze możesz na mnie liczyć.`;
+      const greeting = `Cześć ${userName}. Jestem ${companionName || "Twoim Przyjacielem"}. Cieszę się, że rozmawiamy — zawsze możesz na mnie liczyć.`;
       voiceEngine.speak(
         greeting,
         () => {
@@ -87,7 +81,7 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
     const updated: UserProfile = {
       ...profile,
       name: userName.trim() || "Przyjaciel",
-      companionName: companionName.trim() || (companionGender === "male" ? "Maciej" : "Agata"),
+      companionName: companionName.trim() || "Przyjaciel",
       companionGender,
       companionVoice,
     };
@@ -118,14 +112,14 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
             Twój Przyjaciel
           </h2>
           <p className="font-sans text-xs text-ink-muted max-w-xs mx-auto leading-relaxed">
-            Zdecyduj, jak ma mieć na imię Twój Przyjaciel i jakim głosem ma do Ciebie mówić.
+            Wybierz brzmienie głosu i nadaj swojemu Przyjacielowi własne, wybrane imię.
           </p>
         </div>
 
-        {/* 1. Wybór płci przyjaciela */}
+        {/* 1. Wybór tembru głosu */}
         <div className="mb-5">
           <label className="block text-xs font-medium text-ink font-sans mb-2">
-            Głos i postać
+            Tembr głosu
           </label>
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -139,13 +133,13 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
             >
               <div>
                 <span className="text-[10px] font-sans uppercase tracking-wider text-warm-amber font-semibold block mb-1">
-                  Głos żeński
+                  Tembr żeński
                 </span>
                 <span className="font-serif text-base text-ink font-normal block mb-0.5">
-                  Agata
+                  Ciepły i kojący
                 </span>
                 <p className="text-[11px] text-ink-muted font-sans leading-relaxed">
-                  Ciepły, kojący tembr
+                  Bliski, łagodny ton
                 </p>
               </div>
             </button>
@@ -161,13 +155,13 @@ export const CompanionSettingsModal: React.FC<CompanionSettingsModalProps> = ({
             >
               <div>
                 <span className="text-[10px] font-sans uppercase tracking-wider text-warm-amber font-semibold block mb-1">
-                  Głos męski
+                  Tembr męski
                 </span>
                 <span className="font-serif text-base text-ink font-normal block mb-0.5">
-                  Maciej
+                  Głęboki i spokojny
                 </span>
                 <p className="text-[11px] text-ink-muted font-sans leading-relaxed">
-                  Spokojny, uziemiający
+                  Wyważony, uziemiający
                 </p>
               </div>
             </button>
