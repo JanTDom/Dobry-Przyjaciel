@@ -81,13 +81,18 @@ export function isUserLoggedIn(): boolean {
 
 export function createDefaultProfile(
   name: string = "",
-  companionName: string = "Agata",
+  companionName: string = "",
   companionGender: "female" | "male" | "neutral" = "female",
   email?: string
 ): UserProfile {
   const isJan = (email || "").toLowerCase().includes("jan") || (email || "").toLowerCase().includes("domaniewski");
   const cleanName = sanitizeName(name || (isJan ? "Janek" : "Przyjaciel"), email);
-  const cleanCompName = companionName.trim() || (companionGender === "male" ? "Maciej" : "Agata");
+  
+  // Dla Jana domyślnym imieniem przyjaciółki jest Małgosia
+  let cleanCompName = companionName.trim();
+  if (!cleanCompName) {
+    cleanCompName = isJan ? "Małgosia" : (companionGender === "male" ? "Maciej" : "Przyjaciel");
+  }
 
   return {
     id: email ? "user_" + btoa(email).replace(/=/g, "").slice(0, 12) : "user_" + Date.now(),
@@ -108,35 +113,97 @@ export function createDefaultProfile(
   };
 }
 
+// Przeszukuje wszystkie wersje localStorage w celu odzyskania profilu i wspomnień
+function findLegacyProfile(email: string | null): UserProfile | null {
+  if (typeof window === "undefined") return null;
+
+  const profileKeys = [
+    STORAGE_KEY_PROFILES,
+    "przyjaciel_all_profiles_v4",
+    "przyjaciel_all_profiles_v3",
+    "przyjaciel_all_profiles_v2",
+    "przyjaciel_all_profiles_v1",
+    "przyjaciel_all_profiles",
+  ];
+
+  const activeKeys = [
+    STORAGE_KEY_ACTIVE_PROFILE,
+    "przyjaciel_active_profile_v4",
+    "przyjaciel_active_profile_v3",
+    "przyjaciel_active_profile_v2",
+    "przyjaciel_active_profile_v1",
+    "przyjaciel_active_profile",
+    "przyjaciel_profile",
+  ];
+
+  const cleanEmail = email ? email.toLowerCase().trim() : null;
+
+  // 1. Sprawdź tablice profili
+  for (const k of profileKeys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const dict = JSON.parse(raw);
+        if (cleanEmail && dict[cleanEmail]) {
+          return dict[cleanEmail];
+        }
+        // Jeśli nie podano emaila, weź pierwszy profil
+        if (!cleanEmail && Object.keys(dict).length > 0) {
+          const firstKey = Object.keys(dict)[0];
+          return dict[firstKey];
+        }
+      }
+    } catch {}
+  }
+
+  // 2. Sprawdź pojedyncze profile
+  for (const k of activeKeys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const p = JSON.parse(raw);
+        if (!cleanEmail || (p.email && p.email.toLowerCase().trim() === cleanEmail)) {
+          return p;
+        }
+      }
+    } catch {}
+  }
+
+  return null;
+}
+
 export function getStoredProfile(): UserProfile | null {
   if (typeof window === "undefined") return null;
   try {
     const email = getActiveUserEmail();
+    const isJan = (email || "").toLowerCase().includes("jan") || (email || "").toLowerCase().includes("domaniewski");
 
-    // 1. Sprawdź profil dla aktywnego adresu email
-    const allRaw = localStorage.getItem(STORAGE_KEY_PROFILES);
-    const profiles: Record<string, UserProfile> = allRaw ? JSON.parse(allRaw) : {};
+    // 1. Sprawdź profil w aktualnym lub starszym kluczu
+    const found = findLegacyProfile(email);
 
-    if (email && profiles[email]) {
-      const p = profiles[email];
-      return {
-        ...createDefaultProfile(p.name, p.companionName || "Agata", p.companionGender || "female", email),
-        ...p,
-        name: sanitizeName(p.name, email),
-        companionName: (p.companionName || "").trim() || (p.companionGender === "male" ? "Maciej" : "Agata"),
+    if (found) {
+      const defaultCompName = isJan ? "Małgosia" : (found.companionGender === "male" ? "Maciej" : "Przyjaciel");
+      const finalCompanionName = (found.companionName && found.companionName !== "Agata") 
+        ? found.companionName.trim() 
+        : (isJan ? "Małgosia" : (found.companionName || defaultCompName));
+
+      const merged: UserProfile = {
+        ...createDefaultProfile(found.name, finalCompanionName, found.companionGender || "female", email || found.email),
+        ...found,
+        name: sanitizeName(found.name, email || found.email),
+        companionName: finalCompanionName,
       };
+
+      // Zapisz z powrotem do aktualnego klucza v5
+      saveStoredProfile(merged);
+      return merged;
     }
 
-    // 2. Sprawdź bezpośredni aktywny profil zapasowy
-    const activeRaw = localStorage.getItem(STORAGE_KEY_ACTIVE_PROFILE);
-    if (activeRaw) {
-      const ap: UserProfile = JSON.parse(activeRaw);
-      return {
-        ...createDefaultProfile(ap.name, ap.companionName || "Agata", ap.companionGender || "female", ap.email),
-        ...ap,
-        name: sanitizeName(ap.name, ap.email),
-        companionName: (ap.companionName || "").trim() || (ap.companionGender === "male" ? "Maciej" : "Agata"),
-      };
+    // 2. Jeśli zalogowano jako Jan Domaniewski, a profil był pusty, utwórz z Małgosią
+    if (email && isJan) {
+      const newJanProfile = createDefaultProfile("Janek", "Małgosia", "female", email);
+      saveStoredProfile(newJanProfile);
+      return newJanProfile;
     }
 
     return null;
@@ -149,14 +216,20 @@ export function saveStoredProfile(profile: UserProfile): void {
   if (typeof window === "undefined") return;
   try {
     const email = profile.email || getActiveUserEmail() || "jan.domaniewski@multinewsroom.pl";
+    const isJan = email.toLowerCase().includes("jan") || email.toLowerCase().includes("domaniewski");
+    
     const allRaw = localStorage.getItem(STORAGE_KEY_PROFILES);
     const profiles: Record<string, UserProfile> = allRaw ? JSON.parse(allRaw) : {};
+
+    const cleanCompName = (profile.companionName && profile.companionName !== "Agata")
+      ? profile.companionName.trim()
+      : (isJan ? "Małgosia" : (profile.companionName || "Przyjaciel"));
 
     const cleanProfile: UserProfile = {
       ...profile,
       email,
       name: sanitizeName(profile.name, email),
-      companionName: (profile.companionName || "").trim() || (profile.companionGender === "male" ? "Maciej" : "Agata"),
+      companionName: cleanCompName,
     };
 
     profiles[email] = cleanProfile;
@@ -183,9 +256,33 @@ export function getStoredMessages(): Message[] {
   if (typeof window === "undefined") return [];
   try {
     const email = getActiveUserEmail() || "default";
-    const raw = localStorage.getItem(STORAGE_KEY_MESSAGES_PREFIX + email);
-    if (!raw) return [];
-    return JSON.parse(raw);
+
+    // Sprawdź bieżące i starsze klucze wiadomości
+    const messageKeys = [
+      STORAGE_KEY_MESSAGES_PREFIX + email,
+      "przyjaciel_msgs_v4_" + email,
+      "przyjaciel_msgs_v3_" + email,
+      "przyjaciel_msgs_v2_" + email,
+      "przyjaciel_msgs_v1_" + email,
+      "przyjaciel_msgs_" + email,
+      "przyjaciel_messages_" + email,
+      "przyjaciel_msgs_v5_default",
+      "przyjaciel_msgs_default",
+    ];
+
+    for (const k of messageKeys) {
+      const raw = localStorage.getItem(k);
+      if (raw) {
+        const msgs = JSON.parse(raw);
+        if (Array.isArray(msgs) && msgs.length > 0) {
+          // Przepisz do aktualnego klucza
+          localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + email, JSON.stringify(msgs));
+          return msgs;
+        }
+      }
+    }
+
+    return [];
   } catch {
     return [];
   }

@@ -70,7 +70,7 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
 
     const cleanPass = password.trim();
     if (!VALID_ACCESS_CODES.includes(cleanPass)) {
-      setError("Wpisz prawidłowe hasło dostępowe (A132a132!).");
+      setError("Nieprawidłowe hasło dostępowe.");
       return;
     }
 
@@ -82,9 +82,12 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
     saveAccessCode(cleanPass);
     setActiveUserEmail(email.trim());
 
+    const isJan = email.toLowerCase().includes("jan") || email.toLowerCase().includes("domaniewski");
+    const defaultCompanion = isJan ? "Małgosia" : "Przyjaciel";
+
     const newProfile = createDefaultProfile(
-      userName.trim() || "Przyjaciel",
-      companionName.trim() || (companionGender === "male" ? "Maciej" : "Agata"),
+      userName.trim() || (isJan ? "Janek" : "Przyjaciel"),
+      companionName.trim() || defaultCompanion,
       companionGender,
       email.trim()
     );
@@ -102,7 +105,7 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
 
     const cleanPass = loginPassword.trim();
     if (!VALID_ACCESS_CODES.includes(cleanPass)) {
-      setLoginError("Wpisz prawidłowe hasło dostępowe (A132a132!).");
+      setLoginError("Nieprawidłowe hasło dostępowe.");
       return;
     }
 
@@ -117,10 +120,13 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
     let profile = getStoredProfile();
     const isJan = loginEmail.toLowerCase().includes("jan") || loginEmail.toLowerCase().includes("domaniewski");
     if (!profile) {
-      profile = createDefaultProfile(isJan ? "Janek" : "Przyjaciel", "Agata", "female", loginEmail.trim());
+      profile = createDefaultProfile(isJan ? "Janek" : "Przyjaciel", isJan ? "Małgosia" : "Przyjaciel", "female", loginEmail.trim());
       saveStoredProfile(profile);
     } else if (isJan && (profile.name.toLowerCase().includes("a132") || profile.name === "Przyjaciel")) {
       profile.name = "Janek";
+      if (!profile.companionName || profile.companionName === "Agata") {
+        profile.companionName = "Małgosia";
+      }
       saveStoredProfile(profile);
     }
 
@@ -389,13 +395,10 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Wpisz hasło (np. A132a132!)"
+                      placeholder="Wpisz hasło dostępu"
                       required
                       className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3 text-xs font-sans text-ink focus:outline-none"
                     />
-                    <span className="text-[10px] text-ink-subtle block mt-1">
-                      W wersji przedpremierowej użyj hasła dostępowego: <code className="text-warm-amber font-mono">A132a132!</code>
-                    </span>
                   </div>
                 </div>
 
@@ -463,9 +466,6 @@ export const AuthAndOnboardingModal: React.FC<AuthAndOnboardingModalProps> = ({
                   required
                   className="w-full bg-paper border border-ink/15 focus:border-warm-amber focus:ring-1 focus:ring-warm-amber/30 rounded-card px-4 py-3 text-xs font-sans text-ink focus:outline-none"
                 />
-                <span className="text-[10px] text-ink-subtle block mt-1">
-                  Hasło dostępowe: <code className="text-warm-amber font-mono">A132a132!</code>
-                </span>
               </div>
             </div>
 
