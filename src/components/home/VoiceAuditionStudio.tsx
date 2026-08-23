@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, Pause, Volume2, Sparkles, Check } from "lucide-react";
+import { Play, Pause, Volume2, Sparkles, Check, User } from "lucide-react";
 import { voiceEngine } from "@/lib/voice-engine";
 
 interface VoiceOption {
   id: string;
+  category: "Głos żeński" | "Głos męski";
   name: string;
   gender: "female" | "male";
   tone: string;
@@ -17,16 +18,28 @@ interface VoiceOption {
 const VOICES: VoiceOption[] = [
   {
     id: "v_warm_female",
-    name: "Tembr ciepły i kojący",
+    category: "Głos żeński",
+    name: "Ciepły i kojący",
     gender: "female",
-    tone: "Ciepły, bliski, spokojna obecność",
+    tone: "Bliska, serdeczna i spokojna obecność",
     sampleText: "Jestem przy Tobie. Nie musisz dziś niczego udowadniać — usiądź wygodnie i odpocznij.",
     voiceName: "nova",
     accentColor: "from-amber-400 to-yellow-500",
   },
   {
+    id: "v_soft_female",
+    category: "Głos żeński",
+    name: "Łagodny i miękki",
+    gender: "female",
+    tone: "Delikatny, wyciszający i empatyczny",
+    sampleText: "Każda trudna chwila w końcu mija. Oddychaj powoli, jestem obok Ciebie.",
+    voiceName: "shimmer",
+    accentColor: "from-yellow-400 to-amber-500",
+  },
+  {
     id: "v_deep_male",
-    name: "Tembr głęboki i spokojny",
+    category: "Głos męski",
+    name: "Głęboki i spokojny",
     gender: "male",
     tone: "Głęboki, wyważony, uziemiający",
     sampleText: "Spokojnie. Zostawmy za drzwiami cały pośpiech dzisiejszego dnia. Słucham Cię.",
@@ -34,19 +47,11 @@ const VOICES: VoiceOption[] = [
     accentColor: "from-amber-500 to-orange-600",
   },
   {
-    id: "v_soft_female",
-    name: "Tembr łagodny i miękki",
-    gender: "female",
-    tone: "Delikatny, empatyczny, wyciszający",
-    sampleText: "Każda trudna chwila w końcu mija. Oddychaj powoli, jestem obok Ciebie.",
-    voiceName: "shimmer",
-    accentColor: "from-yellow-400 to-amber-500",
-  },
-  {
     id: "v_warm_male",
-    name: "Tembr życzliwy i wyważony",
+    category: "Głos męski",
+    name: "Życzliwy i wyważony",
     gender: "male",
-    tone: "Życzliwy, mądry, przyjacielski",
+    tone: "Mądry, przyjacielski i stabilny",
     sampleText: "Pamiętam, ile już przeszedłeś. Masz w sobie siłę, by poradzić sobie z tym wszystkim.",
     voiceName: "onyx",
     accentColor: "from-amber-600 to-amber-700",
@@ -90,68 +95,51 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
             Głos i brzmienie
           </span>
           <h3 className="font-serif text-2xl sm:text-3xl text-ink font-normal tracking-tight">
-            Wybierz tembr, w którym poczujesz spokój.
+            Wybierz brzmienie głosu swojego Przyjaciela.
           </h3>
         </div>
         <p className="text-xs text-ink-muted font-sans max-w-xs">
-          Dotknij, aby odsłuchać próbkę brzmienia. Swojemu Przyjacielowi nadasz własne, wybrane imię.
+          Odsłuchaj barwy żeńskie i męskie. Imię dla swojej postaci wybierzesz samodzielnie.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {VOICES.map((v) => {
           const isPlaying = playingVoiceId === v.id;
           const isCurrentChoice = activeVoiceName === v.voiceName;
+          const isFemale = v.gender === "female";
 
           return (
             <div
               key={v.id}
               onClick={() => handleTogglePlay(v)}
-              className={`p-5 rounded-2xl border transition-all duration-300 relative group cursor-pointer flex flex-col justify-between ${
+              className={`p-5 sm:p-6 rounded-2xl border transition-all duration-300 relative group cursor-pointer flex flex-col justify-between ${
                 isPlaying
                   ? "bg-white border-warm-amber shadow-quiet-lg ring-2 ring-warm-amber/30"
                   : "bg-paper-surface/90 hover:bg-white border-ink/8 hover:border-warm-amber/30 shadow-quiet-sm"
               }`}
             >
               <div>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    {/* Przycisk odtwarzania z animacją fali */}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleTogglePlay(v);
-                      }}
-                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-transform active:scale-90 shadow-quiet-sm ${
-                        isPlaying
-                          ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 font-bold"
-                          : "bg-paper-dark group-hover:bg-amber-100 text-ink-muted group-hover:text-warm-amber"
+                {/* Wyrazista, czytelna etykieta płci głosu */}
+                <div className="flex items-center justify-between mb-3.5">
+                  <span
+                    className={`text-[11px] font-sans font-semibold uppercase tracking-wider px-3 py-1 rounded-full border flex items-center gap-1.5 ${
+                      isFemale
+                        ? "bg-amber-100/80 text-amber-900 border-amber-300/70"
+                        : "bg-stone-200/80 text-stone-800 border-stone-300"
+                    }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${
+                        isFemale ? "bg-warm-amber" : "bg-stone-600"
                       }`}
-                      title={isPlaying ? "Zatrzymaj" : "Odsłuchaj tembr głosu"}
-                    >
-                      {isPlaying ? (
-                        <Pause size={16} strokeWidth={2} className="animate-pulse" />
-                      ) : (
-                        <Play size={16} strokeWidth={2} className="ml-0.5" />
-                      )}
-                    </button>
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-serif text-base sm:text-lg text-ink font-medium">
-                          {v.name}
-                        </span>
-                      </div>
-                      <span className="text-xs text-warm-amber font-sans font-medium">
-                        {v.tone}
-                      </span>
-                    </div>
-                  </div>
+                    />
+                    {v.category}
+                  </span>
 
                   {/* Wskaźnik animowanej fali dźwiękowej */}
                   {isPlaying && (
-                    <div className="flex items-center gap-1 h-5 px-2.5 py-1 rounded-full bg-amber-100/90 border border-amber-300">
+                    <div className="flex items-center gap-1 h-6 px-3 py-1 rounded-full bg-amber-100/90 border border-amber-300">
                       <span className="w-1 bg-warm-amber rounded-full animate-[bounce_0.6s_infinite_100ms] h-3" />
                       <span className="w-1 bg-warm-amber rounded-full animate-[bounce_0.6s_infinite_300ms] h-4" />
                       <span className="w-1 bg-warm-amber rounded-full animate-[bounce_0.6s_infinite_200ms] h-2.5" />
@@ -160,15 +148,47 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
                   )}
                 </div>
 
-                <p className="font-serif text-sm text-ink-muted italic leading-relaxed">
+                <div className="flex items-center gap-3.5 mb-3">
+                  {/* Przycisk odtwarzania */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTogglePlay(v);
+                    }}
+                    className={`w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-90 shadow-quiet-sm flex-shrink-0 ${
+                      isPlaying
+                        ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 font-bold"
+                        : "bg-paper-dark group-hover:bg-amber-100 text-ink-muted group-hover:text-warm-amber"
+                    }`}
+                    title={isPlaying ? "Zatrzymaj" : "Odsłuchaj ten głos"}
+                  >
+                    {isPlaying ? (
+                      <Pause size={17} strokeWidth={2} className="animate-pulse" />
+                    ) : (
+                      <Play size={17} strokeWidth={2} className="ml-0.5" />
+                    )}
+                  </button>
+
+                  <div>
+                    <h4 className="font-serif text-lg text-ink font-medium leading-snug">
+                      {v.name}
+                    </h4>
+                    <span className="text-xs text-warm-amber font-sans font-medium">
+                      {v.tone}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="font-serif text-sm text-ink-muted italic leading-relaxed pl-1">
                   „{v.sampleText}”
                 </p>
               </div>
 
               {onSelectVoice && (
-                <div className="pt-3 mt-3 border-t border-ink/8 flex items-center justify-between">
+                <div className="pt-3.5 mt-3.5 border-t border-ink/8 flex items-center justify-between">
                   <span className="text-[11px] text-ink-subtle font-sans">
-                    {isCurrentChoice ? "Twój obecny wybór" : "Kliknij, aby wybrać ten tembr"}
+                    {isCurrentChoice ? "Twój obecny wybór" : "Dotknij, aby wybrać ten tembr"}
                   </span>
                   {isCurrentChoice && (
                     <span className="flex items-center gap-1 text-[11px] text-emerald-700 font-semibold font-sans">
