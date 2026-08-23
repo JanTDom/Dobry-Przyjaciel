@@ -181,7 +181,7 @@ class VoiceEngine {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.stopAndTranscribeCurrentChunk();
-              }, 1400); // 1.4s ciszy po zakończeniu mowy
+              }, 750); // Błyskawiczna reakcja: 750ms ciszy po wypowiedzi
             }
           }
         }

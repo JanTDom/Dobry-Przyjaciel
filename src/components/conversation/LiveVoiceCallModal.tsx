@@ -170,15 +170,15 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       }
     );
 
-    // Odtwórz powitanie DOKŁADNIE RAZ. Po zakończeniu powitania włącz nasłuch mikrofonu
+    // Inicjalizacja mikrofonu i uprawnień od razu przy otwarciu okna
+    voiceEngine.startLiveDialogue();
+
+    // Odtwórz powitanie DOKŁADNIE RAZ. Podczas powitania mikrofon jest wyciszony, a po nim od razu gotowy
     if (!hasPlayedGreetingRef.current) {
       hasPlayedGreetingRef.current = true;
       voiceEngine.speak(
         greetingText,
-        () => {
-          // Po zakończeniu powitania lektora rozpoczynamy automatyczny tryb dialogu na żywo
-          voiceEngine.startLiveDialogue();
-        },
+        undefined,
         companionVoice
       );
     }
