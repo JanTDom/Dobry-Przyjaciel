@@ -5,7 +5,7 @@ export interface VoiceEngineState {
   isRecording: boolean;
   isSpeaking: boolean;
   isProcessing: boolean;
-  userVolume: number; // 0.0 do 1.0
+  userVolume: number;
   transcript: string;
   interimTranscript: string;
   errorMessage?: string | null;
@@ -18,16 +18,16 @@ class VoiceEngine {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private currentAudio: HTMLAudioElement | null = null;
-  private speechRecognition: any = null;
 
   private isContinuousMode: boolean = false;
   private isCurrentlyRecording: boolean = false;
   private isCurrentlySpeaking: boolean = false;
   private isProcessingTranscript: boolean = false;
+  private isMutedForPlayback: boolean = false;
 
   private volumeCheckAnimationId: number | null = null;
   private silenceTimer: any = null;
-  private speechStartTime: number = 0;
+  private consecutiveVoiceFrames: number = 0;
   private hasSpokenInCurrentChunk: boolean = false;
 
   private onMessageCaptured: ((text: string) => void) | null = null;
@@ -37,50 +37,13 @@ class VoiceEngine {
   constructor() {
     if (typeof window !== "undefined") {
       this.currentAudio = new Audio();
-      this.initWebSpeechRecognition();
-    }
-  }
-
-  private initWebSpeechRecognition() {
-    if (typeof window === "undefined") return;
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      try {
-        this.speechRecognition = new SpeechRecognition();
-        this.speechRecognition.continuous = true;
-        this.speechRecognition.interimResults = true;
-        this.speechRecognition.lang = "pl-PL";
-
-        this.speechRecognition.onresult = (event: any) => {
-          let interim = "";
-          let final = "";
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              final += event.results[i][0].transcript;
-            } else {
-              interim += event.results[i][0].transcript;
-            }
-          }
-          const text = (final || interim).trim();
-          if (text) {
-            this.currentTranscript = text;
-            this.notifyState();
-          }
-        };
-
-        this.speechRecognition.onerror = (e: any) => {
-          console.warn("WebSpeech warning:", e.error);
-        };
-      } catch (e) {
-        console.warn("SpeechRecognition init error:", e);
-      }
     }
   }
 
   private notifyState(errorMessage: string | null = null) {
     if (!this.onStateChange) return;
     this.onStateChange({
-      isListening: this.isContinuousMode && !this.isCurrentlySpeaking,
+      isListening: this.isContinuousMode && !this.isCurrentlySpeaking && !this.isMutedForPlayback,
       isRecording: this.isCurrentlyRecording,
       isSpeaking: this.isCurrentlySpeaking,
       isProcessing: this.isProcessingTranscript,
@@ -91,7 +54,7 @@ class VoiceEngine {
     });
   }
 
-  // Odblokowuje AudioContext i element Audio w geście użytkownika (Safari / Chrome)
+  // Odblokowuje AudioContext i element Audio w geście użytkownika (Safari / iOS / Chrome)
   public async unlock(): Promise<boolean> {
     if (typeof window === "undefined") return false;
     try {
@@ -116,7 +79,7 @@ class VoiceEngine {
     }
   }
 
-  // Uzyskuje strumień mikrofonu
+  // Uzyskuje strumień mikrofonu z redukcją echa
   private async getOrCreateMediaStream(): Promise<MediaStream | null> {
     if (this.mediaStream && this.mediaStream.active) {
       return this.mediaStream;
@@ -132,13 +95,12 @@ class VoiceEngine {
       });
       this.mediaStream = stream;
 
-      // Podłącz do AudioContext i AnalyserNode do badania poziomu głośności w czasie rzeczywistym
       if (this.audioContext) {
         try {
           const source = this.audioContext.createMediaStreamSource(stream);
           this.analyser = this.audioContext.createAnalyser();
-          this.analyser.fftSize = 512;
-          this.analyser.smoothingTimeConstant = 0.4;
+          this.analyser.fftSize = 256;
+          this.analyser.smoothingTimeConstant = 0.5;
           source.connect(this.analyser);
         } catch (err) {
           console.warn("Analyser connection error:", err);
@@ -148,7 +110,7 @@ class VoiceEngine {
       return stream;
     } catch (err) {
       console.error("Microphone access error:", err);
-      this.notifyState("Brak dostępu do mikrofonu. Zezwól w ustawieniach przeglądarki.");
+      this.notifyState("Brak dostępu do mikrofonu. Zezwól na dostęp w przeglądarce.");
       return null;
     }
   }
@@ -161,22 +123,20 @@ class VoiceEngine {
     this.onStateChange = onState;
   }
 
-  // Rozpoczyna automatyczny tryb dialogu na żywo (VAD + Whisper)
+  // Rozpoczyna tryb ciągłego dialogu z zabezpieczeniem przed echem
   public async startLiveDialogue() {
     await this.unlock();
     this.isContinuousMode = true;
     this.currentTranscript = "";
-    this.stopSpeaking();
 
     const stream = await this.getOrCreateMediaStream();
     if (!stream) return;
 
-    // Rozpocznij pętlę badania głosu (Voice Activity Detection)
     this.startVoiceActivityDetection();
     this.notifyState();
   }
 
-  // Pętla monitorowania poziomu dźwięku z mikrofonu
+  // Pętla monitorowania poziomu głosu (VAD) z filtrem szumu tła i zabezpieczeniem echa
   private startVoiceActivityDetection() {
     if (this.volumeCheckAnimationId) {
       cancelAnimationFrame(this.volumeCheckAnimationId);
@@ -185,7 +145,13 @@ class VoiceEngine {
     const checkVolume = () => {
       if (!this.isContinuousMode) return;
 
-      if (this.analyser && !this.isCurrentlySpeaking && !this.isProcessingTranscript) {
+      // Badamy mikrofon TYLKO gdy głośnik NIE gra i nie trwa przetwarzanie odpowiedzi
+      if (
+        this.analyser &&
+        !this.isCurrentlySpeaking &&
+        !this.isMutedForPlayback &&
+        !this.isProcessingTranscript
+      ) {
         const buffer = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(buffer);
 
@@ -194,26 +160,29 @@ class VoiceEngine {
           sum += buffer[i];
         }
         const average = sum / buffer.length;
-        const normalizedVolume = Math.min(1, average / 60);
+        const normalizedVolume = Math.min(1, average / 128);
 
-        // Próg detekcji mowy człowieka (ok. 12% głośności)
-        if (normalizedVolume > 0.12) {
-          if (!this.isCurrentlyRecording) {
-            this.startRecordingChunk();
+        // Podniesiony próg detekcji głosu człowieka (> 0.22) zapobiega fałszywym startom na szumie wentylatora
+        if (normalizedVolume > 0.22) {
+          this.consecutiveVoiceFrames++;
+          if (this.consecutiveVoiceFrames >= 3) {
+            if (!this.isCurrentlyRecording) {
+              this.startRecordingChunk();
+            }
+            this.hasSpokenInCurrentChunk = true;
+            if (this.silenceTimer) {
+              clearTimeout(this.silenceTimer);
+              this.silenceTimer = null;
+            }
           }
-          this.hasSpokenInCurrentChunk = true;
-          this.speechStartTime = Date.now();
-          if (this.silenceTimer) {
-            clearTimeout(this.silenceTimer);
-            this.silenceTimer = null;
-          }
-        } else if (this.isCurrentlyRecording && this.hasSpokenInCurrentChunk) {
-          // Jeśli nagrywamy i nastała cisza po tym, jak użytkownik mówił
-          if (!this.silenceTimer) {
-            this.silenceTimer = setTimeout(() => {
-              // Po 1.2s ciszy zakończ i przetwórz nagranie
-              this.stopAndTranscribeCurrentChunk();
-            }, 1200);
+        } else {
+          this.consecutiveVoiceFrames = Math.max(0, this.consecutiveVoiceFrames - 1);
+          if (this.isCurrentlyRecording && this.hasSpokenInCurrentChunk) {
+            if (!this.silenceTimer) {
+              this.silenceTimer = setTimeout(() => {
+                this.stopAndTranscribeCurrentChunk();
+              }, 1400); // 1.4s ciszy po zakończeniu mowy
+            }
           }
         }
       }
@@ -225,7 +194,14 @@ class VoiceEngine {
   }
 
   private startRecordingChunk() {
-    if (!this.mediaStream || this.isCurrentlyRecording || this.isCurrentlySpeaking) return;
+    if (
+      !this.mediaStream ||
+      this.isCurrentlyRecording ||
+      this.isCurrentlySpeaking ||
+      this.isMutedForPlayback
+    ) {
+      return;
+    }
 
     try {
       this.audioChunks = [];
@@ -242,7 +218,7 @@ class VoiceEngine {
         }
       };
 
-      this.mediaRecorder.start(200);
+      this.mediaRecorder.start(250);
       this.isCurrentlyRecording = true;
       this.hasSpokenInCurrentChunk = false;
       this.notifyState();
@@ -265,8 +241,8 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        // Ignoruj zbyt krótkie pliki (poniżej 0.5s mowy lub pusty szum)
-        if (audioBlob.size < 2000 || !this.hasSpokenInCurrentChunk) {
+        // Ignoruj zbyt małe pliki (< 4KB to pusta cisza lub szum tła)
+        if (audioBlob.size < 4000 || !this.hasSpokenInCurrentChunk) {
           this.notifyState();
           resolve();
           return;
@@ -304,7 +280,9 @@ class VoiceEngine {
       };
 
       try {
-        this.mediaRecorder!.stop();
+        if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+          this.mediaRecorder.stop();
+        }
       } catch {
         this.isCurrentlyRecording = false;
         this.notifyState();
@@ -313,19 +291,13 @@ class VoiceEngine {
     });
   }
 
-  // Ręczne rozpoczęcie nagrywania (Tap-to-Speak / Push-to-Talk)
+  // Ręczne rozpoczęcie nagrywania (Tap-to-Speak)
   public async startManualRecording(): Promise<boolean> {
     await this.unlock();
     this.stopSpeaking();
+
     const stream = await this.getOrCreateMediaStream();
     if (!stream) return false;
-
-    if (this.silenceTimer) clearTimeout(this.silenceTimer);
-    if (this.isCurrentlyRecording && this.mediaRecorder) {
-      try {
-        this.mediaRecorder.stop();
-      } catch {}
-    }
 
     try {
       this.audioChunks = [];
@@ -342,30 +314,33 @@ class VoiceEngine {
         }
       };
 
-      this.mediaRecorder.start(200);
+      this.mediaRecorder.start(250);
       this.isCurrentlyRecording = true;
       this.hasSpokenInCurrentChunk = true;
       this.notifyState();
       return true;
-    } catch (err) {
-      console.error("Manual recording error:", err);
-      this.notifyState("Nie udało się uruchomić nagrywania mikrofonu.");
+    } catch (e) {
+      console.error("Manual recording error:", e);
       return false;
     }
   }
 
-  // Ręczne zatrzymanie nagrywania i natychmiastowa transkrypcja
+  // Ręczne zakończenie nagrania i wysłanie do transkrypcji
   public async stopManualRecordingAndTranscribe(): Promise<string | null> {
-    if (!this.isCurrentlyRecording || !this.mediaRecorder) return null;
+    if (!this.mediaRecorder || this.mediaRecorder.state === "inactive") {
+      this.isCurrentlyRecording = false;
+      this.notifyState();
+      return null;
+    }
 
-    return new Promise((resolve) => {
+    return new Promise<string | null>((resolve) => {
       this.mediaRecorder!.onstop = async () => {
         this.isCurrentlyRecording = false;
         const mimeType = this.mediaRecorder?.mimeType || "audio/webm";
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        if (audioBlob.size < 1200) {
+        if (audioBlob.size < 2000) {
           this.notifyState();
           resolve(null);
           return;
@@ -376,7 +351,7 @@ class VoiceEngine {
 
         try {
           const formData = new FormData();
-          formData.append("file", audioBlob, "manual_audio.webm");
+          formData.append("file", audioBlob, "audio.webm");
 
           const res = await fetch("/api/transcribe", {
             method: "POST",
@@ -386,33 +361,139 @@ class VoiceEngine {
           if (res.ok) {
             const data = await res.json();
             const text = (data.text || "").trim();
-            if (text) {
-              this.currentTranscript = text;
-              if (this.onMessageCaptured) {
-                this.onMessageCaptured(text);
-              }
-              this.isProcessingTranscript = false;
-              this.notifyState();
-              resolve(text);
-              return;
-            }
+            this.currentTranscript = text;
+            resolve(text || null);
+          } else {
+            resolve(null);
           }
-        } catch (e) {
-          console.error("Transcription error:", e);
+        } catch (err) {
+          console.error("Manual transcribe error:", err);
+          resolve(null);
+        } finally {
+          this.isProcessingTranscript = false;
+          this.notifyState();
         }
-        this.isProcessingTranscript = false;
-        this.notifyState();
-        resolve(null);
       };
 
       try {
-        this.mediaRecorder!.stop();
+        if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+          this.mediaRecorder.stop();
+        }
       } catch {
         this.isCurrentlyRecording = false;
         this.notifyState();
         resolve(null);
       }
     });
+  }
+
+  // Odtwarzanie głosu lektora (TTS) z wyciszeniem mikrofonu na czas mowy
+  public async speak(
+    text: string,
+    onEnded?: () => void,
+    voice: string = "nova",
+    skipIfBusy = false
+  ): Promise<boolean> {
+    if (!text || text.trim().length === 0) return false;
+
+    // Zabezpieczenie przed echem: natychmiast wyciszamy mikrofon i przerywamy nagrywanie
+    this.isMutedForPlayback = true;
+    if (this.isCurrentlyRecording && this.mediaRecorder) {
+      try {
+        this.mediaRecorder.stop();
+      } catch {}
+      this.isCurrentlyRecording = false;
+    }
+
+    this.stopSpeaking();
+    this.isCurrentlySpeaking = true;
+    this.notifyState();
+
+    try {
+      const res = await fetch("/api/voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: text.trim(),
+          voice: voice || "nova",
+        }),
+      });
+
+      if (!res.ok) {
+        this.isCurrentlySpeaking = false;
+        this.isMutedForPlayback = false;
+        this.notifyState();
+        if (onEnded) onEnded();
+        return false;
+      }
+
+      const blob = await res.blob();
+      const audioUrl = URL.createObjectURL(blob);
+
+      if (!this.currentAudio) {
+        this.currentAudio = new Audio();
+      }
+
+      this.currentAudio.src = audioUrl;
+
+      return new Promise((resolve) => {
+        if (!this.currentAudio) {
+          this.isCurrentlySpeaking = false;
+          this.isMutedForPlayback = false;
+          this.notifyState();
+          if (onEnded) onEnded();
+          resolve(false);
+          return;
+        }
+
+        this.currentAudio.onended = () => {
+          this.isCurrentlySpeaking = false;
+          // Dodajemy 450ms buforu po zakończeniu mowy lektora, aby pogłos głośnika nie aktywował mikrofonu
+          setTimeout(() => {
+            this.isMutedForPlayback = false;
+            this.notifyState();
+            if (onEnded) onEnded();
+            resolve(true);
+          }, 450);
+        };
+
+        this.currentAudio.onerror = (e) => {
+          console.warn("Audio playback error:", e);
+          this.isCurrentlySpeaking = false;
+          this.isMutedForPlayback = false;
+          this.notifyState();
+          if (onEnded) onEnded();
+          resolve(false);
+        };
+
+        this.currentAudio.play().catch((err) => {
+          console.warn("Audio play prevented:", err);
+          this.isCurrentlySpeaking = false;
+          this.isMutedForPlayback = false;
+          this.notifyState();
+          if (onEnded) onEnded();
+          resolve(false);
+        });
+      });
+    } catch (err) {
+      console.error("Speak error:", err);
+      this.isCurrentlySpeaking = false;
+      this.isMutedForPlayback = false;
+      this.notifyState();
+      if (onEnded) onEnded();
+      return false;
+    }
+  }
+
+  public stopSpeaking() {
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+      } catch {}
+    }
+    this.isCurrentlySpeaking = false;
+    this.notifyState();
   }
 
   public stopLiveDialogue() {
@@ -425,94 +506,16 @@ class VoiceEngine {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
     }
-    if (this.mediaRecorder && this.isCurrentlyRecording) {
+    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
       try {
         this.mediaRecorder.stop();
       } catch {}
     }
     this.isCurrentlyRecording = false;
+    this.isMutedForPlayback = false;
     this.stopSpeaking();
     this.notifyState();
-  }
-
-  // Odtwarzanie głosu lektora
-  public async speak(text: string, onEnd?: () => void, voiceName: string = "nova", isPreview: boolean = false) {
-    await this.unlock();
-    this.stopSpeaking();
-
-    // Wstrzymaj nagrywanie na czas mowy lektora, aby AI nie nagrywało samego siebie
-    if (this.mediaRecorder && this.isCurrentlyRecording) {
-      try {
-        this.mediaRecorder.stop();
-      } catch {}
-      this.isCurrentlyRecording = false;
-    }
-
-    this.isCurrentlySpeaking = true;
-    this.notifyState();
-
-    try {
-      const storedCode = typeof window !== "undefined" ? localStorage.getItem("przyjaciel_access_code_v1") || "A132a132!" : "A132a132!";
-      const res = await fetch("/api/voice", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-access-code": storedCode,
-        },
-        body: JSON.stringify({ text, voice: voiceName, accessCode: storedCode, isPreview }),
-      });
-
-      if (res.ok) {
-        const blob = await res.blob();
-        const audioUrl = URL.createObjectURL(blob);
-
-        if (!this.currentAudio) {
-          this.currentAudio = new Audio();
-        }
-
-        const audio = this.currentAudio;
-        audio.src = audioUrl;
-
-        audio.onended = () => {
-          this.handlePlaybackEnd(onEnd);
-        };
-
-        audio.onerror = (e) => {
-          console.error("Audio playback error:", e);
-          this.handlePlaybackEnd(onEnd);
-        };
-
-        const playPromise = audio.play();
-        if (playPromise !== undefined) {
-          await playPromise.catch((err) => {
-            console.warn("Audio play error:", err);
-            this.handlePlaybackEnd(onEnd);
-          });
-        }
-        return;
-      }
-    } catch (err) {
-      console.error("Voice playback fetch error:", err);
-    }
-
-    this.handlePlaybackEnd(onEnd);
-  }
-
-  private handlePlaybackEnd(onEnd?: () => void) {
-    this.isCurrentlySpeaking = false;
-    this.notifyState();
-    if (onEnd) onEnd();
-  }
-
-  public stopSpeaking() {
-    this.isCurrentlySpeaking = false;
-    if (this.currentAudio) {
-      try {
-        this.currentAudio.pause();
-        this.currentAudio.currentTime = 0;
-      } catch {}
-    }
   }
 }
 
-export const voiceEngine = typeof window !== "undefined" ? new VoiceEngine() : ({} as VoiceEngine);
+export const voiceEngine = new VoiceEngine();

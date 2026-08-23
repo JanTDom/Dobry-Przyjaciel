@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mic, PhoneOff, MessageSquare, ArrowLeft, X, ChevronDown, ChevronUp, Compass, Home, Send, Radio, Sparkles } from "lucide-react";
+import { Mic, PhoneOff, MessageSquare, ArrowLeft, X, ChevronDown, ChevronUp, Compass, Home, Send, Radio, Sparkles, Volume2 } from "lucide-react";
 import { LivingWarmHearth } from "@/components/presence/LivingWarmHearth";
 import { voiceEngine, VoiceEngineState } from "@/lib/voice-engine";
 import { getCompanionReplyAsync } from "@/lib/companion-personality";
@@ -24,7 +24,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   onNewMessage,
 }) => {
   const [profile, setProfile] = useState<UserProfile>(initialProfile);
-  const [isListening, setIsListening] = useState(true);
+  const [isListening, setIsListening] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -38,6 +38,9 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const durationTimerRef = useRef<any>(null);
+  const hasPlayedGreetingRef = useRef(false);
+  const isProcessingMessageRef = useRef(false);
+
   const companionVoice = profile.companionVoice || (profile.companionGender === "male" ? "echo" : "nova");
 
   useEffect(() => {
@@ -59,12 +62,15 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     voiceEngine.stopLiveDialogue();
     voiceEngine.stopSpeaking();
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
+    hasPlayedGreetingRef.current = false;
+    isProcessingMessageRef.current = false;
     onClose();
   };
 
   const processUserMessage = async (userText: string) => {
-    if (!userText || userText.trim().length === 0) return;
+    if (!userText || userText.trim().length === 0 || isProcessingMessageRef.current) return;
 
+    isProcessingMessageRef.current = true;
     const cleanUserText = userText.trim();
     setLiveTranscript(cleanUserText);
     setIsProcessing(true);
@@ -104,10 +110,13 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       onNewMessage(companionMsg);
       setSessionMessages((prev) => [...prev, companionMsg]);
 
-      // Odtwórz głos lektora
-      await voiceEngine.speak(reply.text, undefined, companionVoice);
+      // Odtwórz głos lektora. Mikrofon zostanie ponownie aktywowany dopiero po zakończeniu mowy
+      await voiceEngine.speak(reply.text, () => {
+        isProcessingMessageRef.current = false;
+      }, companionVoice);
     } catch (e) {
       console.error("Conversation processing error:", e);
+      isProcessingMessageRef.current = false;
     } finally {
       setIsProcessing(false);
     }
@@ -117,6 +126,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     if (!isOpen) {
       voiceEngine.stopLiveDialogue();
       if (durationTimerRef.current) clearInterval(durationTimerRef.current);
+      hasPlayedGreetingRef.current = false;
+      isProcessingMessageRef.current = false;
       setIsCallEnded(false);
       setSessionMessages([]);
       return;
@@ -127,16 +138,15 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     setIsCallEnded(false);
     setShowTranscriptDrawer(false);
     setErrorMessage(null);
+    hasPlayedGreetingRef.current = false;
+    isProcessingMessageRef.current = false;
 
     durationTimerRef.current = setInterval(() => {
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
-    const greetingText = `Cześć, ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie — słucham Cię.`;
+    const greetingText = `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie — słucham Cię.`;
     setCompanionText(greetingText);
-
-    // Odtwórz przywitanie
-    voiceEngine.speak(greetingText, undefined, companionVoice);
 
     voiceEngine.setCallbacks(
       (capturedText) => {
@@ -156,11 +166,23 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       }
     );
 
-    voiceEngine.startLiveDialogue();
+    // Odtwórz powitanie DOKŁADNIE RAZ. Po zakończeniu powitania włącz nasłuch mikrofonu
+    if (!hasPlayedGreetingRef.current) {
+      hasPlayedGreetingRef.current = true;
+      voiceEngine.speak(
+        greetingText,
+        () => {
+          // Po zakończeniu powitania lektora rozpoczynamy bezpieczny dialog
+          voiceEngine.startLiveDialogue();
+        },
+        companionVoice
+      );
+    }
 
     return () => {
       voiceEngine.stopLiveDialogue();
       if (durationTimerRef.current) clearInterval(durationTimerRef.current);
+      hasPlayedGreetingRef.current = false;
     };
   }, [isOpen]);
 
@@ -211,21 +233,13 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#0F0D0A]/95 text-[#FBF8F1] px-4 sm:px-8 py-6 select-none overflow-hidden"
       >
-        {/* Luksusowe tło aksamitne z subtelną winietą i ciepłą poświatą */}
+        {/* Spokojne, głębokie aksamitne tło bez agresywnego migania */}
         <div
           aria-hidden
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse 80% 60% at 50% 38%, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.05) 50%, rgba(15, 13, 10, 0.95) 100%)",
-          }}
-        />
-        <div
-          aria-hidden
-          className="absolute inset-0 opacity-[0.035] pointer-events-none"
-          style={{
-            backgroundImage:
-              "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+              "radial-gradient(ellipse 80% 60% at 50% 38%, rgba(245, 158, 11, 0.08) 0%, rgba(15, 13, 10, 0.95) 100%)",
           }}
         />
 
@@ -233,7 +247,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         <div className="w-full max-w-2xl flex items-center justify-between z-10">
           <button
             onClick={handleCloseModal}
-            className="flex items-center gap-2 text-xs font-sans font-medium text-[#FBF8F1] bg-white/5 hover:bg-white/10 border border-amber-500/30 hover:border-amber-500/60 px-4 py-2 rounded-full backdrop-blur-md shadow-lg transition-all active:scale-95"
+            className="flex items-center gap-2 text-xs font-sans font-medium text-[#FBF8F1] bg-white/5 hover:bg-white/10 border border-amber-500/25 hover:border-amber-500/50 px-4 py-2 rounded-full backdrop-blur-md shadow-lg transition-all active:scale-95"
             title="Wróć do aplikacji (lub naciśnij ESC)"
           >
             <ArrowLeft size={14} strokeWidth={2} className="text-amber-400" />
@@ -241,8 +255,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           </button>
 
           {!isCallEnded && (
-            <div className="flex items-center gap-2.5 bg-white/5 border border-amber-500/25 px-4 py-1.5 rounded-full backdrop-blur-md shadow-lg">
-              <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_#F59E0B]" />
+            <div className="flex items-center gap-2.5 bg-white/5 border border-amber-500/20 px-4 py-1.5 rounded-full backdrop-blur-md shadow-lg">
+              <div className="w-2 h-2 rounded-full bg-amber-400 shadow-[0_0_8px_#F59E0B]" />
               <span className="text-xs text-[#FBF8F1] font-sans font-medium tracking-wide">
                 {profile.companionName} • {formatDuration(callDuration)}
               </span>
@@ -263,11 +277,11 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
           <>
             {/* Centralna żywa obecność */}
             <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg w-full z-10">
-              {/* Palenisko z możliwością kliknięcia do natychmiastowego nagrania */}
+              {/* Spokojne, ciepłe palenisko */}
               <div
                 className="relative mb-4 cursor-pointer group"
                 onClick={handleToggleManualRecord}
-                title={isRecording ? "Dotknij, aby zakończyć nagranie i wysłać" : "Dotknij paleniska, aby mówić"}
+                title={isRecording ? "Dotknij, aby wysłać wypowiedź" : "Dotknij, aby mówić"}
               >
                 <LivingWarmHearth
                   isListening={isListening}
@@ -275,34 +289,34 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                   isRecording={isRecording}
                   isThinking={isProcessing}
                   size={300}
-                  intensity={isSpeaking ? 0.9 : isRecording ? 1.0 : isListening ? 0.6 : isProcessing ? 0.65 : 0.4}
+                  intensity={isSpeaking ? 0.8 : isRecording ? 0.9 : 0.45}
                 />
               </div>
 
-              {/* Status mikrofonu / mowy */}
+              {/* Status rozmowy */}
               <div className="flex items-center justify-center gap-2 mb-3 font-sans">
                 {isRecording ? (
-                  <div className="flex items-center gap-2 text-xs font-semibold text-red-300 bg-red-950/80 border border-red-500/40 px-4 py-1.5 rounded-full animate-pulse shadow-lg">
-                    <Radio size={14} className="animate-spin text-red-400" />
-                    <span>Nagrywam Twój głos... Dotknij, by wysłać</span>
+                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-200 bg-amber-950/80 border border-amber-500/40 px-4 py-1.5 rounded-full shadow-lg">
+                    <Radio size={14} className="animate-spin text-amber-400" />
+                    <span>Nagrywam... Dotknij, by wysłać</span>
                   </div>
                 ) : isSpeaking ? (
-                  <div className="text-xs font-medium text-amber-300 bg-amber-950/60 border border-amber-500/30 px-4 py-1 rounded-full flex items-center gap-2 shadow-lg">
+                  <div className="text-xs font-medium text-amber-300 bg-amber-950/60 border border-amber-500/30 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg">
                     <Sparkles size={13} className="text-amber-400 animate-pulse" />
                     <span>{profile.companionName} mówi...</span>
                   </div>
                 ) : isProcessing ? (
-                  <div className="text-xs font-medium text-amber-300 bg-amber-950/60 border border-amber-500/30 px-4 py-1 rounded-full animate-pulse shadow-lg">
+                  <div className="text-xs font-medium text-amber-200 bg-amber-950/60 border border-amber-500/30 px-4 py-1.5 rounded-full animate-pulse shadow-lg">
                     Zastanawiam się...
                   </div>
                 ) : isListening ? (
-                  <div className="text-xs font-medium text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-4 py-1 rounded-full flex items-center gap-2 shadow-lg">
+                  <div className="text-xs font-medium text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-4 py-1.5 rounded-full flex items-center gap-2 shadow-lg">
                     <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>Słucham Cię • Mów śmiało lub dotknij</span>
+                    <span>Słucham Cię • Mów swobodnie</span>
                   </div>
                 ) : (
-                  <div className="text-xs font-medium text-stone-400 bg-white/5 px-3.5 py-1 rounded-full">
-                    Dotknij mikrofonu poniżej, aby mówić
+                  <div className="text-xs font-medium text-stone-400 bg-white/5 px-4 py-1.5 rounded-full">
+                    Dotknij przycisku poniżej, aby mówić
                   </div>
                 )}
               </div>
@@ -324,7 +338,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                   {isSpeaking
                     ? `„${companionText}”`
                     : !liveTranscript
-                    ? "Mów swobodnie lub dotknij mikrofonu. Jestem obok."
+                    ? "Mów swobodnie lub dotknij przycisku. Jestem obok."
                     : `„${companionText || "Słucham..."}”`}
                 </p>
               </div>
@@ -344,7 +358,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               {showTranscriptDrawer && (
                 <div className="mt-3 w-full max-h-60 overflow-y-auto bg-[#181410]/95 border border-amber-500/25 rounded-2xl p-4 text-left text-xs font-sans text-stone-200 space-y-3 shadow-2xl backdrop-blur-xl animate-fade-in">
                   <div className="text-[10px] uppercase tracking-wider text-amber-400/80 font-semibold border-b border-white/10 pb-1.5">
-                    Rozmowa na żywo z {profile.companionName}
+                    Rozmowa z {profile.companionName}
                   </div>
                   <div className="space-y-2.5 max-h-32 overflow-y-auto pr-1">
                     {sessionMessages.length === 0 ? (
@@ -361,7 +375,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                     )}
                   </div>
 
-                  {/* Bezpośrednie pole wpisywania w szufladzie */}
                   <form onSubmit={handleDrawerSend} className="flex items-center gap-2 pt-2.5 border-t border-white/10">
                     <input
                       type="text"
@@ -382,14 +395,14 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               )}
             </div>
 
-            {/* Dolne zunifikowane kontrolki rozmowy */}
+            {/* Dolne zunifikowane kontrolki rozmowy w spokojnej ciepłej tonacji */}
             <div className="w-full max-w-md flex items-center justify-center gap-3 pt-4 pb-2 z-10">
-              {/* Przycisk nagrywania głosu / mikrofonu */}
+              {/* Przycisk mówienia / wysyłania */}
               <button
                 onClick={handleToggleManualRecord}
                 className={`flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-full transition-all shadow-xl font-sans text-xs sm:text-sm font-semibold select-none active:scale-95 ${
                   isRecording
-                    ? "bg-red-600 hover:bg-red-500 text-white animate-pulse shadow-[0_0_20px_rgba(239,68,68,0.5)]"
+                    ? "bg-amber-500 text-stone-950 ring-2 ring-amber-300 shadow-[0_0_20px_rgba(245,158,11,0.5)]"
                     : "bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-400 text-stone-950 hover:brightness-110 shadow-[0_0_20px_rgba(245,158,11,0.35)]"
                 }`}
                 title={isRecording ? "Zakończ nagranie i wyślij" : "Dotknij, aby mówić"}
@@ -410,7 +423,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               {/* Zakończ rozmowę */}
               <button
                 onClick={handleEndCallClick}
-                className="flex items-center justify-center gap-2 bg-red-950/80 hover:bg-red-900 border border-red-500/40 text-red-200 font-sans font-medium px-5 py-3.5 rounded-full shadow-lg transition-all active:scale-95 text-xs sm:text-sm tracking-wide"
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/15 text-stone-300 hover:text-white font-sans font-medium px-5 py-3.5 rounded-full shadow-lg transition-all active:scale-95 text-xs sm:text-sm tracking-wide"
                 title="Zakończ tę rozmowę"
               >
                 <PhoneOff size={15} strokeWidth={2} />
