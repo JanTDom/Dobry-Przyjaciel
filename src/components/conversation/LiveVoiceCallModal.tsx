@@ -6,7 +6,7 @@ import { Mic, MicOff, PhoneOff, MessageSquare, ArrowLeft, X, ChevronDown, Chevro
 import { LivingWarmHearth } from "@/components/presence/LivingWarmHearth";
 import { voiceEngine, VoiceEngineState } from "@/lib/voice-engine";
 import { getCompanionReplyAsync } from "@/lib/companion-personality";
-import { getStoredProfile } from "@/lib/storage";
+import { getStoredProfile, getStoredMessages } from "@/lib/storage";
 import { UserProfile, Message } from "@/types";
 import Link from "next/link";
 
@@ -90,7 +90,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 
     try {
       const currentFreshProfile = getStoredProfile() || profile;
-      const reply = await getCompanionReplyAsync(cleanUserText, currentFreshProfile);
+      const fullHistory = [...sessionMessages];
+      const reply = await getCompanionReplyAsync(cleanUserText, currentFreshProfile, fullHistory);
       setCompanionText(reply.text);
 
       if (reply.updatedProfile) {
@@ -133,7 +134,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       hasPlayedGreetingRef.current = false;
       isProcessingMessageRef.current = false;
       setIsCallEnded(false);
-      setSessionMessages([]);
       return;
     }
 
@@ -144,6 +144,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     setErrorMessage(null);
     hasPlayedGreetingRef.current = false;
     isProcessingMessageRef.current = false;
+
+    // Załaduj ostatnie wiadomości z pamięci, aby Przyjaciel pamiętał kontekst od pierwszej sekundy
+    const stored = getStoredMessages();
+    setSessionMessages(stored.slice(-8));
 
     durationTimerRef.current = setInterval(() => {
       setCallDuration((prev) => prev + 1);

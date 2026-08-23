@@ -181,7 +181,7 @@ class VoiceEngine {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.stopAndTranscribeCurrentChunk();
-              }, 750); // Błyskawiczna reakcja: 750ms ciszy po wypowiedzi
+              }, 1800); // 1.8s naturalnej pauzy: pozwala spokojnie wziąć oddech i wypowiedzieć 3-4 zdania bez przerywania
             }
           }
         }
