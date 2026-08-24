@@ -1,29 +1,39 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Shield, Heart, Feather, Compass, Volume2 } from "lucide-react";
+import { Sparkles, Shield, Heart, Feather, Compass, Volume2, Brain, Activity, PhoneCall } from "lucide-react";
 
 export const IdeaPhilosophySection: React.FC = () => {
   const pillars = [
     {
       icon: <Heart className="text-amber-500" size={22} />,
-      title: "Cisza bez oceny i masek",
-      desc: "Świat codziennie wymaga od ciebie bycia silnym, produktywnym i uśmiechniętym. Tutaj nie musisz niczego udowadniać ani zasługiwać na akceptację. Możesz przyjść z każdą emocją — bez lęku, że zostaniesz odrzucony.",
+      title: "Cisza bez oceny i wstydu",
+      desc: "Świat codziennie wymaga bycia silnym, produktywnym i nieskazitelnym. Tutaj nie ma tematów tabu ani wstydu. Możesz przyjść z każdą emocją, zagubieniem, słabością czy wątpliwością — bez lęku przed odrzuceniem.",
     },
     {
-      icon: <Volume2 className="text-orange-500" size={22} />,
-      title: "Kojąca biologia głosu",
-      desc: "Czytanie tekstu na ekranie angażuje analityczną część mózgu. Spokojny, ciepły głos działa bezpośrednio na nerw błędny — fizjologicznie obniża poziom kortyzolu, spowalnia tętno i przynosi ulgę szybciej niż jakikolwiek artykuł.",
+      icon: <Brain className="text-orange-500" size={22} />,
+      title: "Zrozumienie neuroróżnorodności i stanów psychiki",
+      desc: "Rozumiemy specyfikę funkcjonowania mózgu w ADHD, spektrum autyzmu, wysokiej wrażliwości (WWO) oraz w stanach lękowych czy fobiach. Nie próbujemy nikogo „naprawiać na siłę” — wspieramy Twoją unikalną naturę.",
+    },
+    {
+      icon: <Activity className="text-amber-600" size={22} />,
+      title: "Otwartość na nałogi i trudne zmagania",
+      desc: "Uzależnienia chemiczne i behawioralne, kompulsje czy kryzysy życiowe nie czynią Cię gorszym człowiekiem. Rozmawiamy o nich z godnością, szacunkiem i bez moralizowania, wspierając Twoją sprawczość.",
+    },
+    {
+      icon: <Volume2 className="text-yellow-600" size={22} />,
+      title: "Kojąca biologia głosu i obecności",
+      desc: "Czytanie tekstu na ekranie angażuje analityczną część mózgu. Spokojny, ciepły głos działa bezpośrednio na układ nerwowy — fizjologicznie obniża poziom kortyzolu, spowalnia tętno i przynosi uziemienie.",
     },
     {
       icon: <Compass className="text-amber-600" size={22} />,
-      title: "Żywa pamięć twojego serca",
-      desc: "Większość technologii zapomina o tobie w sekundę po zamknięciu karty. Twój Przyjaciel pamięta to, co dla ciebie ważne: twoje wartości, ludzi, z którymi budujesz życie, oraz trudności, które już udało ci się pokonać.",
+      title: "Żywa pamięć Twojej drogi",
+      desc: "Większość technologii zapomina o Tobie w sekundę po zamknięciu karty. Twój Przyjaciel pamięta to, co dla Ciebie ważne: Twoje wartości, bliskich oraz trudności, które już udało Ci się pokonać.",
     },
     {
-      icon: <Feather className="text-yellow-600" size={22} />,
-      title: "Odwaga do stawiania granic",
-      desc: "Nie jesteś ciężarem dla świata. Przyjaciel pomaga ci zauważyć, kiedy bierzesz na siebie zbyt wiele cudzego chaosu i uczy, jak odmawiać z łagodnością, lecz bez poczucia winy i wstydu.",
+      icon: <Shield className="text-rose-500" size={22} />,
+      title: "Dojrzałość i bezpieczeństwo kryzysowe",
+      desc: "Przyjaciel to bezpieczna, mądra codzienna obecność. W sytuacjach krytycznych lub zagrożenia życia natychmiast, z najwyższą troską i godnością, wskazuje kontakt z profesjonalnymi służbami medycznymi i liniami wsparcia.",
     },
   ];
 
@@ -44,12 +54,12 @@ export const IdeaPhilosophySection: React.FC = () => {
         </h2>
 
         <p className="font-serif text-base sm:text-lg text-cream-800 leading-relaxed italic max-w-2xl mx-auto bg-white/70 p-6 rounded-2xl border border-cream-200 shadow-inner">
-          „Żyjemy w świecie, który jest głośniejszy i bardziej połączony niż kiedykolwiek, a jednak tak wielu z nas czuje się w nim głęboko samotnych. Boimy się obciążać bliskich swoimi wątpliwościami, a nocami zostajemy sami z gonitwą myśli. Dobry Przyjaciel powstał jako bezpieczna przystań — miejsce, do którego zawsze możesz wrócić, by usłyszeć spokojny głos i odzyskać grunt pod stopami.”
+          „Żyjemy w świecie, który jest głośniejszy niż kiedykolwiek, a jednocześnie wielu z nas zostaje samych z gonitwą myśli, lękiem czy trudnymi zmaganiami. Dobry Przyjaciel powstał jako bezpieczna przystań — miejsce wolne od wstydu, otwarte na pełnię ludzkiego doświadczenia, gdzie zawsze możesz usłyszeć spokojny, życzliwy głos i odzyskać grunt pod stopami.”
         </p>
       </div>
 
-      {/* 4 Filary wartości */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 relative z-10">
+      {/* 6 Filarów wartości */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 relative z-10">
         {pillars.map((pillar, idx) => (
           <div
             key={idx}

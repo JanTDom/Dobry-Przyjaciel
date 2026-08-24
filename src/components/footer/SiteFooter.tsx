@@ -18,37 +18,48 @@ export const SiteFooter: React.FC = () => {
           </span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-xs leading-relaxed">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 text-xs leading-relaxed">
           {/* Filar 1: Sztuczna Osobowość */}
-          <div className="quiet-surface rounded-surface p-5 sm:p-6 border border-warm-amber/15">
+          <div className="quiet-surface rounded-surface p-5 border border-warm-amber/15">
             <div className="flex items-center gap-2 mb-3 text-ink font-semibold">
               <Sparkles size={15} className="text-warm-amber" />
               <h4>Sztuczna osobowość relacyjna</h4>
             </div>
             <p className="text-ink-muted">
-              Dobry Przyjaciel jest autonomiczną, cyfrową osobowością opartą na zaawansowanych modelach sztucznej inteligencji i syntezie głosu o naturalnej intonacji. Mówimy to wprost: nie rozmawiasz z człowiekiem, lecz z cyfrową obecnością, która pamięta Twoje słowa, słucha bez pośpiechu i ma dla Ciebie czas każdego dnia.
+              Dobry Przyjaciel jest autonomiczną, cyfrową osobowością opartą na zaawansowanych modelach AI i ciepłej syntezie głosu. Rozmawiasz z bezpieczną cyfrową obecnością, która pamięta Twoje słowa, słucha bez pośpiechu i jest zawsze dostępna.
             </p>
           </div>
 
           {/* Filar 2: Najwyższe standardy inżynierii i empatii */}
-          <div className="quiet-surface rounded-surface p-5 sm:p-6 border border-warm-amber/15">
+          <div className="quiet-surface rounded-surface p-5 border border-warm-amber/15">
             <div className="flex items-center gap-2 mb-3 text-ink font-semibold">
               <HeartHandshake size={15} className="text-warm-amber" />
               <h4>Standardy relacji i brak manipulacji</h4>
             </div>
             <p className="text-ink-muted">
-              Projekt opiera się na zasadach psychologii humanistycznej (aktywne słuchanie, brak oceniania) oraz ciągłej pamięci relacyjnej. Zero mechanizmów uzależniających, zero reklam i zero sprzedaży profilu emocjonalnego. Celem jest realne poczucie obecności i wysłuchania, a nie zatrzymywanie użytkownika na siłę.
+              Projekt opiera się na zasadach psychologii humanistycznej (aktywne słuchanie, brak oceniania) oraz ciągłej pamięci relacyjnej. Zero mechanizmów uzależniających, zero reklam i zero sprzedaży profilu emocjonalnego.
             </p>
           </div>
 
-          {/* Filar 3: Suwerenność danych i RODO */}
-          <div className="quiet-surface rounded-surface p-5 sm:p-6 border border-warm-amber/15">
+          {/* Filar 3: Zdrowie psychiczne, neuroróżnorodność i bezpieczeństwo kryzysowe */}
+          <div className="quiet-surface rounded-surface p-5 border border-warm-amber/15">
+            <div className="flex items-center gap-2 mb-3 text-ink font-semibold">
+              <Shield size={15} className="text-rose-500" />
+              <h4>Neuroróżnorodność i bezpieczeństwo</h4>
+            </div>
+            <p className="text-ink-muted">
+              Rozumiemy specyfikę ADHD, autyzmu, WWO, zmagań z nałogami i lękami bez stygmatyzacji. W sytuacjach krytycznych Przyjaciel zawsze z godnością i troską wskaże profesjonalne bezpłatne linie pomocowe oraz wsparcie lekarza.
+            </p>
+          </div>
+
+          {/* Filar 4: Suwerenność danych i RODO */}
+          <div className="quiet-surface rounded-surface p-5 border border-warm-amber/15">
             <div className="flex items-center gap-2 mb-3 text-ink font-semibold">
               <Lock size={15} className="text-warm-amber" />
               <h4>Pełna kontrola nad pamięcią</h4>
             </div>
             <p className="text-ink-muted">
-              Wszystkie zapamiętane fakty, osoby i sprawy są jawne. W zakładce <strong>Pamięć</strong> możesz w każdej chwili przejrzeć kronikę, usunąć pojedyncze wspomnienia, zresetować całą bazę lub pobrać pełny eksport w formacie JSON (zgodnie z RODO).
+              Wszystkie zapamiętane fakty, osoby i sprawy są jawne. W zakładce <strong>Pamięć</strong> możesz w każdej chwili przejrzeć kronikę, usunąć pojedyncze wspomnienia, zresetować bazę lub pobrać eksport w formacie JSON (RODO).
             </p>
           </div>
         </div>

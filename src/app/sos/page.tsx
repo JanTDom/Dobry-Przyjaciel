@@ -177,13 +177,13 @@ export default function SOSPage() {
           )}
 
           {activeTab === "helpline" && (
-            <div className="quiet-surface rounded-surface p-7 sm:p-9 flex flex-col gap-6 animate-fade-in max-w-xl mx-auto border-ink/8">
+            <div className="quiet-surface rounded-surface p-7 sm:p-9 flex flex-col gap-6 animate-fade-in max-w-2xl mx-auto border-ink/8">
               <div>
                 <h3 className="font-serif text-xl text-ink font-normal mb-1">
-                  Bezpłatne całodobowe linie wsparcia
+                  Bezpłatne całodobowe linie wsparcia i pomoc specjalistyczna
                 </h3>
                 <p className="font-sans text-xs text-ink-muted leading-relaxed">
-                  Jeśli przeżywasz trudny kryzys i potrzebujesz natychmiastowej rozmowy ze specjalistą:
+                  Jeśli przeżywasz trudny kryzys, zmagasz się z nałogiem, fobią lub potrzebujesz natychmiastowej rozmowy z człowiekiem i specjalistą:
                 </p>
               </div>
 
@@ -193,13 +193,58 @@ export default function SOSPage() {
                   className="p-4 rounded-card bg-paper-dark/60 border border-ink/8 flex items-center justify-between hover:border-warm-amber/40 transition-colors group"
                 >
                   <div>
-                    <span className="text-ink-muted block text-[11px]">Dorośli w kryzysie</span>
+                    <span className="text-ink-muted block text-[11px]">Dorośli w kryzysie emocjonalnym</span>
                     <span className="text-ink font-serif text-lg font-semibold group-hover:text-warm-amber transition-colors">
                       116 123
                     </span>
                   </div>
                   <span className="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium">
                     24/7 bezpłatnie
+                  </span>
+                </a>
+
+                <a
+                  href="tel:224848801"
+                  className="p-4 rounded-card bg-paper-dark/60 border border-ink/8 flex items-center justify-between hover:border-warm-amber/40 transition-colors group"
+                >
+                  <div>
+                    <span className="text-ink-muted block text-[11px]">Antydepresyjny Telefon Zaufania (ITAKA)</span>
+                    <span className="text-ink font-serif text-lg font-semibold group-hover:text-warm-amber transition-colors">
+                      22 484 88 01
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-warm-amber bg-warm-amber/10 px-2 py-0.5 rounded-full font-medium">
+                    Specjaliści
+                  </span>
+                </a>
+
+                <a
+                  href="tel:800199990"
+                  className="p-4 rounded-card bg-paper-dark/60 border border-ink/8 flex items-center justify-between hover:border-warm-amber/40 transition-colors group"
+                >
+                  <div>
+                    <span className="text-ink-muted block text-[11px]">Telefon Zaufania – Uzależnienia (Narkomania/Inne)</span>
+                    <span className="text-ink font-serif text-lg font-semibold group-hover:text-warm-amber transition-colors">
+                      800 199 990
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium">
+                    Codziennie 16-22
+                  </span>
+                </a>
+
+                <a
+                  href="tel:801889880"
+                  className="p-4 rounded-card bg-paper-dark/60 border border-ink/8 flex items-center justify-between hover:border-warm-amber/40 transition-colors group"
+                >
+                  <div>
+                    <span className="text-ink-muted block text-[11px]">Uzależnienia behawioralne (hazard, sieć)</span>
+                    <span className="text-ink font-serif text-lg font-semibold group-hover:text-warm-amber transition-colors">
+                      801 889 880
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium">
+                    Codziennie 17-22
                   </span>
                 </a>
 
@@ -215,6 +260,21 @@ export default function SOSPage() {
                   </div>
                   <span className="text-[10px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-full font-medium">
                     24/7 bezpłatnie
+                  </span>
+                </a>
+
+                <a
+                  href="tel:112"
+                  className="p-4 rounded-card bg-rose-50/70 border border-rose-200 flex items-center justify-between hover:border-rose-400 transition-colors group"
+                >
+                  <div>
+                    <span className="text-rose-700 block text-[11px]">Nagłe bezpośrednie zagrożenie życia</span>
+                    <span className="text-rose-900 font-serif text-lg font-semibold">
+                      112
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-rose-800 bg-rose-200/80 px-2 py-0.5 rounded-full font-medium">
+                    Numer alarmowy
                   </span>
                 </a>
               </div>
