@@ -281,6 +281,9 @@ class VoiceEngine {
 
       try {
         if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+          try {
+            this.mediaRecorder.requestData();
+          } catch {}
           this.mediaRecorder.stop();
         }
       } catch {
@@ -299,8 +302,10 @@ class VoiceEngine {
     const stream = await this.getOrCreateMediaStream();
     if (!stream) return false;
 
+    this.audioChunks = [];
+    this.currentTranscript = "";
+
     try {
-      this.audioChunks = [];
       const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? { mimeType: "audio/webm;codecs=opus" }
         : MediaRecorder.isTypeSupported("audio/mp4")
@@ -316,31 +321,32 @@ class VoiceEngine {
 
       this.mediaRecorder.start(250);
       this.isCurrentlyRecording = true;
-      this.hasSpokenInCurrentChunk = true;
       this.notifyState();
       return true;
-    } catch (e) {
-      console.error("Manual recording error:", e);
+    } catch (err: any) {
+      this.notifyState("Nie udało się uruchomić nagrywania.");
       return false;
     }
   }
 
-  // Ręczne zakończenie nagrania i wysłanie do transkrypcji
-  public async stopManualRecordingAndTranscribe(): Promise<string | null> {
+  // Zatrzymanie nagrywania ręcznego i transkrypcja
+  public async stopManualRecording(): Promise<string | null> {
     if (!this.mediaRecorder || this.mediaRecorder.state === "inactive") {
       this.isCurrentlyRecording = false;
       this.notifyState();
       return null;
     }
 
-    return new Promise<string | null>((resolve) => {
-      this.mediaRecorder!.onstop = async () => {
+    const recorder = this.mediaRecorder;
+
+    return new Promise((resolve) => {
+      recorder.onstop = async () => {
         this.isCurrentlyRecording = false;
-        const mimeType = this.mediaRecorder?.mimeType || "audio/webm";
+        const mimeType = recorder.mimeType || "audio/webm";
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        if (audioBlob.size < 2000) {
+        if (audioBlob.size < 3000) {
           this.notifyState();
           resolve(null);
           return;
@@ -358,16 +364,23 @@ class VoiceEngine {
             body: formData,
           });
 
-          if (res.ok) {
-            const data = await res.json();
-            const text = (data.text || "").trim();
-            this.currentTranscript = text;
-            resolve(text || null);
-          } else {
+          if (!res.ok) {
+            this.notifyState("Błąd rozpoznawania głosu.");
             resolve(null);
+            return;
           }
-        } catch (err) {
-          console.error("Manual transcribe error:", err);
+
+          const data = await res.json();
+          const text = (data.text || "").trim();
+
+          this.currentTranscript = text;
+          if (this.onMessageCaptured && text) {
+            this.onMessageCaptured(text);
+          }
+          resolve(text);
+        } catch (err: any) {
+          console.error("Transcribe request error:", err);
+          this.notifyState("Błąd połączenia podczas transkrypcji.");
           resolve(null);
         } finally {
           this.isProcessingTranscript = false;
@@ -376,8 +389,11 @@ class VoiceEngine {
       };
 
       try {
-        if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
-          this.mediaRecorder.stop();
+        if (recorder.state !== "inactive") {
+          try {
+            recorder.requestData();
+          } catch {}
+          recorder.stop();
         }
       } catch {
         this.isCurrentlyRecording = false;
@@ -387,7 +403,12 @@ class VoiceEngine {
     });
   }
 
-  // Odtwarzanie głosu lektora (TTS) z wyciszeniem mikrofonu na czas mowy
+  // Alias kompatybilności wstecznej
+  public async stopManualRecordingAndTranscribe(): Promise<string | null> {
+    return this.stopManualRecording();
+  }
+
+  // Odtwarzanie głosu lektora (TTS) z czystym buforem bez trzasków
   public async speak(
     text: string,
     onEnded?: () => void,
@@ -396,7 +417,7 @@ class VoiceEngine {
   ): Promise<boolean> {
     if (!text || text.trim().length === 0) return false;
 
-    // Zabezpieczenie przed echem: natychmiast wyciszamy mikrofon i przerywamy nagrywanie
+    // Wyciszenie mikrofonu na czas mowy lektora
     this.isMutedForPlayback = true;
     if (this.isCurrentlyRecording && this.mediaRecorder) {
       try {
@@ -429,50 +450,36 @@ class VoiceEngine {
 
       const blob = await res.blob();
       const audioUrl = URL.createObjectURL(blob);
-
-      if (!this.currentAudio) {
-        this.currentAudio = new Audio();
-      }
-
-      this.currentAudio.src = audioUrl;
+      const audio = new Audio(audioUrl);
+      audio.preload = "auto";
+      this.currentAudio = audio;
 
       return new Promise((resolve) => {
-        if (!this.currentAudio) {
+        let isCleanedUp = false;
+        const cleanup = (success: boolean) => {
+          if (isCleanedUp) return;
+          isCleanedUp = true;
           this.isCurrentlySpeaking = false;
-          this.isMutedForPlayback = false;
-          this.notifyState();
-          if (onEnded) onEnded();
-          resolve(false);
-          return;
-        }
-
-        this.currentAudio.onended = () => {
-          this.isCurrentlySpeaking = false;
-          // Dodajemy 450ms buforu po zakończeniu mowy lektora, aby pogłos głośnika nie aktywował mikrofonu
+          try {
+            URL.revokeObjectURL(audioUrl);
+          } catch {}
           setTimeout(() => {
             this.isMutedForPlayback = false;
             this.notifyState();
             if (onEnded) onEnded();
-            resolve(true);
-          }, 450);
+            resolve(success);
+          }, 350);
         };
 
-        this.currentAudio.onerror = (e) => {
+        audio.onended = () => cleanup(true);
+        audio.onerror = (e) => {
           console.warn("Audio playback error:", e);
-          this.isCurrentlySpeaking = false;
-          this.isMutedForPlayback = false;
-          this.notifyState();
-          if (onEnded) onEnded();
-          resolve(false);
+          cleanup(false);
         };
 
-        this.currentAudio.play().catch((err) => {
+        audio.play().catch((err) => {
           console.warn("Audio play prevented:", err);
-          this.isCurrentlySpeaking = false;
-          this.isMutedForPlayback = false;
-          this.notifyState();
-          if (onEnded) onEnded();
-          resolve(false);
+          cleanup(false);
         });
       });
     } catch (err) {

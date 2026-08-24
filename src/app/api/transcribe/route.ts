@@ -31,14 +31,12 @@ function isWhisperHallucination(text: string): boolean {
   const clean = text.toLowerCase().trim();
   if (clean.length < 2) return true;
 
-  // Sprawdź czy tekst zawiera którykolwiek z filtrów halucynacji
   for (const pattern of WHISPER_HALLUCINATIONS) {
     if (clean.includes(pattern)) {
       return true;
     }
   }
 
-  // Ignoruj powtarzające się pojedyncze znaki lub znaki interpunkcyjne
   if (/^[.,!?;:\s\-_~]+$/.test(clean)) {
     return true;
   }
@@ -59,8 +57,7 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as Blob | null;
 
-    if (!file || file.size < 4000) {
-      // Zbyt mały plik audio (pusta cisza lub kliknięcie)
+    if (!file || file.size < 3000) {
       return NextResponse.json({ text: "" });
     }
 
@@ -68,7 +65,11 @@ export async function POST(req: NextRequest) {
     openAiFormData.append("file", file, "audio.webm");
     openAiFormData.append("model", "whisper-1");
     openAiFormData.append("language", "pl");
-    openAiFormData.append("temperature", "0.0"); // Ustawienie 0.0 redukuje halucynacje do minimum
+    openAiFormData.append("temperature", "0.0");
+    openAiFormData.append(
+      "prompt",
+      "Rozmowa po polsku. Dokładna, dosłowna transkrypcja wszystkich zdań wypowiedzianych przez użytkownika bez skracania."
+    );
 
     const whisperRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
@@ -90,9 +91,7 @@ export async function POST(req: NextRequest) {
     const data = await whisperRes.json();
     const transcript = (data.text || "").trim();
 
-    // Filtrowanie halucynacji Whisper na ciszy
     if (isWhisperHallucination(transcript)) {
-      console.log("Filtered out Whisper hallucination:", transcript);
       return NextResponse.json({ text: "" });
     }
 
