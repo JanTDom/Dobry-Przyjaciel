@@ -6,7 +6,7 @@ import { PhoneOff, MessageSquare, ArrowLeft, X, ChevronDown, ChevronUp, Compass,
 import { LivingWarmHearth } from "@/components/presence/LivingWarmHearth";
 import { voiceEngine, VoiceEngineState } from "@/lib/voice-engine";
 import { getCompanionReplyAsync } from "@/lib/companion-personality";
-import { getStoredProfile, getStoredMessages } from "@/lib/storage";
+import { getStoredProfile, getStoredMessages, addStoredMessage } from "@/lib/storage";
 import { UserProfile, Message } from "@/types";
 import Link from "next/link";
 
@@ -72,6 +72,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     setIsProcessing(true);
     setErrorMessage(null);
 
+    // Dokładny, dosłowny zapis słów użytkownika wprost
     const userMsg: Message = {
       id: "msg_" + Date.now(),
       userId: profile.id,
@@ -81,6 +82,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       createdAt: new Date().toISOString(),
     };
 
+    addStoredMessage(userMsg);
     onNewMessage(userMsg);
     setSessionMessages((prev) => [...prev, userMsg]);
 
@@ -103,6 +105,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         createdAt: new Date().toISOString(),
       };
 
+      addStoredMessage(companionMsg);
       onNewMessage(companionMsg);
       setSessionMessages((prev) => [...prev, companionMsg]);
 

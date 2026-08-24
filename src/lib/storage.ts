@@ -298,6 +298,19 @@ export function saveStoredMessages(messages: Message[]): void {
   }
 }
 
+export function addStoredMessage(message: Message): void {
+  if (typeof window === "undefined" || !message) return;
+  try {
+    const current = getStoredMessages();
+    if (!current.some((m) => m.id === message.id)) {
+      const updated = [...current, message];
+      saveStoredMessages(updated);
+    }
+  } catch (err) {
+    console.error("Failed to add message", err);
+  }
+}
+
 export function getStoredMemories(): LifeMemoryFact[] {
   const profile = getStoredProfile();
   return profile ? profile.memories || [] : [];

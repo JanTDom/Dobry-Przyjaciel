@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     openAiFormData.append("temperature", "0.0");
     openAiFormData.append(
       "prompt",
-      "Rozmowa po polsku. Dokładna, dosłowna transkrypcja wszystkich zdań wypowiedzianych przez użytkownika bez skracania."
+      "Transkrypcja rozmowy w języku polskim. Zapisuj dosłownie i wprost dokładnie każde słowo i zdanie wypowiedziane przez użytkownika, bez żadnego skracania, przeinaczania ani pomijania."
     );
 
     const whisperRes = await fetch("https://api.openai.com/v1/audio/transcriptions", {
