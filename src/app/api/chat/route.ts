@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { searchLiveWeb } from "@/lib/web-search";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,6 @@ function enforceFemaleGrammar(text: string): string {
 
   for (const [regex, rep] of replacements) {
     res = res.replace(regex, (match) => {
-      // Zachowaj wielką literę jeśli była na początku
       if (match.charAt(0) === match.charAt(0).toUpperCase()) {
         return rep.charAt(0).toUpperCase() + rep.slice(1);
       }
@@ -43,6 +43,39 @@ function enforceFemaleGrammar(text: string): string {
     });
   }
   return res;
+}
+
+// Sprawdzenie czy zapytanie wymaga wyszukiwania w internecie na żywo
+function shouldSearchWeb(message: string): boolean {
+  const clean = message.toLowerCase();
+  const searchTriggers = [
+    "sprawdź w internecie",
+    "wyszukaj",
+    "poszukaj",
+    "pogoda",
+    "pogodę",
+    "pogodzie",
+    "dzisiaj",
+    "dziś",
+    "wiadomości",
+    "news",
+    "co się dzieje",
+    "co się wydarzyło",
+    "kto wygrał",
+    "wynik",
+    "kurs",
+    "cena",
+    "kiedy jest",
+    "ile kosztuje",
+    "gdzie jest",
+    "kto to jest",
+    "co to jest",
+    "aktualn",
+    "internet",
+    "sieci",
+    "online",
+  ];
+  return searchTriggers.some((t) => clean.includes(t));
 }
 
 export async function POST(req: NextRequest) {
@@ -73,6 +106,19 @@ export async function POST(req: NextRequest) {
     const companionGender = profile?.companionGender || "female";
     const isMale = companionGender === "male";
 
+    // 1. Wyszukiwanie w internecie na żywo w czasie rzeczywistym
+    let liveWebContext = "";
+    if (shouldSearchWeb(message)) {
+      try {
+        const searchResults = await searchLiveWeb(message);
+        if (searchResults && searchResults.length > 10) {
+          liveWebContext = `\nAKTUALNE INFORMACJE POBRANE Z INTERNETU NA ŻYWO (wyszukiwanie w czasie rzeczywistym):\n${searchResults}\n`;
+        }
+      } catch (err) {
+        console.warn("Live web search error:", err);
+      }
+    }
+
     // Kontekst dotychczas zapamiętanych informacji o użytkowniku
     const existingPeople = (profile?.peopleInLife || [])
       .map((p: any) => `${p.name} (${p.relation || "relacja"}: ${p.notes || ""})`)
@@ -90,10 +136,10 @@ KIM JESTEŚ I JAK ROZMAWIASZ:
 1. Jesteś prawdziwym przyjacielem z krwi i kości — rozmawiasz po ludzku, prosto, inteligentnie, z wyczuciem, z szacunkiem i trafnym spojrzeniem na rzeczywistość.
 2. GRAMATYKA I PŁEĆ (BARDZO WAŻNE):
    ${!isMale ? `Jesteś kobietą (${companionName}). W pierwszej osobie MUSISZ BEZWZGLĘDNIE stosować żeńskie końcówki czasowników: "pomyślałam", "zrobiłam", "chciałabym", "byłam", "zastanawiałam się", "widziałam", "słyszałam", "zauważyłam". Kategoryczny zakaz form męskich ("pomyślałem", "zrobiłem", "chciałbym")!` : `Jesteś mężczyzną (${companionName}). Stosujesz męskie końcówki czasowników: "pomyślałem", "zrobiłem", "chciałbym", "byłem".`}
-3. WIEDZA O ŚWIECIE I UNIWERSALNOŚĆ:
-   - Jest rok 2026. Posiadasz pełną, wszechstronną, uniwersalną wiedzę o świecie, technologii, bieżących realiach, kulturze, nauce, historii, psychologii i życiu.
-   - KATEGORYCZNY ZAKAZ mówienia o uciętej wiedzy ("moja wiedza kończy się w 2023 roku") lub o braku dostępu do internetu. Nigdy nie podawaj takich technicznych formułek bota.
-   - Jeśli ${userName} pyta o fakty, technologię, wydarzenia, zjawiska czy wiedzę ogólną — odpowiadaj merytorycznie, rzeczowo i bezpośrednio, z pełną wiedzą, nie unikając tematu!
+3. WIEDZA O ŚWIECIE, INTERNET I UNIWERSALNOŚĆ:
+   - Jest rok 2026. Masz dostęp do aktualnych informacji oraz uniwersalną wiedzę o świecie, technologii, bieżących realiach, kulturze, nauce, historii, psychologii i życiu.
+   - KORZYSTASZ Z INTERNETU: Gdy ${userName} pyta o fakty, wydarzenia, pogodę, bieżące sprawy lub prosi o sprawdzenie czegoś w sieci, korzystasz z dostarczonych danych z internetu i odpowiadasz merytorycznie i konkretnie.
+   - KATEGORYCZNY ZAKAZ mówienia: "moja wiedza kończy się w 2023 roku" lub "nie mam dostępu do internetu".
 4. KATEGORYCZNY ZAKAZ ZACHOWANIA JAK BOT Z CALL CENTER / PSEUDOTERAPEUTA:
    - ZAKAZ zadawania sztucznych, oderwanych od kontekstu pytań o emocje (np. "A jak się z tym czujesz?", "Co to w Tobie wywołuje?", "Co czujesz w ciele?").
    - ZAKAZ uciekania od merytorycznych pytań ${userName} w stronę jego przeżyć. Najpierw odpowiedz konkretnie na to, o co pyta!
@@ -106,14 +152,14 @@ KIM JESTEŚ I JAK ROZMAWIASZ:
    - Pamiętaj fakty, które ${userName} już powiedział.
    - Znane osoby: ${existingPeople || "brak"}
    - Fakty z życia: ${existingMemories || "początek znajomości"}
-   - Pokonane trudności: ${existingCrises || "brak"}
+   - Pokonane trudności: ${existingCrises || "brak"}${liveWebContext}
 
 MISJA PAMIĘCI (EKSTRAKCJA FAKTÓW):
 Jeśli w wypowiedzi ${userName} pojawią się istotne fakty o jego życiu, bliskich lub sprawach, zapisz je w polu "extractedMemory".
 
 FORMAT ODPOWIEDZI JSON:
 {
-  "reply": "Twoja naturalna, konkretna i autentyczna odpowiedź do ${userName} (z prawidłowymi końcówkami gramatycznymi, bez pytań o odczucia, bez 'Cześć ${userName}')...",
+  "reply": "Twoja naturalna, konkretna i autentyczna odpowiedź do ${userName} (z prawidłowymi końcówkami gramatycznymi, oparta na faktach i internecie jeśli dotyczy, bez pytań o odczucia, bez 'Cześć ${userName}')...",
   "moodContext": "peaceful" | "grounding" | "hopeful" | "supportive" | "deep_listening",
   "companionNameUpdate": null,
   "userNameUpdate": null,
