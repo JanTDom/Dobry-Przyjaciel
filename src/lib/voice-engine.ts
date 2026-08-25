@@ -18,7 +18,6 @@ class VoiceEngine {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private currentAudio: HTMLAudioElement | null = null;
-  private activeSourceNode: AudioBufferSourceNode | null = null;
 
   private isContinuousMode: boolean = false;
   private isCurrentlyRecording: boolean = false;
@@ -65,8 +64,7 @@ class VoiceEngine {
     if (!clean || clean.length < 2) return;
 
     const now = Date.now();
-    // Zabezpieczenie przed podwójnym wywołaniem tego samego zdania w ciągu 2.5 sekundy
-    if (this.lastCapturedText.toLowerCase() === clean.toLowerCase() && now - this.lastCapturedTimestamp < 2500) {
+    if (this.lastCapturedText.toLowerCase() === clean.toLowerCase() && now - this.lastCapturedTimestamp < 2000) {
       return;
     }
 
@@ -80,7 +78,7 @@ class VoiceEngine {
     }
   }
 
-  // Odblokowuje AudioContext i element Audio w geście użytkownika (Safari / iOS / Chrome)
+  // Odblokowuje AudioContext i element Audio w geście użytkownika
   public async unlock(): Promise<boolean> {
     if (typeof window === "undefined") return false;
     try {
@@ -105,7 +103,7 @@ class VoiceEngine {
     }
   }
 
-  // Uzyskuje i utrzymuje ciągły strumień mikrofonu bez jego niszczenia
+  // Uzyskuje i utrzymuje ciągły strumień mikrofonu
   public async getOrCreateMediaStream(): Promise<MediaStream | null> {
     if (this.mediaStream && this.mediaStream.active) {
       const tracks = this.mediaStream.getAudioTracks();
@@ -160,7 +158,7 @@ class VoiceEngine {
     this.onStateChange = onState;
   }
 
-  // Rozpoczyna natywne rozpoznawanie mowy w przeglądarce (iOS Safari / Chrome)
+  // Natywne rozpoznawanie mowy w przeglądarce (iOS Safari / Chrome)
   private initNativeSpeechRecognition() {
     if (typeof window === "undefined") return;
     const SpeechRecognition =
@@ -214,7 +212,7 @@ class VoiceEngine {
     }
   }
 
-  // Rozpoczyna tryb ciągłego dialogu z zabezpieczeniem przed echem
+  // Rozpoczyna tryb ciągłego dialogu
   public async startLiveDialogue() {
     await this.unlock();
     this.isContinuousMode = true;
@@ -257,10 +255,10 @@ class VoiceEngine {
           voiceSum += buffer[i];
         }
         const voiceEnergy = voiceSum / (voiceBins - 1);
-        const normalizedVolume = Math.min(1, voiceEnergy / 50);
+        const normalizedVolume = Math.min(1, voiceEnergy / 40);
 
-        // Czuły próg detekcji mowy człowieka (> 5)
-        const isUserSpeaking = voiceEnergy > 5;
+        // Czuły próg detekcji mowy człowieka (> 4)
+        const isUserSpeaking = voiceEnergy > 4;
 
         if (isUserSpeaking) {
           this.consecutiveVoiceFrames++;
@@ -280,7 +278,7 @@ class VoiceEngine {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.stopAndTranscribeCurrentChunk();
-              }, 650);
+              }, 600);
             }
           }
         }
@@ -351,8 +349,7 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        // Akceptuj nagranie z mową (> 350 bajtów)
-        if (audioBlob.size < 350 || !this.hasSpokenInCurrentChunk) {
+        if (audioBlob.size < 200 || !this.hasSpokenInCurrentChunk) {
           this.notifyState();
           resolve();
           return;
@@ -468,7 +465,7 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        if (audioBlob.size < 350) {
+        if (audioBlob.size < 200) {
           this.notifyState();
           resolve(null);
           return;
@@ -527,12 +524,11 @@ class VoiceEngine {
     });
   }
 
-  // Alias kompatybilności wstecznej
   public async stopManualRecordingAndTranscribe(): Promise<string | null> {
     return this.stopManualRecording();
   }
 
-  // Odtwarzanie głosu lektora (TTS) przez Web Audio API (nie zakłóca mikrofonu na iOS Safari)
+  // Odtwarzanie głosu lektora (TTS) z gwarantowanym wybudzeniem i zabezpieczeniem przed zawieszeniem
   public async speak(
     text: string,
     onEnded?: () => void,
@@ -541,7 +537,6 @@ class VoiceEngine {
   ): Promise<boolean> {
     if (!text || text.trim().length === 0) return false;
 
-    // Wyciszenie mikrofonu na czas mowy lektora
     this.isMutedForPlayback = true;
     if (this.isCurrentlyRecording && this.mediaRecorder) {
       try {
@@ -573,52 +568,7 @@ class VoiceEngine {
       }
 
       await this.unlock();
-      const arrayBuffer = await res.arrayBuffer();
-
-      // 1. Odtwarzanie przez AudioContext (Web Audio API)
-      if (this.audioContext && typeof this.audioContext.decodeAudioData === "function") {
-        try {
-          if (this.audioContext.state === "suspended") {
-            await this.audioContext.resume();
-          }
-
-          const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
-          const source = this.audioContext.createBufferSource();
-          source.buffer = audioBuffer;
-          source.connect(this.audioContext.destination);
-          this.activeSourceNode = source;
-
-          return new Promise((resolve) => {
-            let isCleanedUp = false;
-            const cleanup = (success: boolean) => {
-              if (isCleanedUp) return;
-              isCleanedUp = true;
-              this.activeSourceNode = null;
-              this.isCurrentlySpeaking = false;
-
-              setTimeout(() => {
-                this.isMutedForPlayback = false;
-                this.notifyState();
-                if (this.speechRecognition) {
-                  try {
-                    this.speechRecognition.start();
-                  } catch {}
-                }
-                if (onEnded) onEnded();
-                resolve(success);
-              }, 50);
-            };
-
-            source.onended = () => cleanup(true);
-            source.start(0);
-          });
-        } catch (audioCtxErr) {
-          console.warn("WebAudio playback fallback to HTMLAudioElement:", audioCtxErr);
-        }
-      }
-
-      // 2. Fallback HTMLAudioElement
-      const blob = new Blob([arrayBuffer], { type: "audio/mp3" });
+      const blob = await res.blob();
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
       audio.preload = "auto";
@@ -626,29 +576,35 @@ class VoiceEngine {
 
       return new Promise((resolve) => {
         let isCleanedUp = false;
+
         const cleanup = (success: boolean) => {
           if (isCleanedUp) return;
           isCleanedUp = true;
           this.isCurrentlySpeaking = false;
+          this.isMutedForPlayback = false;
           try {
             URL.revokeObjectURL(audioUrl);
           } catch {}
 
-          setTimeout(() => {
-            this.isMutedForPlayback = false;
-            this.notifyState();
-            if (this.speechRecognition) {
-              try {
-                this.speechRecognition.start();
-              } catch {}
-            }
-            if (onEnded) onEnded();
-            resolve(success);
-          }, 50);
+          this.notifyState();
+          if (this.speechRecognition) {
+            try {
+              this.speechRecognition.start();
+            } catch {}
+          }
+          if (onEnded) onEnded();
+          resolve(success);
         };
 
         audio.onended = () => cleanup(true);
         audio.onerror = () => cleanup(false);
+
+        // Failsafe timeout: maksymalnie 10 sekund na wypowiedź
+        const maxDurationMs = Math.min(12000, Math.max(3500, text.length * 80));
+        setTimeout(() => {
+          cleanup(true);
+        }, maxDurationMs);
+
         audio.play().catch(() => cleanup(false));
       });
     } catch (err) {
@@ -662,19 +618,13 @@ class VoiceEngine {
   }
 
   public stopSpeaking() {
-    if (this.activeSourceNode) {
-      try {
-        this.activeSourceNode.stop();
-        this.activeSourceNode.disconnect();
-      } catch {}
-      this.activeSourceNode = null;
-    }
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
       this.currentAudio = null;
     }
     this.isCurrentlySpeaking = false;
+    this.isMutedForPlayback = false;
     this.notifyState();
   }
 

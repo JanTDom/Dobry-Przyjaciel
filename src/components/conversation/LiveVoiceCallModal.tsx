@@ -114,16 +114,14 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       // Odtwórz głos lektora
       await voiceEngine.speak(
         reply.text,
-        () => {
-          isProcessingMessageRef.current = false;
-        },
+        undefined,
         companionVoice
       );
     } catch (e) {
       console.error("Conversation processing error:", e);
-      isProcessingMessageRef.current = false;
     } finally {
       setIsProcessing(false);
+      isProcessingMessageRef.current = false;
     }
   };
 
