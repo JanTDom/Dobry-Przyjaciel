@@ -66,7 +66,7 @@ class VoiceEngine {
 
     const now = Date.now();
     // Zabezpieczenie przed podwójnym wywołaniem tego samego zdania w ciągu 2.5 sekundy
-    if (this.lastCapturedText === clean && now - this.lastCapturedTimestamp < 2500) {
+    if (this.lastCapturedText.toLowerCase() === clean.toLowerCase() && now - this.lastCapturedTimestamp < 2500) {
       return;
     }
 
@@ -105,23 +105,16 @@ class VoiceEngine {
     }
   }
 
-  // Uzyskuje strumień mikrofonu z redukcją echa
-  public async getOrCreateMediaStream(forceFresh = false): Promise<MediaStream | null> {
-    if (!forceFresh && this.mediaStream && this.mediaStream.active) {
+  // Uzyskuje i utrzymuje ciągły strumień mikrofonu bez jego niszczenia
+  public async getOrCreateMediaStream(): Promise<MediaStream | null> {
+    if (this.mediaStream && this.mediaStream.active) {
       const tracks = this.mediaStream.getAudioTracks();
-      if (tracks.length > 0 && tracks[0].readyState === "live" && !tracks[0].muted) {
+      if (tracks.length > 0 && tracks[0].readyState === "live") {
         return this.mediaStream;
       }
     }
 
     try {
-      if (this.mediaStream) {
-        try {
-          this.mediaStream.getTracks().forEach((t) => t.stop());
-        } catch {}
-        this.mediaStream = null;
-      }
-
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -131,6 +124,11 @@ class VoiceEngine {
       });
       this.mediaStream = stream;
 
+      if (!this.audioContext || this.audioContext.state === "closed") {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) this.audioContext = new AudioCtx();
+      }
+
       if (this.audioContext) {
         try {
           if (this.audioContext.state === "suspended") {
@@ -139,10 +137,10 @@ class VoiceEngine {
           const source = this.audioContext.createMediaStreamSource(stream);
           this.analyser = this.audioContext.createAnalyser();
           this.analyser.fftSize = 256;
-          this.analyser.smoothingTimeConstant = 0.3;
+          this.analyser.smoothingTimeConstant = 0.2;
           source.connect(this.analyser);
         } catch (err) {
-          console.warn("Analyser connection error:", err);
+          console.warn("Analyser setup error:", err);
         }
       }
 
@@ -222,7 +220,7 @@ class VoiceEngine {
     this.isContinuousMode = true;
     this.currentTranscript = "";
 
-    const stream = await this.getOrCreateMediaStream(true);
+    const stream = await this.getOrCreateMediaStream();
     if (!stream) return;
 
     this.startVoiceActivityDetection();
@@ -230,7 +228,7 @@ class VoiceEngine {
     this.notifyState();
   }
 
-  // Pętla monitorowania poziomu głosu (VAD) zoptymalizowana pod pasmo mowy człowieka
+  // Pętla monitorowania poziomu głosu (VAD)
   private startVoiceActivityDetection() {
     if (this.volumeCheckAnimationId) {
       cancelAnimationFrame(this.volumeCheckAnimationId);
@@ -239,7 +237,6 @@ class VoiceEngine {
     const checkVolume = () => {
       if (!this.isContinuousMode) return;
 
-      // Upewnij się, że AudioContext nie jest uśpiony na iOS
       if (this.audioContext && this.audioContext.state === "suspended") {
         this.audioContext.resume().catch(() => {});
       }
@@ -254,17 +251,16 @@ class VoiceEngine {
         const buffer = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(buffer);
 
-        // Skupiamy się na paśmie ludzkiego głosu (80 Hz - 3500 Hz: pierwsze 32 pasma z 128)
         let voiceSum = 0;
         const voiceBins = Math.min(buffer.length, 32);
         for (let i = 1; i < voiceBins; i++) {
           voiceSum += buffer[i];
         }
         const voiceEnergy = voiceSum / (voiceBins - 1);
-        const normalizedVolume = Math.min(1, voiceEnergy / 60);
+        const normalizedVolume = Math.min(1, voiceEnergy / 50);
 
-        // Czuły próg detekcji mowy człowieka (> 6) działający niezawodnie na iPhone i laptopach
-        const isUserSpeaking = voiceEnergy > 6;
+        // Czuły próg detekcji mowy człowieka (> 5)
+        const isUserSpeaking = voiceEnergy > 5;
 
         if (isUserSpeaking) {
           this.consecutiveVoiceFrames++;
@@ -284,7 +280,7 @@ class VoiceEngine {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.stopAndTranscribeCurrentChunk();
-              }, 650); // Błyskawiczna reakcja (650ms)
+              }, 650);
             }
           }
         }
@@ -300,13 +296,7 @@ class VoiceEngine {
     this.volumeCheckAnimationId = requestAnimationFrame(checkVolume);
   }
 
-  private async startRecordingChunk() {
-    // Upewnij się, że strumień jest aktywny
-    const track = this.mediaStream?.getAudioTracks()[0];
-    if (!track || track.readyState === "ended" || !this.mediaStream?.active) {
-      await this.getOrCreateMediaStream(true);
-    }
-
+  private startRecordingChunk() {
     if (
       !this.mediaStream ||
       this.isCurrentlyRecording ||
@@ -336,7 +326,6 @@ class VoiceEngine {
         }
       };
 
-      // Na iOS / Safari NIE podajemy timeslice, aby nie psuć nagłówków kontenera MP4
       this.mediaRecorder.start();
       this.isCurrentlyRecording = true;
       this.hasSpokenInCurrentChunk = false;
@@ -347,7 +336,7 @@ class VoiceEngine {
   }
 
   private async stopAndTranscribeCurrentChunk() {
-    if (!this.mediaRecorder) return;
+    if (!this.mediaRecorder || this.mediaRecorder.state === "inactive") return;
     if (this.silenceTimer) {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
@@ -427,7 +416,7 @@ class VoiceEngine {
     await this.unlock();
     this.stopSpeaking();
 
-    const stream = await this.getOrCreateMediaStream(true);
+    const stream = await this.getOrCreateMediaStream();
     if (!stream) return false;
 
     this.audioChunks = [];
@@ -587,7 +576,6 @@ class VoiceEngine {
       const arrayBuffer = await res.arrayBuffer();
 
       // 1. Odtwarzanie przez AudioContext (Web Audio API)
-      // Zapobiega niszczeniu sesji mikrofonowej na iOS Safari!
       if (this.audioContext && typeof this.audioContext.decodeAudioData === "function") {
         try {
           if (this.audioContext.state === "suspended") {
@@ -602,17 +590,11 @@ class VoiceEngine {
 
           return new Promise((resolve) => {
             let isCleanedUp = false;
-            const cleanup = async (success: boolean) => {
+            const cleanup = (success: boolean) => {
               if (isCleanedUp) return;
               isCleanedUp = true;
               this.activeSourceNode = null;
               this.isCurrentlySpeaking = false;
-
-              // Upewnij się, że mikrofon nie został uśpiony przez iOS
-              const track = this.mediaStream?.getAudioTracks()[0];
-              if (!track || track.readyState === "ended" || !this.mediaStream?.active) {
-                await this.getOrCreateMediaStream(true);
-              }
 
               setTimeout(() => {
                 this.isMutedForPlayback = false;
@@ -644,18 +626,13 @@ class VoiceEngine {
 
       return new Promise((resolve) => {
         let isCleanedUp = false;
-        const cleanup = async (success: boolean) => {
+        const cleanup = (success: boolean) => {
           if (isCleanedUp) return;
           isCleanedUp = true;
           this.isCurrentlySpeaking = false;
           try {
             URL.revokeObjectURL(audioUrl);
           } catch {}
-
-          const track = this.mediaStream?.getAudioTracks()[0];
-          if (!track || track.readyState === "ended" || !this.mediaStream?.active) {
-            await this.getOrCreateMediaStream(true);
-          }
 
           setTimeout(() => {
             this.isMutedForPlayback = false;
