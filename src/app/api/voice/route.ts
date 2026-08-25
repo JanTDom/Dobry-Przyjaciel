@@ -2,14 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// Mapowanie głosów na ElevenLabs (Ultra-realistyczne, ciepłe, naturalne głosy ludzkie)
+// Mapowanie głosów na natywne, ciepłe i kojące głosy ElevenLabs w języku polskim
 const ELEVENLABS_VOICE_MAP: Record<string, string> = {
-  nova: "21m00Tcm4TlvDq8ikWAM", // Rachel - ciepły, naturalny, kojący głos kobiecy
-  shimmer: "EXAVITQu4vr4xnSDxMaL", // Sarah - łagodny, empatyczny głos
-  alloy: "piTKgcLEGmPE4e6mEKli", // Nicole - intymny, spokojny
-  echo: "pNInz6obpgDQGcFmaJgB", // Adam - głęboki, ciepły, mądry głos męski
-  onyx: "ErXwobaYiN019PkySvjV", // Antoni - naturalny, wyważony głos męski
-  fable: "VR6AewLTigWG4xSOukaG", // Arnold - głęboki spokój
+  // Głosy żeńskie (Ciepłe, wyciszające, terapeutyczne, bez pośpiechu i bez mechaniczności)
+  nova: "xJQ0EWXEICoCWK3Ld1Ew", // Agata - Warm, Soothing, Meditative (Polska lektorka o kojącym, głębokim tembrze)
+  shimmer: "Jh0mX1tXXa7ZuZmHDYFp", // Paula - Warm & Friendly Narrator (Ciepła, serdeczna polska lektorka)
+  alloy: "xJQ0EWXEICoCWK3Ld1Ew", // Agata
+
+  // Głosy męskie (Spokojne, mądre, uziemiające)
+  echo: "8qCMI2ZZW5ZGwmg0lM1l", // Paweł Siwek - Engaging, Warm Radio Host (Głęboki, ciepły radiowy głos męski)
+  onyx: "GvFYRPRytx7jphnfTmpN", // Marcin - Polish Narrator (Stabilny, życzliwy polski lektor)
+  fable: "8qCMI2ZZW5ZGwmg0lM1l", // Paweł Siwek
 };
 
 export async function POST(req: NextRequest) {
@@ -25,7 +28,7 @@ export async function POST(req: NextRequest) {
     const elevenLabsKey = process.env.ELEVENLABS_API_KEY;
     const openAiKey = process.env.OPENAI_API_KEY;
 
-    // 1. Preferowany ElevenLabs Multilingual v2 (Ultra-realistyczny, ciepły ludzki głos z intonacją i empatią)
+    // 1. ElevenLabs Multilingual v2 z dedykowanymi polskimi głosami
     if (elevenLabsKey) {
       try {
         const voiceId = ELEVENLABS_VOICE_MAP[voice] || ELEVENLABS_VOICE_MAP["nova"];
@@ -41,9 +44,9 @@ export async function POST(req: NextRequest) {
               text: cleanText,
               model_id: "eleven_multilingual_v2",
               voice_settings: {
-                stability: 0.52,
-                similarity_boost: 0.82,
-                style: 0.25,
+                stability: 0.68, // Wysoka stabilność zapobiega agresywnym, natarczywym skokom intonacji
+                similarity_boost: 0.85, // Czyste, naturalne brzmienie polskiej wymowy
+                style: 0.10, // Łagodna, spokojna ekspresja
                 use_speaker_boost: true,
               },
             }),
@@ -57,7 +60,7 @@ export async function POST(req: NextRequest) {
             headers: {
               "Content-Type": "audio/mpeg",
               "Content-Length": audioBuffer.byteLength.toString(),
-              "x-voice-engine": "ElevenLabs-Multilingual-v2",
+              "x-voice-engine": "ElevenLabs-Polish-Meditative",
             },
           });
         } else {
@@ -69,7 +72,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2. Fallback: OpenAI TTS-1-HD (High Definition)
+    // 2. Fallback: OpenAI TTS-1-HD
     if (openAiKey) {
       const validVoices = ["nova", "shimmer", "echo", "onyx", "fable", "alloy"];
       const selectedVoice = validVoices.includes(voice) ? voice : "nova";
@@ -85,7 +88,7 @@ export async function POST(req: NextRequest) {
           input: cleanText,
           voice: selectedVoice,
           response_format: "mp3",
-          speed: 1.0,
+          speed: 0.95, // Lekko zwolnione tempo dla większego spokoju
         }),
       });
 
@@ -96,7 +99,7 @@ export async function POST(req: NextRequest) {
           headers: {
             "Content-Type": "audio/mpeg",
             "Content-Length": audioBuffer.byteLength.toString(),
-            "x-voice-engine": "OpenAI-HD",
+            "x-voice-engine": "OpenAI-HD-Slow",
           },
         });
       }

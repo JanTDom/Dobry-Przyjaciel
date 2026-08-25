@@ -33,6 +33,8 @@ class VoiceEngine {
   private speechRecognition: any = null;
   private lastCapturedTimestamp: number = 0;
   private lastCapturedText: string = "";
+  private nativeInterimTimer: any = null;
+  private lastNativeInterimText: string = "";
 
   private onMessageCaptured: ((text: string) => void) | null = null;
   private onStateChange: ((state: VoiceEngineState) => void) | null = null;
@@ -53,7 +55,7 @@ class VoiceEngine {
       isProcessing: this.isProcessingTranscript,
       userVolume: currentVolume,
       transcript: this.currentTranscript,
-      interimTranscript: "",
+      interimTranscript: this.lastNativeInterimText,
       errorMessage,
     });
   }
@@ -64,7 +66,11 @@ class VoiceEngine {
     if (!clean || clean.length < 2) return;
 
     const now = Date.now();
-    if (this.lastCapturedText.toLowerCase() === clean.toLowerCase() && now - this.lastCapturedTimestamp < 2000) {
+    // Sprawdź czy to samo zdanie nie zostało przetworzone przed chwilą
+    if (
+      this.lastCapturedText.toLowerCase() === clean.toLowerCase() &&
+      now - this.lastCapturedTimestamp < 2500
+    ) {
       return;
     }
 
@@ -72,13 +78,19 @@ class VoiceEngine {
     this.lastCapturedTimestamp = now;
     this.currentTranscript = clean;
     this.hasSpokenInCurrentChunk = false;
+    this.lastNativeInterimText = "";
+
+    // Jeśli lektor w tym momencie mówił, zatrzymaj go, bo użytkownik wszedł w słowo
+    if (this.isCurrentlySpeaking) {
+      this.stopSpeaking();
+    }
 
     if (this.onMessageCaptured) {
       this.onMessageCaptured(clean);
     }
   }
 
-  // Odblokowuje AudioContext i element Audio w geście użytkownika
+  // Odblokowuje AudioContext i element Audio w geście użytkownika (wymóg iOS Safari / Chrome)
   public async unlock(): Promise<boolean> {
     if (typeof window === "undefined") return false;
     try {
@@ -95,7 +107,8 @@ class VoiceEngine {
       if (!this.currentAudio) {
         this.currentAudio = new Audio();
       }
-      this.currentAudio.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+      this.currentAudio.src =
+        "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
       await this.currentAudio.play().catch(() => {});
       return true;
     } catch {
@@ -134,11 +147,11 @@ class VoiceEngine {
           }
           const source = this.audioContext.createMediaStreamSource(stream);
           this.analyser = this.audioContext.createAnalyser();
-          this.analyser.fftSize = 256;
+          this.analyser.fftSize = 512;
           this.analyser.smoothingTimeConstant = 0.2;
           source.connect(this.analyser);
         } catch (err) {
-          console.warn("Analyser setup error:", err);
+          console.warn("Analyser setup warning:", err);
         }
       }
 
@@ -158,7 +171,7 @@ class VoiceEngine {
     this.onStateChange = onState;
   }
 
-  // Natywne rozpoznawanie mowy w przeglądarce (iOS Safari / Chrome)
+  // Natywne rozpoznawanie mowy w przeglądarce (iOS Safari / Chrome / Android)
   private initNativeSpeechRecognition() {
     if (typeof window === "undefined") return;
     const SpeechRecognition =
@@ -176,18 +189,42 @@ class VoiceEngine {
       const recognition = new SpeechRecognition();
       recognition.lang = "pl-PL";
       recognition.continuous = true;
-      recognition.interimResults = false;
+      recognition.interimResults = true;
       recognition.maxAlternatives = 1;
 
       recognition.onresult = (event: any) => {
         if (this.isCurrentlySpeaking || this.isMutedForPlayback) return;
+
+        let interimStr = "";
+        let finalStr = "";
+
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            const transcript = event.results[i][0].transcript.trim();
-            if (transcript.length > 1) {
-              this.handleCapturedSpeech(transcript);
-            }
+          const item = event.results[i];
+          if (item.isFinal) {
+            finalStr += item[0].transcript + " ";
+          } else {
+            interimStr += item[0].transcript;
           }
+        }
+
+        if (finalStr.trim().length > 1) {
+          if (this.nativeInterimTimer) {
+            clearTimeout(this.nativeInterimTimer);
+            this.nativeInterimTimer = null;
+          }
+          this.handleCapturedSpeech(finalStr.trim());
+        } else if (interimStr.trim().length > 1) {
+          this.lastNativeInterimText = interimStr.trim();
+          this.notifyState(null, 0.4);
+
+          // Na urządzeniach mobilnych (iOS/Android), gdzie isFinal bywa opóźnione:
+          if (this.nativeInterimTimer) clearTimeout(this.nativeInterimTimer);
+          this.nativeInterimTimer = setTimeout(() => {
+            if (this.lastNativeInterimText && this.lastNativeInterimText.length > 1) {
+              this.handleCapturedSpeech(this.lastNativeInterimText);
+              this.lastNativeInterimText = "";
+            }
+          }, 800);
         }
       };
 
@@ -217,6 +254,7 @@ class VoiceEngine {
     await this.unlock();
     this.isContinuousMode = true;
     this.currentTranscript = "";
+    this.lastNativeInterimText = "";
 
     const stream = await this.getOrCreateMediaStream();
     if (!stream) return;
@@ -226,7 +264,7 @@ class VoiceEngine {
     this.notifyState();
   }
 
-  // Pętla monitorowania poziomu głosu (VAD)
+  // Pętla monitorowania poziomu głosu (RMS VAD - niezawodna na każdym mikrofonie)
   private startVoiceActivityDetection() {
     if (this.volumeCheckAnimationId) {
       cancelAnimationFrame(this.volumeCheckAnimationId);
@@ -239,26 +277,27 @@ class VoiceEngine {
         this.audioContext.resume().catch(() => {});
       }
 
-      // Badamy mikrofon TYLKO gdy głośnik NIE gra i nie trwa przetwarzanie odpowiedzi
+      // Badamy mikrofon, gdy lektor nie mówi i nie trwa transkrypcja
       if (
         this.analyser &&
         !this.isCurrentlySpeaking &&
         !this.isMutedForPlayback &&
         !this.isProcessingTranscript
       ) {
-        const buffer = new Uint8Array(this.analyser.frequencyBinCount);
-        this.analyser.getByteFrequencyData(buffer);
+        const timeData = new Uint8Array(this.analyser.fftSize);
+        this.analyser.getByteTimeDomainData(timeData);
 
-        let voiceSum = 0;
-        const voiceBins = Math.min(buffer.length, 32);
-        for (let i = 1; i < voiceBins; i++) {
-          voiceSum += buffer[i];
+        // Obliczenie energii RMS z sygnału czasowego (standard akustyczny)
+        let sum = 0;
+        for (let i = 0; i < timeData.length; i++) {
+          const val = (timeData[i] - 128) / 128;
+          sum += val * val;
         }
-        const voiceEnergy = voiceSum / (voiceBins - 1);
-        const normalizedVolume = Math.min(1, voiceEnergy / 40);
+        const rms = Math.sqrt(sum / timeData.length);
+        const normalizedVolume = Math.min(1, rms * 18);
 
-        // Czuły próg detekcji mowy człowieka (> 4)
-        const isUserSpeaking = voiceEnergy > 4;
+        // Czuły, uniwersalny próg detekcji mowy człowieka (RMS > 0.015)
+        const isUserSpeaking = rms > 0.015;
 
         if (isUserSpeaking) {
           this.consecutiveVoiceFrames++;
@@ -349,7 +388,7 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        if (audioBlob.size < 200 || !this.hasSpokenInCurrentChunk) {
+        if (audioBlob.size < 150 || !this.hasSpokenInCurrentChunk) {
           this.notifyState();
           resolve();
           return;
@@ -465,7 +504,7 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        if (audioBlob.size < 200) {
+        if (audioBlob.size < 150) {
           this.notifyState();
           resolve(null);
           return;
@@ -528,7 +567,7 @@ class VoiceEngine {
     return this.stopManualRecording();
   }
 
-  // Odtwarzanie głosu lektora (TTS) z gwarantowanym wybudzeniem i zabezpieczeniem przed zawieszeniem
+  // Odtwarzanie głosu lektora (TTS) z natychmiastowym wznowieniem nasłuchu
   public async speak(
     text: string,
     onEnded?: () => void,
@@ -599,7 +638,7 @@ class VoiceEngine {
         audio.onended = () => cleanup(true);
         audio.onerror = () => cleanup(false);
 
-        // Failsafe timeout: maksymalnie 10 sekund na wypowiedź
+        // Failsafe timeout: maksymalnie 12 sekund na pojedynczą wypowiedź
         const maxDurationMs = Math.min(12000, Math.max(3500, text.length * 80));
         setTimeout(() => {
           cleanup(true);
@@ -641,6 +680,10 @@ class VoiceEngine {
     if (this.silenceTimer) {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
+    }
+    if (this.nativeInterimTimer) {
+      clearTimeout(this.nativeInterimTimer);
+      this.nativeInterimTimer = null;
     }
     if (this.speechRecognition) {
       try {
