@@ -40,14 +40,14 @@ class VoiceEngine {
     }
   }
 
-  private notifyState(errorMessage: string | null = null) {
+  private notifyState(errorMessage: string | null = null, currentVolume: number = 0) {
     if (!this.onStateChange) return;
     this.onStateChange({
       isListening: this.isContinuousMode && !this.isCurrentlySpeaking && !this.isMutedForPlayback,
       isRecording: this.isCurrentlyRecording,
       isSpeaking: this.isCurrentlySpeaking,
       isProcessing: this.isProcessingTranscript,
-      userVolume: 0,
+      userVolume: currentVolume,
       transcript: this.currentTranscript,
       interimTranscript: "",
       errorMessage,
@@ -97,10 +97,13 @@ class VoiceEngine {
 
       if (this.audioContext) {
         try {
+          if (this.audioContext.state === "suspended") {
+            await this.audioContext.resume();
+          }
           const source = this.audioContext.createMediaStreamSource(stream);
           this.analyser = this.audioContext.createAnalyser();
           this.analyser.fftSize = 256;
-          this.analyser.smoothingTimeConstant = 0.5;
+          this.analyser.smoothingTimeConstant = 0.3;
           source.connect(this.analyser);
         } catch (err) {
           console.warn("Analyser connection error:", err);
@@ -136,7 +139,7 @@ class VoiceEngine {
     this.notifyState();
   }
 
-  // Pętla monitorowania poziomu głosu (VAD) z filtrem szumu tła i zabezpieczeniem echa
+  // Pętla monitorowania poziomu głosu (VAD) zoptymalizowana pod pasmo mowy człowieka
   private startVoiceActivityDetection() {
     if (this.volumeCheckAnimationId) {
       cancelAnimationFrame(this.volumeCheckAnimationId);
@@ -155,17 +158,21 @@ class VoiceEngine {
         const buffer = new Uint8Array(this.analyser.frequencyBinCount);
         this.analyser.getByteFrequencyData(buffer);
 
-        let sum = 0;
-        for (let i = 0; i < buffer.length; i++) {
-          sum += buffer[i];
+        // Skupiamy się na paśmie ludzkiego głosu (80 Hz - 3500 Hz: pierwsze 32 pasma z 128)
+        let voiceSum = 0;
+        const voiceBins = Math.min(buffer.length, 32);
+        for (let i = 1; i < voiceBins; i++) {
+          voiceSum += buffer[i];
         }
-        const average = sum / buffer.length;
-        const normalizedVolume = Math.min(1, average / 128);
+        const voiceEnergy = voiceSum / (voiceBins - 1);
+        const normalizedVolume = Math.min(1, voiceEnergy / 80);
 
-        // Podniesiony próg detekcji głosu człowieka (> 0.22) zapobiega fałszywym startom na szumie wentylatora
-        if (normalizedVolume > 0.22) {
+        // Czuły próg detekcji mowy człowieka (> 9) działający niezawodnie na mikrofonach laptopów i telefonów
+        const isUserSpeaking = voiceEnergy > 9;
+
+        if (isUserSpeaking) {
           this.consecutiveVoiceFrames++;
-          if (this.consecutiveVoiceFrames >= 3) {
+          if (this.consecutiveVoiceFrames >= 2) {
             if (!this.isCurrentlyRecording) {
               this.startRecordingChunk();
             }
@@ -181,9 +188,13 @@ class VoiceEngine {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.stopAndTranscribeCurrentChunk();
-              }, 1800); // 1.8s naturalnej pauzy: pozwala spokojnie wziąć oddech i wypowiedzieć 3-4 zdania bez przerywania
+              }, 1500); // 1.5s naturalnej pauzy po wypowiedzi
             }
           }
+        }
+
+        if (this.onStateChange) {
+          this.notifyState(null, normalizedVolume);
         }
       }
 
@@ -234,15 +245,17 @@ class VoiceEngine {
       this.silenceTimer = null;
     }
 
+    const recorder = this.mediaRecorder;
+
     return new Promise<void>((resolve) => {
-      this.mediaRecorder!.onstop = async () => {
+      recorder.onstop = async () => {
         this.isCurrentlyRecording = false;
-        const mimeType = this.mediaRecorder?.mimeType || "audio/webm";
+        const mimeType = recorder.mimeType || "audio/webm";
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        // Ignoruj zbyt małe pliki (< 4KB to pusta cisza lub szum tła)
-        if (audioBlob.size < 4000 || !this.hasSpokenInCurrentChunk) {
+        // Akceptuj każde nagranie z mową (> 1200 bajtów)
+        if (audioBlob.size < 1200 || !this.hasSpokenInCurrentChunk) {
           this.notifyState();
           resolve();
           return;
@@ -280,11 +293,11 @@ class VoiceEngine {
       };
 
       try {
-        if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
+        if (recorder.state !== "inactive") {
           try {
-            this.mediaRecorder.requestData();
+            recorder.requestData();
           } catch {}
-          this.mediaRecorder.stop();
+          recorder.stop();
         }
       } catch {
         this.isCurrentlyRecording = false;
@@ -292,6 +305,13 @@ class VoiceEngine {
         resolve();
       }
     });
+  }
+
+  // Wymuszenie natychmiastowego wysłania bieżącej wypowiedzi
+  public forceFinishSpeakingAndSend() {
+    if (this.isCurrentlyRecording) {
+      this.stopAndTranscribeCurrentChunk();
+    }
   }
 
   // Ręczne rozpoczęcie nagrywania (Tap-to-Speak)

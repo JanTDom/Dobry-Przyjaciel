@@ -35,6 +35,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const [drawerInputText, setDrawerInputText] = useState("");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [userVolume, setUserVolume] = useState(0);
+
   const durationTimerRef = useRef<any>(null);
   const hasPlayedGreetingRef = useRef(false);
   const isProcessingMessageRef = useRef(false);
@@ -151,7 +153,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
-    const isFemale = profile.companionGender !== "male";
     const greetingText = `Cześć ${profile.name}. Jestem ${profile.companionName}. Usiądź wygodnie — słucham Cię.`;
 
     voiceEngine.setCallbacks(
@@ -163,6 +164,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         setIsRecording(state.isRecording);
         setIsSpeaking(state.isSpeaking);
         setIsProcessing(state.isProcessing);
+        setUserVolume(state.userVolume || 0);
         if (state.errorMessage) {
           setErrorMessage(state.errorMessage);
         }
@@ -269,15 +271,15 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 <LivingWarmHearth
                   isListening={isListening}
                   isSpeaking={isSpeaking}
-                  isRecording={isRecording}
+                  isRecording={isRecording || userVolume > 0.08}
                   isThinking={isProcessing}
                   size={320}
-                  intensity={isSpeaking ? 0.85 : isRecording ? 0.9 : 0.45}
+                  intensity={isSpeaking ? 0.85 : (isRecording || userVolume > 0.08) ? 0.95 : 0.45}
                 />
               </div>
 
-              {/* Dyskretny status obecności */}
-              <div className="flex items-center justify-center gap-2 mb-3 font-sans">
+              {/* Dyskretny status obecności z reakcją na głos na żywo */}
+              <div className="flex flex-col items-center justify-center gap-2 mb-3 font-sans">
                 {isSpeaking ? (
                   <div className="text-xs font-medium text-amber-300 bg-amber-950/60 border border-amber-500/30 px-5 py-2 rounded-full flex items-center gap-2 shadow-lg animate-pulse">
                     <Sparkles size={14} className="text-amber-400" />
@@ -288,14 +290,22 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                     Zastanawiam się...
                   </div>
                 ) : isRecording ? (
-                  <div className="flex items-center gap-2 text-xs font-semibold text-amber-200 bg-amber-950/80 border border-amber-500/40 px-5 py-2 rounded-full shadow-lg">
-                    <Radio size={14} className="animate-spin text-amber-400" />
-                    <span>Słucham Cię uważnie...</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-5 py-2 rounded-full shadow-lg">
+                      <Radio size={14} className="animate-spin text-emerald-400" />
+                      <span>Rejestruję Twój głos...</span>
+                    </div>
+                    <button
+                      onClick={() => voiceEngine.forceFinishSpeakingAndSend()}
+                      className="text-[11px] font-sans font-medium text-amber-300 hover:text-amber-200 bg-amber-950/70 border border-amber-500/40 px-3.5 py-1.5 rounded-full shadow-md active:scale-95 transition-all"
+                    >
+                      Odpowiedz teraz
+                    </button>
                   </div>
                 ) : isListening ? (
                   <div className="text-xs font-medium text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-5 py-2 rounded-full flex items-center gap-2 shadow-lg">
-                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                    <span>Rozmowa na żywo • Mów swobodnie</span>
+                    <div className={`w-2 h-2 rounded-full bg-emerald-400 ${userVolume > 0.05 ? "scale-150 shadow-[0_0_8px_#34D399]" : "animate-ping"} transition-all`} />
+                    <span>Mikrofon aktywny • Słucham Cię</span>
                   </div>
                 ) : (
                   <div className="text-xs font-medium text-stone-400 bg-white/5 px-5 py-2 rounded-full">
