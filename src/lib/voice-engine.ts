@@ -188,7 +188,7 @@ class VoiceEngine {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.stopAndTranscribeCurrentChunk();
-              }, 1500); // 1.5s naturalnej pauzy po wypowiedzi
+              }, 650); // Błyskawiczna reakcja (650ms): natychmiastowa odpowiedź bez wiszenia i bez zbędnej pauzy
             }
           }
         }
@@ -488,7 +488,7 @@ class VoiceEngine {
             this.notifyState();
             if (onEnded) onEnded();
             resolve(success);
-          }, 350);
+          }, 50);
         };
 
         audio.onended = () => cleanup(true);

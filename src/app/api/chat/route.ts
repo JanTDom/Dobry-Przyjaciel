@@ -194,7 +194,7 @@ Zwróć WYŁĄCZNIE poprawny JSON bez formatowania markdown.`;
           { role: "user", content: message },
         ],
         temperature: 0.7,
-        max_tokens: 380,
+        max_tokens: 220,
         response_format: { type: "json_object" },
       }),
     });
