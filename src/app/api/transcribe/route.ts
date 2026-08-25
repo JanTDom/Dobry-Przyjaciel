@@ -57,12 +57,23 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData();
     const file = formData.get("file") as Blob | null;
 
-    if (!file || file.size < 3000) {
+    if (!file || file.size < 400) {
       return NextResponse.json({ text: "" });
     }
 
+    // Wybór właściwego rozszerzenia pliku dla Whisper w zależności od typu MIME (iOS mp4 vs webm vs wav)
+    const mimeType = (file.type || "").toLowerCase();
+    let filename = "audio.webm";
+    if (mimeType.includes("mp4") || mimeType.includes("m4a") || mimeType.includes("aac")) {
+      filename = "audio.mp4";
+    } else if (mimeType.includes("wav")) {
+      filename = "audio.wav";
+    } else if (mimeType.includes("ogg")) {
+      filename = "audio.ogg";
+    }
+
     const openAiFormData = new FormData();
-    openAiFormData.append("file", file, "audio.webm");
+    openAiFormData.append("file", file, filename);
     openAiFormData.append("model", "whisper-1");
     openAiFormData.append("language", "pl");
     openAiFormData.append("temperature", "0.0");
@@ -99,9 +110,9 @@ export async function POST(req: NextRequest) {
       text: transcript,
     });
   } catch (err: any) {
-    console.error("Transcribe API error:", err);
+    console.error("Transcribe API critical error:", err);
     return NextResponse.json(
-      { error: "Błąd serwera podczas transkrypcji audio", details: err.message },
+      { error: "Błąd serwera podczas transkrypcji", details: err.message },
       { status: 500 }
     );
   }

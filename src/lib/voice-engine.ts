@@ -30,6 +30,10 @@ class VoiceEngine {
   private consecutiveVoiceFrames: number = 0;
   private hasSpokenInCurrentChunk: boolean = false;
 
+  private speechRecognition: any = null;
+  private lastCapturedTimestamp: number = 0;
+  private lastCapturedText: string = "";
+
   private onMessageCaptured: ((text: string) => void) | null = null;
   private onStateChange: ((state: VoiceEngineState) => void) | null = null;
   private currentTranscript: string = "";
@@ -52,6 +56,27 @@ class VoiceEngine {
       interimTranscript: "",
       errorMessage,
     });
+  }
+
+  // Bezpieczne przekazanie rozpoznanej mowy z deduplikacją
+  private handleCapturedSpeech(text: string) {
+    const clean = text.trim();
+    if (!clean || clean.length < 2) return;
+
+    const now = Date.now();
+    // Zabezpieczenie przed podwójnym wywołaniem tego samego zdania w ciągu 2.5 sekundy
+    if (this.lastCapturedText === clean && now - this.lastCapturedTimestamp < 2500) {
+      return;
+    }
+
+    this.lastCapturedText = clean;
+    this.lastCapturedTimestamp = now;
+    this.currentTranscript = clean;
+    this.hasSpokenInCurrentChunk = false;
+
+    if (this.onMessageCaptured) {
+      this.onMessageCaptured(clean);
+    }
   }
 
   // Odblokowuje AudioContext i element Audio w geście użytkownika (Safari / iOS / Chrome)
@@ -126,6 +151,62 @@ class VoiceEngine {
     this.onStateChange = onState;
   }
 
+  // Rozpoczyna natywne rozpoznawanie mowy w przeglądarce (iOS Safari / Chrome)
+  private initNativeSpeechRecognition() {
+    if (typeof window === "undefined") return;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+    if (!SpeechRecognition) return;
+
+    try {
+      if (this.speechRecognition) {
+        try {
+          this.speechRecognition.stop();
+        } catch {}
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = "pl-PL";
+      recognition.continuous = true;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event: any) => {
+        if (this.isCurrentlySpeaking || this.isMutedForPlayback) return;
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            const transcript = event.results[i][0].transcript.trim();
+            if (transcript.length > 1) {
+              this.handleCapturedSpeech(transcript);
+            }
+          }
+        }
+      };
+
+      recognition.onerror = (e: any) => {
+        // Ignoruj błędy ciszy 'no-speech'
+        if (e.error !== "no-speech") {
+          console.warn("Native SpeechRecognition error:", e.error);
+        }
+      };
+
+      recognition.onend = () => {
+        // Automatyczne wznowienie w trybie ciągłym
+        if (this.isContinuousMode && !this.isCurrentlySpeaking && !this.isMutedForPlayback) {
+          try {
+            recognition.start();
+          } catch {}
+        }
+      };
+
+      recognition.start();
+      this.speechRecognition = recognition;
+    } catch (err) {
+      console.warn("Could not start SpeechRecognition:", err);
+    }
+  }
+
   // Rozpoczyna tryb ciągłego dialogu z zabezpieczeniem przed echem
   public async startLiveDialogue() {
     await this.unlock();
@@ -136,6 +217,7 @@ class VoiceEngine {
     if (!stream) return;
 
     this.startVoiceActivityDetection();
+    this.initNativeSpeechRecognition();
     this.notifyState();
   }
 
@@ -147,6 +229,11 @@ class VoiceEngine {
 
     const checkVolume = () => {
       if (!this.isContinuousMode) return;
+
+      // Upewnij się, że AudioContext nie jest uśpiony na iOS
+      if (this.audioContext && this.audioContext.state === "suspended") {
+        this.audioContext.resume().catch(() => {});
+      }
 
       // Badamy mikrofon TYLKO gdy głośnik NIE gra i nie trwa przetwarzanie odpowiedzi
       if (
@@ -165,10 +252,10 @@ class VoiceEngine {
           voiceSum += buffer[i];
         }
         const voiceEnergy = voiceSum / (voiceBins - 1);
-        const normalizedVolume = Math.min(1, voiceEnergy / 80);
+        const normalizedVolume = Math.min(1, voiceEnergy / 70);
 
-        // Czuły próg detekcji mowy człowieka (> 9) działający niezawodnie na mikrofonach laptopów i telefonów
-        const isUserSpeaking = voiceEnergy > 9;
+        // Czuły próg detekcji mowy człowieka (> 8) działający niezawodnie na iPhone i laptopach
+        const isUserSpeaking = voiceEnergy > 8;
 
         if (isUserSpeaking) {
           this.consecutiveVoiceFrames++;
@@ -188,7 +275,7 @@ class VoiceEngine {
             if (!this.silenceTimer) {
               this.silenceTimer = setTimeout(() => {
                 this.stopAndTranscribeCurrentChunk();
-              }, 650); // Błyskawiczna reakcja (650ms): natychmiastowa odpowiedź bez wiszenia i bez zbędnej pauzy
+              }, 650); // Błyskawiczna reakcja (650ms)
             }
           }
         }
@@ -216,20 +303,26 @@ class VoiceEngine {
 
     try {
       this.audioChunks = [];
-      const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      const isWebmSupported = MediaRecorder.isTypeSupported("audio/webm;codecs=opus");
+      const isMp4Supported = MediaRecorder.isTypeSupported("audio/mp4");
+      const options = isWebmSupported
         ? { mimeType: "audio/webm;codecs=opus" }
-        : MediaRecorder.isTypeSupported("audio/mp4")
+        : isMp4Supported
         ? { mimeType: "audio/mp4" }
         : undefined;
 
-      this.mediaRecorder = new MediaRecorder(this.mediaStream, options);
+      this.mediaRecorder = options
+        ? new MediaRecorder(this.mediaStream, options)
+        : new MediaRecorder(this.mediaStream);
+
       this.mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
           this.audioChunks.push(e.data);
         }
       };
 
-      this.mediaRecorder.start(250);
+      // Na iOS / Safari NIE podajemy timeslice, aby nie psuć nagłówków kontenera MP4
+      this.mediaRecorder.start();
       this.isCurrentlyRecording = true;
       this.hasSpokenInCurrentChunk = false;
       this.notifyState();
@@ -254,8 +347,8 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        // Akceptuj każde nagranie z mową (> 1200 bajtów)
-        if (audioBlob.size < 1200 || !this.hasSpokenInCurrentChunk) {
+        // Akceptuj nagranie z mową (> 400 bajtów)
+        if (audioBlob.size < 400 || !this.hasSpokenInCurrentChunk) {
           this.notifyState();
           resolve();
           return;
@@ -265,8 +358,14 @@ class VoiceEngine {
         this.notifyState();
 
         try {
+          const isMp4 =
+            mimeType.toLowerCase().includes("mp4") ||
+            mimeType.toLowerCase().includes("aac") ||
+            mimeType.toLowerCase().includes("m4a");
+          const filename = isMp4 ? "audio.mp4" : "audio.webm";
+
           const formData = new FormData();
-          formData.append("file", audioBlob, "audio.webm");
+          formData.append("file", audioBlob, filename);
 
           const res = await fetch("/api/transcribe", {
             method: "POST",
@@ -277,10 +376,7 @@ class VoiceEngine {
             const data = await res.json();
             const text = (data.text || "").trim();
             if (text && text.length > 1) {
-              this.currentTranscript = text;
-              if (this.onMessageCaptured) {
-                this.onMessageCaptured(text);
-              }
+              this.handleCapturedSpeech(text);
             }
           }
         } catch (err) {
@@ -294,9 +390,6 @@ class VoiceEngine {
 
       try {
         if (recorder.state !== "inactive") {
-          try {
-            recorder.requestData();
-          } catch {}
           recorder.stop();
         }
       } catch {
@@ -326,20 +419,25 @@ class VoiceEngine {
     this.currentTranscript = "";
 
     try {
-      const options = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+      const isWebmSupported = MediaRecorder.isTypeSupported("audio/webm;codecs=opus");
+      const isMp4Supported = MediaRecorder.isTypeSupported("audio/mp4");
+      const options = isWebmSupported
         ? { mimeType: "audio/webm;codecs=opus" }
-        : MediaRecorder.isTypeSupported("audio/mp4")
+        : isMp4Supported
         ? { mimeType: "audio/mp4" }
         : undefined;
 
-      this.mediaRecorder = new MediaRecorder(stream, options);
+      this.mediaRecorder = options
+        ? new MediaRecorder(stream, options)
+        : new MediaRecorder(stream);
+
       this.mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
           this.audioChunks.push(e.data);
         }
       };
 
-      this.mediaRecorder.start(250);
+      this.mediaRecorder.start();
       this.isCurrentlyRecording = true;
       this.notifyState();
       return true;
@@ -366,7 +464,7 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        if (audioBlob.size < 3000) {
+        if (audioBlob.size < 400) {
           this.notifyState();
           resolve(null);
           return;
@@ -376,8 +474,14 @@ class VoiceEngine {
         this.notifyState();
 
         try {
+          const isMp4 =
+            mimeType.toLowerCase().includes("mp4") ||
+            mimeType.toLowerCase().includes("aac") ||
+            mimeType.toLowerCase().includes("m4a");
+          const filename = isMp4 ? "audio.mp4" : "audio.webm";
+
           const formData = new FormData();
-          formData.append("file", audioBlob, "audio.webm");
+          formData.append("file", audioBlob, filename);
 
           const res = await fetch("/api/transcribe", {
             method: "POST",
@@ -393,9 +497,8 @@ class VoiceEngine {
           const data = await res.json();
           const text = (data.text || "").trim();
 
-          this.currentTranscript = text;
-          if (this.onMessageCaptured && text) {
-            this.onMessageCaptured(text);
+          if (text) {
+            this.handleCapturedSpeech(text);
           }
           resolve(text);
         } catch (err: any) {
@@ -410,9 +513,6 @@ class VoiceEngine {
 
       try {
         if (recorder.state !== "inactive") {
-          try {
-            recorder.requestData();
-          } catch {}
           recorder.stop();
         }
       } catch {
@@ -486,6 +586,11 @@ class VoiceEngine {
           setTimeout(() => {
             this.isMutedForPlayback = false;
             this.notifyState();
+            if (this.speechRecognition) {
+              try {
+                this.speechRecognition.start();
+              } catch {}
+            }
             if (onEnded) onEnded();
             resolve(success);
           }, 50);
@@ -514,10 +619,9 @@ class VoiceEngine {
 
   public stopSpeaking() {
     if (this.currentAudio) {
-      try {
-        this.currentAudio.pause();
-        this.currentAudio.currentTime = 0;
-      } catch {}
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio = null;
     }
     this.isCurrentlySpeaking = false;
     this.notifyState();
@@ -525,6 +629,10 @@ class VoiceEngine {
 
   public stopLiveDialogue() {
     this.isContinuousMode = false;
+    this.isCurrentlyRecording = false;
+    this.isMutedForPlayback = false;
+    this.hasSpokenInCurrentChunk = false;
+
     if (this.volumeCheckAnimationId) {
       cancelAnimationFrame(this.volumeCheckAnimationId);
       this.volumeCheckAnimationId = null;
@@ -533,13 +641,17 @@ class VoiceEngine {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
     }
+    if (this.speechRecognition) {
+      try {
+        this.speechRecognition.stop();
+      } catch {}
+      this.speechRecognition = null;
+    }
     if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
       try {
         this.mediaRecorder.stop();
       } catch {}
     }
-    this.isCurrentlyRecording = false;
-    this.isMutedForPlayback = false;
     this.stopSpeaking();
     this.notifyState();
   }
