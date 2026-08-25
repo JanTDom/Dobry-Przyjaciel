@@ -18,6 +18,7 @@ class VoiceEngine {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private currentAudio: HTMLAudioElement | null = null;
+  private activeSourceNode: AudioBufferSourceNode | null = null;
 
   private isContinuousMode: boolean = false;
   private isCurrentlyRecording: boolean = false;
@@ -105,12 +106,22 @@ class VoiceEngine {
   }
 
   // Uzyskuje strumień mikrofonu z redukcją echa
-  private async getOrCreateMediaStream(): Promise<MediaStream | null> {
-    if (this.mediaStream && this.mediaStream.active) {
-      return this.mediaStream;
+  public async getOrCreateMediaStream(forceFresh = false): Promise<MediaStream | null> {
+    if (!forceFresh && this.mediaStream && this.mediaStream.active) {
+      const tracks = this.mediaStream.getAudioTracks();
+      if (tracks.length > 0 && tracks[0].readyState === "live" && !tracks[0].muted) {
+        return this.mediaStream;
+      }
     }
 
     try {
+      if (this.mediaStream) {
+        try {
+          this.mediaStream.getTracks().forEach((t) => t.stop());
+        } catch {}
+        this.mediaStream = null;
+      }
+
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
@@ -185,14 +196,12 @@ class VoiceEngine {
       };
 
       recognition.onerror = (e: any) => {
-        // Ignoruj błędy ciszy 'no-speech'
         if (e.error !== "no-speech") {
           console.warn("Native SpeechRecognition error:", e.error);
         }
       };
 
       recognition.onend = () => {
-        // Automatyczne wznowienie w trybie ciągłym
         if (this.isContinuousMode && !this.isCurrentlySpeaking && !this.isMutedForPlayback) {
           try {
             recognition.start();
@@ -213,7 +222,7 @@ class VoiceEngine {
     this.isContinuousMode = true;
     this.currentTranscript = "";
 
-    const stream = await this.getOrCreateMediaStream();
+    const stream = await this.getOrCreateMediaStream(true);
     if (!stream) return;
 
     this.startVoiceActivityDetection();
@@ -252,10 +261,10 @@ class VoiceEngine {
           voiceSum += buffer[i];
         }
         const voiceEnergy = voiceSum / (voiceBins - 1);
-        const normalizedVolume = Math.min(1, voiceEnergy / 70);
+        const normalizedVolume = Math.min(1, voiceEnergy / 60);
 
-        // Czuły próg detekcji mowy człowieka (> 8) działający niezawodnie na iPhone i laptopach
-        const isUserSpeaking = voiceEnergy > 8;
+        // Czuły próg detekcji mowy człowieka (> 6) działający niezawodnie na iPhone i laptopach
+        const isUserSpeaking = voiceEnergy > 6;
 
         if (isUserSpeaking) {
           this.consecutiveVoiceFrames++;
@@ -291,7 +300,13 @@ class VoiceEngine {
     this.volumeCheckAnimationId = requestAnimationFrame(checkVolume);
   }
 
-  private startRecordingChunk() {
+  private async startRecordingChunk() {
+    // Upewnij się, że strumień jest aktywny
+    const track = this.mediaStream?.getAudioTracks()[0];
+    if (!track || track.readyState === "ended" || !this.mediaStream?.active) {
+      await this.getOrCreateMediaStream(true);
+    }
+
     if (
       !this.mediaStream ||
       this.isCurrentlyRecording ||
@@ -332,7 +347,7 @@ class VoiceEngine {
   }
 
   private async stopAndTranscribeCurrentChunk() {
-    if (!this.isCurrentlyRecording || !this.mediaRecorder) return;
+    if (!this.mediaRecorder) return;
     if (this.silenceTimer) {
       clearTimeout(this.silenceTimer);
       this.silenceTimer = null;
@@ -347,8 +362,8 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        // Akceptuj nagranie z mową (> 400 bajtów)
-        if (audioBlob.size < 400 || !this.hasSpokenInCurrentChunk) {
+        // Akceptuj nagranie z mową (> 350 bajtów)
+        if (audioBlob.size < 350 || !this.hasSpokenInCurrentChunk) {
           this.notifyState();
           resolve();
           return;
@@ -412,7 +427,7 @@ class VoiceEngine {
     await this.unlock();
     this.stopSpeaking();
 
-    const stream = await this.getOrCreateMediaStream();
+    const stream = await this.getOrCreateMediaStream(true);
     if (!stream) return false;
 
     this.audioChunks = [];
@@ -464,7 +479,7 @@ class VoiceEngine {
         const audioBlob = new Blob(this.audioChunks, { type: mimeType });
         this.audioChunks = [];
 
-        if (audioBlob.size < 400) {
+        if (audioBlob.size < 350) {
           this.notifyState();
           resolve(null);
           return;
@@ -528,7 +543,7 @@ class VoiceEngine {
     return this.stopManualRecording();
   }
 
-  // Odtwarzanie głosu lektora (TTS) z czystym buforem bez trzasków
+  // Odtwarzanie głosu lektora (TTS) przez Web Audio API (nie zakłóca mikrofonu na iOS Safari)
   public async speak(
     text: string,
     onEnded?: () => void,
@@ -568,7 +583,60 @@ class VoiceEngine {
         return false;
       }
 
-      const blob = await res.blob();
+      await this.unlock();
+      const arrayBuffer = await res.arrayBuffer();
+
+      // 1. Odtwarzanie przez AudioContext (Web Audio API)
+      // Zapobiega niszczeniu sesji mikrofonowej na iOS Safari!
+      if (this.audioContext && typeof this.audioContext.decodeAudioData === "function") {
+        try {
+          if (this.audioContext.state === "suspended") {
+            await this.audioContext.resume();
+          }
+
+          const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer.slice(0));
+          const source = this.audioContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(this.audioContext.destination);
+          this.activeSourceNode = source;
+
+          return new Promise((resolve) => {
+            let isCleanedUp = false;
+            const cleanup = async (success: boolean) => {
+              if (isCleanedUp) return;
+              isCleanedUp = true;
+              this.activeSourceNode = null;
+              this.isCurrentlySpeaking = false;
+
+              // Upewnij się, że mikrofon nie został uśpiony przez iOS
+              const track = this.mediaStream?.getAudioTracks()[0];
+              if (!track || track.readyState === "ended" || !this.mediaStream?.active) {
+                await this.getOrCreateMediaStream(true);
+              }
+
+              setTimeout(() => {
+                this.isMutedForPlayback = false;
+                this.notifyState();
+                if (this.speechRecognition) {
+                  try {
+                    this.speechRecognition.start();
+                  } catch {}
+                }
+                if (onEnded) onEnded();
+                resolve(success);
+              }, 50);
+            };
+
+            source.onended = () => cleanup(true);
+            source.start(0);
+          });
+        } catch (audioCtxErr) {
+          console.warn("WebAudio playback fallback to HTMLAudioElement:", audioCtxErr);
+        }
+      }
+
+      // 2. Fallback HTMLAudioElement
+      const blob = new Blob([arrayBuffer], { type: "audio/mp3" });
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
       audio.preload = "auto";
@@ -576,13 +644,19 @@ class VoiceEngine {
 
       return new Promise((resolve) => {
         let isCleanedUp = false;
-        const cleanup = (success: boolean) => {
+        const cleanup = async (success: boolean) => {
           if (isCleanedUp) return;
           isCleanedUp = true;
           this.isCurrentlySpeaking = false;
           try {
             URL.revokeObjectURL(audioUrl);
           } catch {}
+
+          const track = this.mediaStream?.getAudioTracks()[0];
+          if (!track || track.readyState === "ended" || !this.mediaStream?.active) {
+            await this.getOrCreateMediaStream(true);
+          }
+
           setTimeout(() => {
             this.isMutedForPlayback = false;
             this.notifyState();
@@ -597,15 +671,8 @@ class VoiceEngine {
         };
 
         audio.onended = () => cleanup(true);
-        audio.onerror = (e) => {
-          console.warn("Audio playback error:", e);
-          cleanup(false);
-        };
-
-        audio.play().catch((err) => {
-          console.warn("Audio play prevented:", err);
-          cleanup(false);
-        });
+        audio.onerror = () => cleanup(false);
+        audio.play().catch(() => cleanup(false));
       });
     } catch (err) {
       console.error("Speak error:", err);
@@ -618,6 +685,13 @@ class VoiceEngine {
   }
 
   public stopSpeaking() {
+    if (this.activeSourceNode) {
+      try {
+        this.activeSourceNode.stop();
+        this.activeSourceNode.disconnect();
+      } catch {}
+      this.activeSourceNode = null;
+    }
     if (this.currentAudio) {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;

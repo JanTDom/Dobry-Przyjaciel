@@ -40,6 +40,7 @@ export default function IdeaPage() {
       return;
     }
     voiceEngine.unlock();
+    voiceEngine.startLiveDialogue();
     setIsLiveCallOpen(true);
   };
 

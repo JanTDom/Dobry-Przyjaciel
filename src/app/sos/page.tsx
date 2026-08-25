@@ -43,6 +43,7 @@ export default function SOSPage() {
       return;
     }
     voiceEngine.unlock();
+    voiceEngine.startLiveDialogue();
     setIsLiveCallOpen(true);
   };
 
