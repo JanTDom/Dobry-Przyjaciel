@@ -65,7 +65,6 @@ export default function HomePage() {
       return;
     }
     voiceEngine.unlock();
-    voiceEngine.startLiveDialogue();
     setIsLiveCallOpen(true);
   };
 
