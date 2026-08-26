@@ -17,30 +17,34 @@ class VoiceEngine {
   private mediaStream: MediaStream | null = null;
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
-  private currentAudio: HTMLAudioElement | null = null;
 
-  private isContinuousMode: boolean = false;
-  private isCurrentlyRecording: boolean = false;
-  private isCurrentlySpeaking: boolean = false;
-  private isProcessingTranscript: boolean = false;
-  private isMutedForPlayback: boolean = false;
+  // Jeden element Audio przez cały cykl życia singletonu — iOS wymaga reużycia
+  private currentAudio: HTMLAudioElement | null = null;
+  private _currentAudioUrl: string | null = null;
+  private _audioUnlocked = false;
+  // Blokada podwójnego getUserMedia (race condition)
+  private _mediaStreamPending: Promise<MediaStream | null> | null = null;
+
+  private isContinuousMode = false;
+  private isCurrentlyRecording = false;
+  private isCurrentlySpeaking = false;
+  private isProcessingTranscript = false;
+  private isMutedForPlayback = false;
 
   private volumeCheckAnimationId: number | null = null;
   private silenceTimer: any = null;
-  private consecutiveVoiceFrames: number = 0;
-  private hasSpokenInCurrentChunk: boolean = false;
+  private consecutiveVoiceFrames = 0;
+  private hasSpokenInCurrentChunk = false;
 
   private speechRecognition: any = null;
-  private lastCapturedTimestamp: number = 0;
-  private lastCapturedText: string = "";
+  private lastCapturedTimestamp = 0;
+  private lastCapturedText = "";
   private nativeInterimTimer: any = null;
-  private lastNativeInterimText: string = "";
+  private lastNativeInterimText = "";
 
   private onMessageCaptured: ((text: string) => void) | null = null;
   private onStateChange: ((state: VoiceEngineState) => void) | null = null;
-  private currentTranscript: string = "";
-  private _currentAudioUrl: string | null = null;
-  private _audioUnlocked: boolean = false;
+  private currentTranscript = "";
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -48,7 +52,7 @@ class VoiceEngine {
     }
   }
 
-  private notifyState(errorMessage: string | null = null, currentVolume: number = 0) {
+  private notifyState(errorMessage: string | null = null, currentVolume = 0) {
     if (!this.onStateChange) return;
     this.onStateChange({
       isListening: this.isContinuousMode && !this.isCurrentlySpeaking && !this.isMutedForPlayback,
@@ -62,19 +66,14 @@ class VoiceEngine {
     });
   }
 
-  // Bezpieczne przekazanie rozpoznanej mowy z deduplikacją
   private handleCapturedSpeech(text: string) {
     const clean = text.trim();
     if (!clean || clean.length < 2) return;
-
     const now = Date.now();
-    // Sprawdź czy to samo zdanie nie zostało przetworzone przed chwilą
     if (
       this.lastCapturedText.toLowerCase() === clean.toLowerCase() &&
       now - this.lastCapturedTimestamp < 2500
-    ) {
-      return;
-    }
+    ) return;
 
     this.lastCapturedText = clean;
     this.lastCapturedTimestamp = now;
@@ -82,37 +81,32 @@ class VoiceEngine {
     this.hasSpokenInCurrentChunk = false;
     this.lastNativeInterimText = "";
 
-    // Jeśli lektor w tym momencie mówił, zatrzymaj go, bo użytkownik wszedł w słowo
     if (this.isCurrentlySpeaking) {
       this.stopSpeaking();
     }
-
     if (this.onMessageCaptured) {
       this.onMessageCaptured(clean);
     }
   }
 
-  // Odblokowuje AudioContext i element Audio w geście użytkownika (wymóg iOS Safari / Chrome).
-  // Idempotentny — nie resetuje audio jeśli już odblokowany (eliminuje trzaski).
+  // ─── UNLOCK ────────────────────────────────────────────────────────────────
+  // Wywołać SYNCHRONICZNIE w obsłudze kliknięcia (gestu użytkownika).
+  // Idempotentny — nie resetuje audio elementu jeśli już odblokowany.
   public async unlock(): Promise<boolean> {
     if (typeof window === "undefined") return false;
     try {
+      // AudioContext — BEZ wymuszania sampleRate (iOS działa na 48kHz system rate)
       if (!this.audioContext || this.audioContext.state === "closed") {
         const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          // sampleRate 44100 — musi pasować do mp3_44100_128 z ElevenLabs
-          this.audioContext = new AudioCtx({ sampleRate: 44100 });
-        }
+        if (AudioCtx) this.audioContext = new AudioCtx();
       }
-      if (this.audioContext && this.audioContext.state === "suspended") {
+      if (this.audioContext?.state === "suspended") {
         await this.audioContext.resume();
       }
 
-      // Odblokuj element Audio tylko raz — nie resetuj src jeśli już gra lub grało
+      // Element Audio — odblokuj tylko raz gestem, potem reużywaj bez resetu src
       if (!this._audioUnlocked) {
-        if (!this.currentAudio) {
-          this.currentAudio = new Audio();
-        }
+        if (!this.currentAudio) this.currentAudio = new Audio();
         this.currentAudio.src =
           "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
         await this.currentAudio.play().catch(() => {});
@@ -124,51 +118,61 @@ class VoiceEngine {
     }
   }
 
-  // Uzyskuje i utrzymuje ciągły strumień mikrofonu
+  // ─── MIKROFON ──────────────────────────────────────────────────────────────
+  // Zabezpieczenie przed podwójnym getUserMedia (race condition)
   public async getOrCreateMediaStream(): Promise<MediaStream | null> {
-    if (this.mediaStream && this.mediaStream.active) {
+    if (this.mediaStream?.active) {
       const tracks = this.mediaStream.getAudioTracks();
-      if (tracks.length > 0 && tracks[0].readyState === "live") {
-        return this.mediaStream;
-      }
+      if (tracks.length > 0 && tracks[0].readyState === "live") return this.mediaStream;
     }
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        },
-      });
-      this.mediaStream = stream;
+    // Jeśli już czekamy na pozwolenie — zwróć tę samą obietnicę (nie pytaj dwa razy)
+    if (this._mediaStreamPending) return this._mediaStreamPending;
 
-      if (!this.audioContext || this.audioContext.state === "closed") {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) this.audioContext = new AudioCtx();
-      }
+    this._mediaStreamPending = (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            // autoGainControl wyłączone — AGC obniża sygnał do wartości nie wykrywalnych przez VAD
+            autoGainControl: false,
+          },
+        });
+        this.mediaStream = stream;
 
-      if (this.audioContext) {
+        // Podłącz analyser — BEZ wymuszania sampleRate (musi pasować do strumienia)
         try {
-          if (this.audioContext.state === "suspended") {
+          if (!this.audioContext || this.audioContext.state === "closed") {
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioCtx) this.audioContext = new AudioCtx();
+          }
+          if (this.audioContext?.state === "suspended") {
             await this.audioContext.resume();
           }
-          const source = this.audioContext.createMediaStreamSource(stream);
-          this.analyser = this.audioContext.createAnalyser();
-          this.analyser.fftSize = 512;
-          this.analyser.smoothingTimeConstant = 0.2;
-          source.connect(this.analyser);
+          if (this.audioContext) {
+            const source = this.audioContext.createMediaStreamSource(stream);
+            this.analyser = this.audioContext.createAnalyser();
+            this.analyser.fftSize = 1024;
+            this.analyser.smoothingTimeConstant = 0.1;
+            source.connect(this.analyser);
+          }
         } catch (err) {
-          console.warn("Analyser setup warning:", err);
+          console.warn("Analyser setup error:", err);
+          // analyser będzie null — VAD nie zadziała, ale SpeechRecognition tak
         }
-      }
 
-      return stream;
-    } catch (err) {
-      console.error("Microphone access error:", err);
-      this.notifyState("Brak dostępu do mikrofonu. Zezwól na dostęp w przeglądarce.");
-      return null;
-    }
+        return stream;
+      } catch (err) {
+        console.error("Microphone access error:", err);
+        this.notifyState("Brak dostępu do mikrofonu. Zezwól na dostęp w przeglądarce.");
+        return null;
+      } finally {
+        this._mediaStreamPending = null;
+      }
+    })();
+
+    return this._mediaStreamPending;
   }
 
   public setCallbacks(
@@ -179,22 +183,21 @@ class VoiceEngine {
     this.onStateChange = onState;
   }
 
-  // Natywne rozpoznawanie mowy w przeglądarce (iOS Safari / Chrome / Android)
+  // ─── SPEECH RECOGNITION ────────────────────────────────────────────────────
   private initNativeSpeechRecognition() {
     if (typeof window === "undefined") return;
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-
-    if (!SpeechRecognition) return;
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      console.log("SpeechRecognition not available — using MediaRecorder+Whisper only");
+      return;
+    }
 
     try {
       if (this.speechRecognition) {
-        try {
-          this.speechRecognition.stop();
-        } catch {}
+        try { this.speechRecognition.stop(); } catch {}
       }
 
-      const recognition = new SpeechRecognition();
+      const recognition = new SR();
       recognition.lang = "pl-PL";
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -224,11 +227,9 @@ class VoiceEngine {
         } else if (interimStr.trim().length > 1) {
           this.lastNativeInterimText = interimStr.trim();
           this.notifyState(null, 0.4);
-
-          // Na urządzeniach mobilnych (iOS/Android), gdzie isFinal bywa opóźnione:
           if (this.nativeInterimTimer) clearTimeout(this.nativeInterimTimer);
           this.nativeInterimTimer = setTimeout(() => {
-            if (this.lastNativeInterimText && this.lastNativeInterimText.length > 1) {
+            if (this.lastNativeInterimText?.length > 1) {
               this.handleCapturedSpeech(this.lastNativeInterimText);
               this.lastNativeInterimText = "";
             }
@@ -238,15 +239,13 @@ class VoiceEngine {
 
       recognition.onerror = (e: any) => {
         if (e.error !== "no-speech") {
-          console.warn("Native SpeechRecognition error:", e.error);
+          console.warn("SpeechRecognition error:", e.error);
         }
       };
 
       recognition.onend = () => {
         if (this.isContinuousMode && !this.isCurrentlySpeaking && !this.isMutedForPlayback) {
-          try {
-            recognition.start();
-          } catch {}
+          try { recognition.start(); } catch {}
         }
       };
 
@@ -257,10 +256,8 @@ class VoiceEngine {
     }
   }
 
-  // Rozpoczyna tryb ciągłego dialogu (wywoływane po zakończeniu powitania)
+  // ─── START DIALOGUE ────────────────────────────────────────────────────────
   public async startLiveDialogue() {
-    // Nie wywołujemy unlock() — jest już idempotentny, ale wywołanie go po sieci
-    // resetowałoby src elementu Audio. AudioContext odblokowany jest już z gestu.
     this.isContinuousMode = true;
     this.currentTranscript = "";
     this.lastNativeInterimText = "";
@@ -273,7 +270,7 @@ class VoiceEngine {
     this.notifyState();
   }
 
-  // Pętla monitorowania poziomu głosu (RMS VAD - niezawodna na każdym mikrofonie)
+  // ─── VAD (Voice Activity Detection) ───────────────────────────────────────
   private startVoiceActivityDetection() {
     if (this.volumeCheckAnimationId) {
       cancelAnimationFrame(this.volumeCheckAnimationId);
@@ -282,11 +279,10 @@ class VoiceEngine {
     const checkVolume = () => {
       if (!this.isContinuousMode) return;
 
-      if (this.audioContext && this.audioContext.state === "suspended") {
+      if (this.audioContext?.state === "suspended") {
         this.audioContext.resume().catch(() => {});
       }
 
-      // Badamy mikrofon, gdy lektor nie mówi i nie trwa transkrypcja
       if (
         this.analyser &&
         !this.isCurrentlySpeaking &&
@@ -296,24 +292,21 @@ class VoiceEngine {
         const timeData = new Uint8Array(this.analyser.fftSize);
         this.analyser.getByteTimeDomainData(timeData);
 
-        // Obliczenie energii RMS z sygnału czasowego (standard akustyczny)
         let sum = 0;
         for (let i = 0; i < timeData.length; i++) {
           const val = (timeData[i] - 128) / 128;
           sum += val * val;
         }
         const rms = Math.sqrt(sum / timeData.length);
-        const normalizedVolume = Math.min(1, rms * 18);
+        const normalizedVolume = Math.min(1, rms * 20);
 
-        // Czuły, uniwersalny próg detekcji mowy człowieka (RMS > 0.015)
-        const isUserSpeaking = rms > 0.015;
+        // Niższy próg (0.010) — lepsza czułość dla telefonów z wyłączonym AGC
+        const isUserSpeaking = rms > 0.010;
 
         if (isUserSpeaking) {
           this.consecutiveVoiceFrames++;
           if (this.consecutiveVoiceFrames >= 2) {
-            if (!this.isCurrentlyRecording) {
-              this.startRecordingChunk();
-            }
+            if (!this.isCurrentlyRecording) this.startRecordingChunk();
             this.hasSpokenInCurrentChunk = true;
             if (this.silenceTimer) {
               clearTimeout(this.silenceTimer);
@@ -331,9 +324,7 @@ class VoiceEngine {
           }
         }
 
-        if (this.onStateChange) {
-          this.notifyState(null, normalizedVolume);
-        }
+        if (this.onStateChange) this.notifyState(null, normalizedVolume);
       }
 
       this.volumeCheckAnimationId = requestAnimationFrame(checkVolume);
@@ -342,15 +333,14 @@ class VoiceEngine {
     this.volumeCheckAnimationId = requestAnimationFrame(checkVolume);
   }
 
+  // ─── MEDIA RECORDER ────────────────────────────────────────────────────────
   private startRecordingChunk() {
     if (
       !this.mediaStream ||
       this.isCurrentlyRecording ||
       this.isCurrentlySpeaking ||
       this.isMutedForPlayback
-    ) {
-      return;
-    }
+    ) return;
 
     try {
       this.audioChunks = [];
@@ -367,9 +357,7 @@ class VoiceEngine {
         : new MediaRecorder(this.mediaStream);
 
       this.mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          this.audioChunks.push(e.data);
-        }
+        if (e.data?.size > 0) this.audioChunks.push(e.data);
       };
 
       this.mediaRecorder.start();
@@ -389,7 +377,6 @@ class VoiceEngine {
     }
 
     const recorder = this.mediaRecorder;
-
     return new Promise<void>((resolve) => {
       recorder.onstop = async () => {
         this.isCurrentlyRecording = false;
@@ -412,21 +399,14 @@ class VoiceEngine {
             mimeType.toLowerCase().includes("aac") ||
             mimeType.toLowerCase().includes("m4a");
           const filename = isMp4 ? "audio.mp4" : "audio.webm";
-
           const formData = new FormData();
           formData.append("file", audioBlob, filename);
 
-          const res = await fetch("/api/transcribe", {
-            method: "POST",
-            body: formData,
-          });
-
+          const res = await fetch("/api/transcribe", { method: "POST", body: formData });
           if (res.ok) {
             const data = await res.json();
             const text = (data.text || "").trim();
-            if (text && text.length > 1) {
-              this.handleCapturedSpeech(text);
-            }
+            if (text?.length > 1) this.handleCapturedSpeech(text);
           }
         } catch (err) {
           console.error("Transcription error:", err);
@@ -438,9 +418,7 @@ class VoiceEngine {
       };
 
       try {
-        if (recorder.state !== "inactive") {
-          recorder.stop();
-        }
+        if (recorder.state !== "inactive") recorder.stop();
       } catch {
         this.isCurrentlyRecording = false;
         this.notifyState();
@@ -449,14 +427,11 @@ class VoiceEngine {
     });
   }
 
-  // Wymuszenie natychmiastowego wysłania bieżącej wypowiedzi
   public forceFinishSpeakingAndSend() {
-    if (this.isCurrentlyRecording) {
-      this.stopAndTranscribeCurrentChunk();
-    }
+    if (this.isCurrentlyRecording) this.stopAndTranscribeCurrentChunk();
   }
 
-  // Ręczne rozpoczęcie nagrywania (Tap-to-Speak)
+  // ─── MANUAL RECORDING (tap-to-speak) ──────────────────────────────────────
   public async startManualRecording(): Promise<boolean> {
     await this.unlock();
     this.stopSpeaking();
@@ -481,9 +456,7 @@ class VoiceEngine {
         : new MediaRecorder(stream);
 
       this.mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          this.audioChunks.push(e.data);
-        }
+        if (e.data?.size > 0) this.audioChunks.push(e.data);
       };
 
       this.mediaRecorder.start();
@@ -496,7 +469,6 @@ class VoiceEngine {
     }
   }
 
-  // Zatrzymanie nagrywania ręcznego i transkrypcja
   public async stopManualRecording(): Promise<string | null> {
     if (!this.mediaRecorder || this.mediaRecorder.state === "inactive") {
       this.isCurrentlyRecording = false;
@@ -505,7 +477,6 @@ class VoiceEngine {
     }
 
     const recorder = this.mediaRecorder;
-
     return new Promise((resolve) => {
       recorder.onstop = async () => {
         this.isCurrentlyRecording = false;
@@ -523,36 +494,18 @@ class VoiceEngine {
         this.notifyState();
 
         try {
-          const isMp4 =
-            mimeType.toLowerCase().includes("mp4") ||
-            mimeType.toLowerCase().includes("aac") ||
-            mimeType.toLowerCase().includes("m4a");
+          const isMp4 = mimeType.toLowerCase().includes("mp4") || mimeType.toLowerCase().includes("m4a");
           const filename = isMp4 ? "audio.mp4" : "audio.webm";
-
           const formData = new FormData();
           formData.append("file", audioBlob, filename);
 
-          const res = await fetch("/api/transcribe", {
-            method: "POST",
-            body: formData,
-          });
-
-          if (!res.ok) {
-            this.notifyState("Błąd rozpoznawania głosu.");
-            resolve(null);
-            return;
-          }
-
+          const res = await fetch("/api/transcribe", { method: "POST", body: formData });
+          if (!res.ok) { resolve(null); return; }
           const data = await res.json();
           const text = (data.text || "").trim();
-
-          if (text) {
-            this.handleCapturedSpeech(text);
-          }
+          if (text) this.handleCapturedSpeech(text);
           resolve(text);
-        } catch (err: any) {
-          console.error("Transcribe request error:", err);
-          this.notifyState("Błąd połączenia podczas transkrypcji.");
+        } catch {
           resolve(null);
         } finally {
           this.isProcessingTranscript = false;
@@ -561,9 +514,7 @@ class VoiceEngine {
       };
 
       try {
-        if (recorder.state !== "inactive") {
-          recorder.stop();
-        }
+        if (recorder.state !== "inactive") recorder.stop();
       } catch {
         this.isCurrentlyRecording = false;
         this.notifyState();
@@ -576,25 +527,22 @@ class VoiceEngine {
     return this.stopManualRecording();
   }
 
-  // Odtwarzanie głosu lektora (TTS).
-  // iOS Safari: reużywamy JEDEN element Audio przez całą sesję — ten sam, który
-  // był odblokowany gestem w unlock(). Tworzenie new Audio() po async fetch
-  // powoduje blokadę iOS, bo nowy element nie był aktywowany gestem.
+  // ─── TTS SPEAK ─────────────────────────────────────────────────────────────
+  // iOS Safari: reużywamy JEDEN element Audio odblokowany gestem.
+  // Nigdy nie tworzymy new Audio() po async operacji — iOS blokuje play().
   public async speak(
     text: string,
     onEnded?: () => void,
-    voice: string = "nova",
+    voice = "nova",
     skipIfBusy = false
   ): Promise<boolean> {
-    if (!text || text.trim().length === 0) return false;
+    if (!text?.trim()) return false;
 
     this.isMutedForPlayback = true;
     if (this.isCurrentlyRecording && this.mediaRecorder) {
       try { this.mediaRecorder.stop(); } catch {}
       this.isCurrentlyRecording = false;
     }
-
-    // Zatrzymaj bieżące audio ale NIE nulluj elementu — iOS wymaga reużycia
     this._pauseAudio();
     this.isCurrentlySpeaking = true;
     this.notifyState();
@@ -610,38 +558,33 @@ class VoiceEngine {
         this.isCurrentlySpeaking = false;
         this.isMutedForPlayback = false;
         this.notifyState();
-        if (onEnded) onEnded();
+        onEnded?.();
         return false;
       }
 
       const blob = await res.blob();
-      // Upewnij się że mamy element Audio odblokowany gestem
-      if (!this.currentAudio) {
-        this.currentAudio = new Audio();
-      }
+      if (!this.currentAudio) this.currentAudio = new Audio();
 
-      // Podmień src na bieżącym, już odblokowanym elemencie
       const prevUrl = this._currentAudioUrl;
       const audioUrl = URL.createObjectURL(blob);
       this._currentAudioUrl = audioUrl;
 
+      // Podmień src na odblokowanym elemencie — nie twórz nowego
       this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
       this.currentAudio.src = audioUrl;
-      // Nie wywołujemy .load() — przeglądarka automatycznie przeładowuje po zmianie src,
-      // a jawne .load() powoduje trzaski na iOS Safari
+      // NIE wywołuj .load() — powoduje trzaski na iOS
 
       if (prevUrl) {
         try { URL.revokeObjectURL(prevUrl); } catch {}
       }
 
       return new Promise((resolve) => {
-        let isCleanedUp = false;
+        let done = false;
         const audio = this.currentAudio!;
 
         const cleanup = (success: boolean) => {
-          if (isCleanedUp) return;
-          isCleanedUp = true;
+          if (done) return;
+          done = true;
           clearTimeout(failsafe);
           this.isCurrentlySpeaking = false;
           this.isMutedForPlayback = false;
@@ -649,19 +592,19 @@ class VoiceEngine {
           if (this.speechRecognition) {
             try { this.speechRecognition.start(); } catch {}
           }
-          if (onEnded) onEnded();
+          onEnded?.();
           resolve(success);
         };
 
         audio.onended = () => cleanup(true);
         audio.onerror = (e) => {
-          console.warn("Audio playback error:", e);
+          console.warn("Audio error:", e);
           cleanup(false);
         };
 
-        // Failsafe: ~110ms per znak + 4s bufor
-        const maxDurationMs = Math.min(15000, Math.max(4000, text.length * 110));
-        const failsafe = setTimeout(() => cleanup(true), maxDurationMs);
+        // Failsafe: ~110ms/znak + 5s bufor — gwarantuje odblokowanie mikrofonu
+        const maxMs = Math.min(18000, Math.max(5000, text.length * 110));
+        const failsafe = setTimeout(() => cleanup(true), maxMs);
 
         audio.play().catch((err) => {
           console.warn("audio.play() rejected:", err);
@@ -674,12 +617,11 @@ class VoiceEngine {
       this.isCurrentlySpeaking = false;
       this.isMutedForPlayback = false;
       this.notifyState();
-      if (onEnded) onEnded();
+      onEnded?.();
       return false;
     }
   }
 
-  // Zatrzymuje odtwarzanie bez niszczenia elementu Audio (iOS wymaga reużycia)
   private _pauseAudio() {
     if (this.currentAudio) {
       try {
@@ -691,12 +633,12 @@ class VoiceEngine {
 
   public stopSpeaking() {
     this._pauseAudio();
-    // Nie nullujemy this.currentAudio — iOS musi reużywać odblokowany element
     this.isCurrentlySpeaking = false;
     this.isMutedForPlayback = false;
     this.notifyState();
   }
 
+  // ─── STOP ──────────────────────────────────────────────────────────────────
   public stopLiveDialogue() {
     this.isContinuousMode = false;
     this.isCurrentlyRecording = false;
@@ -716,15 +658,11 @@ class VoiceEngine {
       this.nativeInterimTimer = null;
     }
     if (this.speechRecognition) {
-      try {
-        this.speechRecognition.stop();
-      } catch {}
+      try { this.speechRecognition.stop(); } catch {}
       this.speechRecognition = null;
     }
-    if (this.mediaRecorder && this.mediaRecorder.state !== "inactive") {
-      try {
-        this.mediaRecorder.stop();
-      } catch {}
+    if (this.mediaRecorder?.state !== "inactive") {
+      try { this.mediaRecorder?.stop(); } catch {}
     }
     this.stopSpeaking();
     this.notifyState();
