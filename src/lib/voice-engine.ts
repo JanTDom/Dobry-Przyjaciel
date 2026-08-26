@@ -567,7 +567,10 @@ class VoiceEngine {
     return this.stopManualRecording();
   }
 
-  // Odtwarzanie głosu lektora (TTS) z natychmiastowym wznowieniem nasłuchu
+  // Odtwarzanie głosu lektora (TTS)
+  // WAŻNE: na iOS AudioContext musi być odblokowany przez unlock() wywołane w geście
+  // użytkownika PRZED wywołaniem speak(). Ta metoda NIE wywołuje unlock() sama,
+  // bo byłoby to po awaicie sieci — za późno dla iOS AVAudioSession.
   public async speak(
     text: string,
     onEnded?: () => void,
@@ -606,7 +609,6 @@ class VoiceEngine {
         return false;
       }
 
-      await this.unlock();
       const blob = await res.blob();
       const audioUrl = URL.createObjectURL(blob);
       const audio = new Audio(audioUrl);
@@ -638,13 +640,17 @@ class VoiceEngine {
         audio.onended = () => cleanup(true);
         audio.onerror = () => cleanup(false);
 
-        // Failsafe timeout: maksymalnie 12 sekund na pojedynczą wypowiedź
-        const maxDurationMs = Math.min(12000, Math.max(3500, text.length * 80));
-        setTimeout(() => {
-          cleanup(true);
-        }, maxDurationMs);
+        // Failsafe: ~100ms per znak + 4s bufor. Gwarantuje odblokowanie nasłuchu.
+        const maxDurationMs = Math.min(15000, Math.max(4000, text.length * 100));
+        const failsafe = setTimeout(() => cleanup(true), maxDurationMs);
 
-        audio.play().catch(() => cleanup(false));
+        audio.play().then(() => {
+          // Gra — anuluj failsafe jeśli audio samo zgłosi onended
+          audio.addEventListener("ended", () => clearTimeout(failsafe), { once: true });
+        }).catch(() => {
+          clearTimeout(failsafe);
+          cleanup(false);
+        });
       });
     } catch (err) {
       console.error("Speak error:", err);
@@ -655,6 +661,7 @@ class VoiceEngine {
       return false;
     }
   }
+
 
   public stopSpeaking() {
     if (this.currentAudio) {

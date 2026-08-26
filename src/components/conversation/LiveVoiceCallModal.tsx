@@ -27,6 +27,8 @@ interface LiveVoiceCallModalProps {
   onClose: () => void;
   profile: UserProfile;
   onNewMessage: (msg: Message) => void;
+  /** Callback wywoływany gdy modal jest gotowy do odbioru tekstu mówionego */
+  onReady?: () => void;
 }
 
 export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
@@ -56,8 +58,9 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const companionVoiceRef = useRef<string>(
     initialProfile.companionVoice || (initialProfile.companionGender === "male" ? "echo" : "nova")
   );
+  // Flaga pilnująca, że powitanie odtworzone zostało dokładnie raz
+  const hasGreetedRef = useRef(false);
 
-  // Sync refs do bieżącego stanu — kluczowe dla unikania stale closures
   useEffect(() => {
     sessionMessagesRef.current = sessionMessages;
   }, [sessionMessages]);
@@ -85,10 +88,10 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     voiceEngine.stopSpeaking();
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
     isProcessingRef.current = false;
+    hasGreetedRef.current = false;
     onClose();
   }, [onClose]);
 
-  // Stabilna funkcja przetwarzania wypowiedzi — zawsze korzysta z aktualnych ref
   const processUserMessage = useCallback(async (userText: string) => {
     if (!userText || userText.trim().length < 2) return;
     if (isProcessingRef.current) return;
@@ -163,13 +166,13 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     }
   }, [onNewMessage]);
 
-  // Główny effect uruchamiany wyłącznie przy otwarciu/zamknięciu modala
   useEffect(() => {
     if (!isOpen) {
       voiceEngine.stopLiveDialogue();
       voiceEngine.stopSpeaking();
       if (durationTimerRef.current) clearInterval(durationTimerRef.current);
       isProcessingRef.current = false;
+      hasGreetedRef.current = false;
       setIsCallEnded(false);
       return;
     }
@@ -181,6 +184,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
     setErrorMessage(null);
     setStatusLabel("Łączę...");
     isProcessingRef.current = false;
+    hasGreetedRef.current = false;
 
     const stored = getStoredMessages();
     const initialHistory = stored.slice(-8);
@@ -191,7 +195,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
-    // Zarejestruj callbacki PRZED startLiveDialogue
     voiceEngine.setCallbacks(
       (capturedText) => {
         processUserMessage(capturedText);
@@ -210,24 +213,40 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       }
     );
 
-    // Uruchom mikrofon — jednorazowo w tym miejscu
-    voiceEngine.startLiveDialogue();
-
-    // Krótkie, nieblokujące powitanie (2s opóźnienie żeby UI zdążył się wyrenderować)
+    // iOS Safari: audio MUSI być wywołane natychmiast po wyrenderowaniu,
+    // bez żadnych setTimeout. Powitanie uruchamiamy tu synchronicznie.
+    // Mikrofon startuje dopiero po zakończeniu powitania (onEnded callback),
+    // żeby getUserMedia nie interferował z AVAudioSession na iOS.
     const currentProfile = getStoredProfile() || initialProfile;
     const greetingText = `Cześć ${currentProfile.name}. Słucham Cię.`;
     const voice =
       currentProfile.companionVoice ||
       (currentProfile.companionGender === "male" ? "echo" : "nova");
 
-    const greetingTimer = setTimeout(async () => {
+    if (!hasGreetedRef.current) {
+      hasGreetedRef.current = true;
       setStatusLabel("Odpowiadam...");
-      await voiceEngine.speak(greetingText, undefined, voice);
-      setStatusLabel("Słucham Cię");
-    }, 300);
+
+      // Odtwarzamy powitanie. Po jego zakończeniu (lub po 3s jeśli coś zawiedzie)
+      // startujemy mikrofon — to gwarantuje że iOS nie zawiesi sesji audio.
+      const startMicAfterGreeting = () => {
+        setStatusLabel("Słucham Cię");
+        voiceEngine.startLiveDialogue();
+      };
+
+      voiceEngine.speak(greetingText, startMicAfterGreeting, voice).then((success) => {
+        // Failsafe: jeśli speak() wróci false (błąd sieci, ElevenLabs niedostępny)
+        // mimo to uruchamiamy mikrofon
+        if (!success) {
+          startMicAfterGreeting();
+        }
+      });
+    } else {
+      // Przy ponownym otwarciu bez powitania — mikrofon startuje od razu
+      voiceEngine.startLiveDialogue();
+    }
 
     return () => {
-      clearTimeout(greetingTimer);
       voiceEngine.stopLiveDialogue();
       voiceEngine.stopSpeaking();
       if (durationTimerRef.current) clearInterval(durationTimerRef.current);
@@ -269,7 +288,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#0F0D0A]/97 text-[#FBF8F1] px-4 sm:px-8 py-6 select-none overflow-hidden"
       >
-        {/* Tło */}
         <div
           aria-hidden
           className="absolute inset-0 pointer-events-none"
@@ -310,7 +328,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
         {!isCallEnded ? (
           <>
             <div className="flex flex-col items-center justify-center my-auto text-center max-w-lg w-full z-10">
-              {/* Żywe palenisko */}
               <div className="relative mb-6">
                 <LivingWarmHearth
                   isListening={isListening}
@@ -322,7 +339,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 />
               </div>
 
-              {/* Status */}
               <div className="flex flex-col items-center justify-center gap-2 mb-3 font-sans min-h-[36px]">
                 {isSpeaking ? (
                   <div className="text-xs font-medium text-amber-300 bg-amber-950/60 border border-amber-500/30 px-5 py-2 rounded-full flex items-center gap-2 shadow-lg animate-pulse">
@@ -345,7 +361,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                   </div>
                 ) : (
                   <div className="text-xs font-medium text-stone-500 bg-white/4 px-5 py-2 rounded-full">
-                    Połączenie aktywne
+                    {statusLabel}
                   </div>
                 )}
               </div>
@@ -356,7 +372,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 </div>
               )}
 
-              {/* Szuflada historii */}
               <div className="mt-5">
                 <button
                   onClick={() => setShowTranscriptDrawer(!showTranscriptDrawer)}
@@ -408,7 +423,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
               )}
             </div>
 
-            {/* Dolny pasek */}
             <div className="w-full max-w-md flex items-center justify-center gap-4 pt-4 pb-2 z-10">
               <button
                 onClick={handleEndCallClick}
@@ -427,7 +441,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
             </div>
           </>
         ) : (
-          /* Ekran po zakończeniu rozmowy */
           <div className="my-auto max-w-lg w-full text-center flex flex-col items-center py-8 z-10">
             <div className="mb-4">
               <LivingWarmHearth size={180} intensity={0.4} />
