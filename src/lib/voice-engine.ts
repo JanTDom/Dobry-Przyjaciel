@@ -39,6 +39,7 @@ class VoiceEngine {
   private onMessageCaptured: ((text: string) => void) | null = null;
   private onStateChange: ((state: VoiceEngineState) => void) | null = null;
   private currentTranscript: string = "";
+  private _currentAudioUrl: string | null = null;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -567,10 +568,10 @@ class VoiceEngine {
     return this.stopManualRecording();
   }
 
-  // Odtwarzanie głosu lektora (TTS)
-  // WAŻNE: na iOS AudioContext musi być odblokowany przez unlock() wywołane w geście
-  // użytkownika PRZED wywołaniem speak(). Ta metoda NIE wywołuje unlock() sama,
-  // bo byłoby to po awaicie sieci — za późno dla iOS AVAudioSession.
+  // Odtwarzanie głosu lektora (TTS).
+  // iOS Safari: reużywamy JEDEN element Audio przez całą sesję — ten sam, który
+  // był odblokowany gestem w unlock(). Tworzenie new Audio() po async fetch
+  // powoduje blokadę iOS, bo nowy element nie był aktywowany gestem.
   public async speak(
     text: string,
     onEnded?: () => void,
@@ -581,13 +582,12 @@ class VoiceEngine {
 
     this.isMutedForPlayback = true;
     if (this.isCurrentlyRecording && this.mediaRecorder) {
-      try {
-        this.mediaRecorder.stop();
-      } catch {}
+      try { this.mediaRecorder.stop(); } catch {}
       this.isCurrentlyRecording = false;
     }
 
-    this.stopSpeaking();
+    // Zatrzymaj bieżące audio ale NIE nulluj elementu — iOS wymaga reużycia
+    this._pauseAudio();
     this.isCurrentlySpeaking = true;
     this.notifyState();
 
@@ -595,10 +595,7 @@ class VoiceEngine {
       const res = await fetch("/api/voice", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: text.trim(),
-          voice: voice || "nova",
-        }),
+        body: JSON.stringify({ text: text.trim(), voice: voice || "nova" }),
       });
 
       if (!res.ok) {
@@ -610,44 +607,55 @@ class VoiceEngine {
       }
 
       const blob = await res.blob();
+      // Upewnij się że mamy element Audio odblokowany gestem
+      if (!this.currentAudio) {
+        this.currentAudio = new Audio();
+      }
+
+      // Podmień src na bieżącym, już odblokowanym elemencie
+      const prevUrl = this._currentAudioUrl;
       const audioUrl = URL.createObjectURL(blob);
-      const audio = new Audio(audioUrl);
-      audio.preload = "auto";
-      this.currentAudio = audio;
+      this._currentAudioUrl = audioUrl;
+
+      this.currentAudio.pause();
+      this.currentAudio.currentTime = 0;
+      this.currentAudio.src = audioUrl;
+      this.currentAudio.load();
+
+      if (prevUrl) {
+        try { URL.revokeObjectURL(prevUrl); } catch {}
+      }
 
       return new Promise((resolve) => {
         let isCleanedUp = false;
+        const audio = this.currentAudio!;
 
         const cleanup = (success: boolean) => {
           if (isCleanedUp) return;
           isCleanedUp = true;
+          clearTimeout(failsafe);
           this.isCurrentlySpeaking = false;
           this.isMutedForPlayback = false;
-          try {
-            URL.revokeObjectURL(audioUrl);
-          } catch {}
-
           this.notifyState();
           if (this.speechRecognition) {
-            try {
-              this.speechRecognition.start();
-            } catch {}
+            try { this.speechRecognition.start(); } catch {}
           }
           if (onEnded) onEnded();
           resolve(success);
         };
 
         audio.onended = () => cleanup(true);
-        audio.onerror = () => cleanup(false);
+        audio.onerror = (e) => {
+          console.warn("Audio playback error:", e);
+          cleanup(false);
+        };
 
-        // Failsafe: ~100ms per znak + 4s bufor. Gwarantuje odblokowanie nasłuchu.
-        const maxDurationMs = Math.min(15000, Math.max(4000, text.length * 100));
+        // Failsafe: ~110ms per znak + 4s bufor
+        const maxDurationMs = Math.min(15000, Math.max(4000, text.length * 110));
         const failsafe = setTimeout(() => cleanup(true), maxDurationMs);
 
-        audio.play().then(() => {
-          // Gra — anuluj failsafe jeśli audio samo zgłosi onended
-          audio.addEventListener("ended", () => clearTimeout(failsafe), { once: true });
-        }).catch(() => {
+        audio.play().catch((err) => {
+          console.warn("audio.play() rejected:", err);
           clearTimeout(failsafe);
           cleanup(false);
         });
@@ -662,13 +670,19 @@ class VoiceEngine {
     }
   }
 
+  // Zatrzymuje odtwarzanie bez niszczenia elementu Audio (iOS wymaga reużycia)
+  private _pauseAudio() {
+    if (this.currentAudio) {
+      try {
+        this.currentAudio.pause();
+        this.currentAudio.currentTime = 0;
+      } catch {}
+    }
+  }
 
   public stopSpeaking() {
-    if (this.currentAudio) {
-      this.currentAudio.pause();
-      this.currentAudio.currentTime = 0;
-      this.currentAudio = null;
-    }
+    this._pauseAudio();
+    // Nie nullujemy this.currentAudio — iOS musi reużywać odblokowany element
     this.isCurrentlySpeaking = false;
     this.isMutedForPlayback = false;
     this.notifyState();

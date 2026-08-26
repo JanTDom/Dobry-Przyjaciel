@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       try {
         const voiceId = ELEVENLABS_VOICE_MAP[voice] || ELEVENLABS_VOICE_MAP["nova"];
         const elevenRes = await fetch(
-          `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?optimize_streaming_latency=3`,
+          `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128&optimize_streaming_latency=3`,
           {
             method: "POST",
             headers: {
