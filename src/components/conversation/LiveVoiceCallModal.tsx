@@ -58,8 +58,9 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   const companionVoiceRef = useRef<string>(
     initialProfile.companionVoice || (initialProfile.companionGender === "male" ? "echo" : "nova")
   );
-  // Flaga pilnująca, że powitanie odtworzone zostało dokładnie raz
   const hasGreetedRef = useRef(false);
+  // Pilnuje że startMicAfterGreeting nie odpali się po zamknięciu modala
+  const isOpenRef = useRef(false);
 
   useEffect(() => {
     sessionMessagesRef.current = sessionMessages;
@@ -168,6 +169,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) {
+      isOpenRef.current = false; // Blokuje opóźnione startMicAfterGreeting
       voiceEngine.stopLiveDialogue();
       voiceEngine.stopSpeaking();
       if (durationTimerRef.current) clearInterval(durationTimerRef.current);
@@ -195,6 +197,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       setCallDuration((prev) => prev + 1);
     }, 1000);
 
+    // Zarejestruj callbacki PRZED startLiveDialogue
     voiceEngine.setCallbacks(
       (capturedText) => {
         processUserMessage(capturedText);
@@ -213,36 +216,36 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       }
     );
 
-    // iOS Safari: audio MUSI być wywołane natychmiast po wyrenderowaniu,
-    // bez żadnych setTimeout. Powitanie uruchamiamy tu synchronicznie.
-    // Mikrofon startuje dopiero po zakończeniu powitania (onEnded callback),
-    // żeby getUserMedia nie interferował z AVAudioSession na iOS.
     const currentProfile = getStoredProfile() || initialProfile;
     const greetingText = `Cześć ${currentProfile.name}. Słucham Cię.`;
     const voice =
       currentProfile.companionVoice ||
       (currentProfile.companionGender === "male" ? "echo" : "nova");
 
+    // isOpenRef: chroni przed uruchomieniem mikrofonu jeśli modal już zamknięty
+    // (failsafe timer może odpalić się po wyjściu z modala)
+    isOpenRef.current = true;
+
+    // Żądamy dostępu do mikrofonu równolegle z powitaniem —
+    // dialog pojawia się natychmiast, a mic jest gotowy gdy powitanie się kończy
+    voiceEngine.getOrCreateMediaStream().catch(() => {});
+
     if (!hasGreetedRef.current) {
       hasGreetedRef.current = true;
       setStatusLabel("Odpowiadam...");
 
-      // Odtwarzamy powitanie. Po jego zakończeniu (lub po 3s jeśli coś zawiedzie)
-      // startujemy mikrofon — to gwarantuje że iOS nie zawiesi sesji audio.
       const startMicAfterGreeting = () => {
+        if (!isOpenRef.current) return; // Modal zamknięty — nie ruszaj mikrofonu
         setStatusLabel("Słucham Cię");
         voiceEngine.startLiveDialogue();
       };
 
       voiceEngine.speak(greetingText, startMicAfterGreeting, voice).then((success) => {
-        // Failsafe: jeśli speak() wróci false (błąd sieci, ElevenLabs niedostępny)
-        // mimo to uruchamiamy mikrofon
-        if (!success) {
+        if (!success && isOpenRef.current) {
           startMicAfterGreeting();
         }
       });
     } else {
-      // Przy ponownym otwarciu bez powitania — mikrofon startuje od razu
       voiceEngine.startLiveDialogue();
     }
 

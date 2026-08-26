@@ -40,6 +40,7 @@ class VoiceEngine {
   private onStateChange: ((state: VoiceEngineState) => void) | null = null;
   private currentTranscript: string = "";
   private _currentAudioUrl: string | null = null;
+  private _audioUnlocked: boolean = false;
 
   constructor() {
     if (typeof window !== "undefined") {
@@ -91,26 +92,32 @@ class VoiceEngine {
     }
   }
 
-  // Odblokowuje AudioContext i element Audio w geście użytkownika (wymóg iOS Safari / Chrome)
+  // Odblokowuje AudioContext i element Audio w geście użytkownika (wymóg iOS Safari / Chrome).
+  // Idempotentny — nie resetuje audio jeśli już odblokowany (eliminuje trzaski).
   public async unlock(): Promise<boolean> {
     if (typeof window === "undefined") return false;
     try {
       if (!this.audioContext || this.audioContext.state === "closed") {
         const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
         if (AudioCtx) {
-          this.audioContext = new AudioCtx();
+          // sampleRate 44100 — musi pasować do mp3_44100_128 z ElevenLabs
+          this.audioContext = new AudioCtx({ sampleRate: 44100 });
         }
       }
       if (this.audioContext && this.audioContext.state === "suspended") {
         await this.audioContext.resume();
       }
 
-      if (!this.currentAudio) {
-        this.currentAudio = new Audio();
+      // Odblokuj element Audio tylko raz — nie resetuj src jeśli już gra lub grało
+      if (!this._audioUnlocked) {
+        if (!this.currentAudio) {
+          this.currentAudio = new Audio();
+        }
+        this.currentAudio.src =
+          "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
+        await this.currentAudio.play().catch(() => {});
+        this._audioUnlocked = true;
       }
-      this.currentAudio.src =
-        "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-      await this.currentAudio.play().catch(() => {});
       return true;
     } catch {
       return false;
@@ -250,9 +257,10 @@ class VoiceEngine {
     }
   }
 
-  // Rozpoczyna tryb ciągłego dialogu
+  // Rozpoczyna tryb ciągłego dialogu (wywoływane po zakończeniu powitania)
   public async startLiveDialogue() {
-    await this.unlock();
+    // Nie wywołujemy unlock() — jest już idempotentny, ale wywołanie go po sieci
+    // resetowałoby src elementu Audio. AudioContext odblokowany jest już z gestu.
     this.isContinuousMode = true;
     this.currentTranscript = "";
     this.lastNativeInterimText = "";
@@ -620,7 +628,8 @@ class VoiceEngine {
       this.currentAudio.pause();
       this.currentAudio.currentTime = 0;
       this.currentAudio.src = audioUrl;
-      this.currentAudio.load();
+      // Nie wywołujemy .load() — przeglądarka automatycznie przeładowuje po zmianie src,
+      // a jawne .load() powoduje trzaski na iOS Safari
 
       if (prevUrl) {
         try { URL.revokeObjectURL(prevUrl); } catch {}
