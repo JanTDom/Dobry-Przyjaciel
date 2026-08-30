@@ -13,7 +13,7 @@ export const BondOverview: React.FC<BondOverviewProps> = ({ profile, memories })
   return (
     <div className="flex flex-col gap-6">
       {/* Karta zrozumienia Ciebie */}
-      <div className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-warm-md relative overflow-hidden">
+      <div className="glass-sanctuary rounded-3xl p-6 sm:p-8 border border-cream-300 shadow-quiet-md relative overflow-hidden">
         <div className="absolute -right-8 -top-8 w-48 h-48 bg-sun-200/40 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex items-center gap-3 mb-4">
@@ -24,7 +24,7 @@ export const BondOverview: React.FC<BondOverviewProps> = ({ profile, memories })
             <h2 className="font-serif text-2xl sm:text-3xl text-cream-950 font-normal">
               Jak cię widzę i czego się o tobie uczę
             </h2>
-            <p className="font-sans text-xs text-cream-600 mt-0.5">
+            <p className="font-sans text-xs text-cream-700 mt-0.5">
               Spisane przez {profile.companionName} na podstawie twoich rozmów
             </p>
           </div>
@@ -44,20 +44,20 @@ export const BondOverview: React.FC<BondOverviewProps> = ({ profile, memories })
 
         {/* Wskaźniki relacji */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          <div className="bg-white border border-cream-300 p-4 rounded-2xl shadow-warm-sm">
-            <span className="text-[11px] text-cream-600 font-sans block mb-1 font-medium">Dni w relacji</span>
+          <div className="bg-white border border-cream-300 p-4 rounded-2xl shadow-quiet-sm">
+            <span className="text-[11px] text-cream-700 font-sans block mb-1 font-medium">Dni w relacji</span>
             <span className="font-serif text-xl text-sun-700 font-semibold">{profile.daysTogether} dzień</span>
           </div>
-          <div className="bg-white border border-cream-300 p-4 rounded-2xl shadow-warm-sm">
-            <span className="text-[11px] text-cream-600 font-sans block mb-1 font-medium">Zapamiętane lekcje</span>
+          <div className="bg-white border border-cream-300 p-4 rounded-2xl shadow-quiet-sm">
+            <span className="text-[11px] text-cream-700 font-sans block mb-1 font-medium">Zapamiętane lekcje</span>
             <span className="font-serif text-xl text-sun-700 font-semibold">{memories.length}</span>
           </div>
-          <div className="bg-white border border-cream-300 p-4 rounded-2xl shadow-warm-sm">
-            <span className="text-[11px] text-cream-600 font-sans block mb-1 font-medium">Nastrój</span>
+          <div className="bg-white border border-cream-300 p-4 rounded-2xl shadow-quiet-sm">
+            <span className="text-[11px] text-cream-700 font-sans block mb-1 font-medium">Nastrój</span>
             <span className="font-serif text-xl text-sun-700 font-semibold">Spokojny</span>
           </div>
-          <div className="bg-white border border-cream-300 p-4 rounded-2xl shadow-warm-sm">
-            <span className="text-[11px] text-cream-600 font-sans block mb-1 font-medium">Przystań</span>
+          <div className="bg-white border border-cream-300 p-4 rounded-2xl shadow-quiet-sm">
+            <span className="text-[11px] text-cream-700 font-sans block mb-1 font-medium">Przystań</span>
             <span className="font-serif text-xl text-sun-700 font-semibold">Aktywna</span>
           </div>
         </div>
@@ -69,27 +69,27 @@ export const BondOverview: React.FC<BondOverviewProps> = ({ profile, memories })
           {memories.map((mem) => (
             <div
               key={mem.id}
-              className="glass-sanctuary rounded-2xl p-5 border border-cream-300 hover:border-sun-300 shadow-warm-sm transition-all"
+              className="glass-sanctuary rounded-2xl p-5 border border-cream-300 hover:border-sun-300 shadow-quiet-sm transition-all"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[11px] font-sans uppercase tracking-wider text-sun-700 font-semibold">
                   {mem.category}
                 </span>
-                <span className="text-[11px] text-cream-500 font-sans">
+                <span className="text-[11px] text-ink-subtle font-sans font-medium">
                   {mem.extractedAt}
                 </span>
               </div>
               <h3 className="font-serif text-base text-cream-950 font-medium mb-1.5">
                 {mem.title}
               </h3>
-              <p className="font-sans text-xs text-cream-700 leading-relaxed">
+              <p className="font-sans text-xs text-cream-800 leading-relaxed">
                 {mem.detail}
               </p>
             </div>
           ))}
         </div>
       ) : (
-        <div className="glass-sanctuary rounded-2xl p-6 text-center border border-cream-300 text-cream-600 text-xs font-sans">
+        <div className="glass-sanctuary rounded-2xl p-6 text-center border border-cream-300 text-cream-700 text-xs font-sans">
           Brak zapisanych faktów. Porozmawiaj ze swoim przyjacielem, a on zapamięta najważniejsze wątki z waszych rozmów.
         </div>
       )}

@@ -50,45 +50,49 @@ export const LiveVoiceBar: React.FC<LiveVoiceBarProps> = ({
         <button
           type="button"
           onClick={onOpenLiveCall}
-          className="presence-btn-primary flex items-center gap-2 font-sans font-medium text-xs px-4 py-2.5 rounded-full transition-all select-none shadow-quiet-sm flex-shrink-0 active:scale-95"
+          aria-label="Uruchom pełnoekranową rozmowę głosową na żywo"
+          className="presence-btn-primary flex items-center gap-2 font-sans font-medium text-xs px-4 py-2.5 min-h-[44px] rounded-full transition-all select-none shadow-quiet-sm flex-shrink-0 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
           title="Uruchom pełnoekranową rozmowę głosową na żywo"
         >
-          <PhoneCall size={13} strokeWidth={1.75} className="animate-pulse text-warm-honey" />
+          <PhoneCall size={14} strokeWidth={1.75} className="animate-pulse text-warm-honey" />
           <span className="hidden sm:inline">Rozmawiaj na żywo</span>
           <span className="sm:hidden">Głos</span>
         </button>
 
-        {/* Pole wpisywania wiadomości */}
+        {/* Pole wpisywania wiadomości (text-base prevents iOS Safari zoom on focus) */}
         <input
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
+          aria-label="Wiadomość do Przyjaciela"
           placeholder={isRecording ? "Nagrywam... Dotknij mikrofon, by wysłać" : "Napisz do mnie lub nagraj głos..."}
-          className="flex-1 bg-transparent px-3 py-2 text-xs sm:text-sm font-sans text-ink placeholder:text-ink-subtle focus:outline-none"
+          className="flex-1 bg-transparent px-3 py-2 text-base sm:text-sm font-sans text-ink placeholder:text-ink-subtle focus:outline-none"
         />
 
         {/* Przycisk bezpośredniego nagrywania głosu na stronie głównej */}
         <button
           type="button"
           onClick={handleToggleVoiceRecord}
-          className={`p-2.5 rounded-full transition-all active:scale-95 ${
+          aria-label={isRecording ? "Zakończ i wyślij nagranie głosowe" : "Nagraj wiadomość głosową"}
+          className={`w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full transition-all active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 ${
             isRecording
               ? "bg-red-700 text-white animate-pulse shadow-quiet-sm"
               : "bg-paper-dark hover:bg-warm-amber/15 text-warm-amber border border-warm-amber/20"
           }`}
           title={isRecording ? "Wyślij nagranie" : "Nagraj szybką wiadomość głosową"}
         >
-          {isRecording ? <Radio size={14} className="animate-spin" /> : <Mic size={14} strokeWidth={1.75} />}
+          {isRecording ? <Radio size={16} className="animate-spin" /> : <Mic size={16} strokeWidth={1.75} />}
         </button>
 
         {/* Przycisk wysłania tekstu */}
         <button
           type="submit"
           disabled={!inputText.trim()}
-          className="p-2.5 rounded-full bg-paper-dark hover:bg-warm-amber/10 text-ink-muted hover:text-warm-amber disabled:opacity-30 transition-all mr-1"
+          aria-label="Wyślij wiadomość tekstową"
+          className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-paper-dark hover:bg-warm-amber/10 text-ink-muted hover:text-warm-amber disabled:opacity-30 transition-all mr-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
           title="Wyślij wiadomość"
         >
-          <Send size={14} strokeWidth={1.75} />
+          <Send size={15} strokeWidth={1.75} />
         </button>
       </form>
     </div>

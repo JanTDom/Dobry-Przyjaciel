@@ -106,9 +106,11 @@ export const VictoryVault: React.FC = () => {
         </div>
 
         <button
+          type="button"
           onClick={handleGenerateEveningLetter}
           disabled={isGenerating || !profile}
-          className="presence-btn-primary whitespace-nowrap px-6 py-3.5 rounded-full font-sans font-medium text-xs flex items-center gap-2 shadow-quiet-md active:scale-95 transition-all disabled:opacity-50"
+          aria-label={isGenerating ? "Generowanie listu w toku" : "Napisz dla mnie list wsparcia na dzisiejszy wieczór"}
+          className="presence-btn-primary w-full sm:w-auto justify-center min-h-[44px] px-6 py-3.5 rounded-full font-sans font-medium text-xs sm:text-sm flex items-center gap-2 shadow-quiet-md active:scale-95 transition-all disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 flex-shrink-0"
         >
           {isGenerating ? (
             <>
@@ -150,8 +152,10 @@ export const VictoryVault: React.FC = () => {
 
             <div className="flex items-center justify-between pt-4 border-t border-ink/8">
               <button
+                type="button"
                 onClick={() => handleToggleVoice(l)}
-                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-4 py-2 rounded-full font-medium"
+                aria-label={playingId === l.id ? `Zatrzymaj odsłuchiwanie listu: ${l.title}` : `Odsłuchaj list: ${l.title}`}
+                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-4 py-2.5 min-h-[40px] sm:min-h-[44px] rounded-full font-medium active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
               >
                 {playingId === l.id ? (
                   <>

@@ -12,7 +12,7 @@ interface LivingWarmHearthProps {
   intensity?: number;
 }
 
-const RING_BAR_COUNT = 32;
+const RING_BAR_COUNT = 24;
 
 export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
   isListening = false,
@@ -27,7 +27,7 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
   // Generowanie unoszących się iskier i drobinek ciepłego światła
   const embers = useMemo(
     () =>
-      Array.from({ length: 14 }, (_, i) => ({
+      Array.from({ length: 12 }, (_, i) => ({
         id: i,
         left: 45 + Math.sin(i * 1.5) * 24 + (i % 3) * 4,
         delay: (i * 0.5) % 4,
@@ -55,7 +55,7 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
 
   return (
     <div
-      className="relative flex items-center justify-center select-none"
+      className="relative flex items-center justify-center select-none gpu-layer"
       style={{ width: size, height: size }}
     >
       {/* 1. Zewnętrzna, głęboka poświata ciepłego bursztynu (Zawsze spójna, bez agresywnego czerwonego błysku) */}
@@ -68,6 +68,7 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
           background:
             "radial-gradient(circle, rgba(245, 158, 11, 0.30) 0%, rgba(251, 191, 36, 0.16) 45%, rgba(217, 119, 6, 0.05) 65%, transparent 75%)",
           filter: "blur(26px)",
+          willChange: "transform, opacity",
         }}
         animate={{
           scale: isSpeaking
@@ -101,6 +102,7 @@ export const LivingWarmHearth: React.FC<LivingWarmHearthProps> = ({
               height: 12 * scaleRatio,
               transformOrigin: `50% ${size * 0.42}px`,
               transform: `rotate(${bar.angle}deg) translateY(-${size * 0.42}px)`,
+              willChange: "transform, opacity",
             }}
             animate={{
               scaleY: isSpeaking

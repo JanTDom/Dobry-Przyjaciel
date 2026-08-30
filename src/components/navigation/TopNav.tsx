@@ -29,6 +29,8 @@ export const TopNav: React.FC<TopNavProps> = ({
   companionGender = "female",
 }) => {
   const pathname = usePathname();
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+
   // Obsługa zamykania menu klawiszem Escape lub kliknięciem na zewnątrz
   React.useEffect(() => {
     if (!showProfileMenu) return;

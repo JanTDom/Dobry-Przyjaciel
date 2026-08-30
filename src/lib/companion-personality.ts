@@ -51,7 +51,7 @@ export async function getCompanionReplyAsync(
           const cleanName = p.name.trim();
           const people = currentProfile.peopleInLife || [];
           const existingIdx = people.findIndex(
-            (item) => item.name.toLowerCase() === cleanName.toLowerCase()
+            (item: PersonInLife) => item.name.toLowerCase() === cleanName.toLowerCase()
           );
 
           if (existingIdx >= 0) {

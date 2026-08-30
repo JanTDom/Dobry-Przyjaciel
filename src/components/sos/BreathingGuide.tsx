@@ -73,7 +73,7 @@ export const BreathingGuide: React.FC = () => {
         Prosty, 4-fazowy rytm, który pomaga wyciszyć gonitwę myśli i przywrócić poczucie spokoju.
       </p>
 
-      <div className="relative w-56 h-56 flex items-center justify-center mb-8">
+      <div className="relative w-56 h-56 flex items-center justify-center mb-8" aria-live="polite">
         <motion.div
           animate={{
             scale:
@@ -87,7 +87,7 @@ export const BreathingGuide: React.FC = () => {
             opacity: phase === "Zatrzymaj" || phase === "Wdech" ? 0.7 : 0.3,
           }}
           transition={{ duration: 4, ease: "easeInOut" }}
-          className="absolute inset-0 rounded-full bg-gradient-to-tr from-warm-amber/20 via-warm-apricot/25 to-warm-sage/20 blur-xl"
+          className="absolute inset-0 rounded-full bg-gradient-to-tr from-warm-amber/20 via-warm-apricot/25 to-warm-sage/20 blur-xl gpu-layer"
         />
 
         <div className="relative z-10 flex flex-col items-center justify-center rounded-full w-44 h-44 bg-paper-surface border border-ink/10 shadow-quiet-sm">
@@ -102,8 +102,10 @@ export const BreathingGuide: React.FC = () => {
 
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={handleToggle}
-          className="presence-btn-primary flex items-center gap-2 font-sans font-medium text-xs px-7 py-3.5 rounded-full active:scale-95 transition-all shadow-quiet-md"
+          aria-label={isActive ? "Wstrzymaj ćwiczenie oddechowe" : "Rozpocznij ćwiczenie oddechowe 4-4-4-4"}
+          className="presence-btn-primary flex items-center justify-center gap-2 font-sans font-medium text-xs sm:text-sm px-7 py-3.5 min-h-[44px] rounded-full active:scale-95 transition-all shadow-quiet-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
         >
           {isActive ? <Pause size={14} /> : <Play size={14} />}
           <span>{isActive ? "Wstrzymaj ćwiczenie" : "Rozpocznij oddech"}</span>
@@ -111,8 +113,10 @@ export const BreathingGuide: React.FC = () => {
 
         {isActive && (
           <button
+            type="button"
             onClick={handleReset}
-            className="presence-btn-secondary p-3 rounded-full text-ink-muted hover:text-ink"
+            aria-label="Zresetuj ćwiczenie oddechowe do początku"
+            className="presence-btn-secondary w-11 h-11 min-w-[44px] min-h-[44px] rounded-full text-ink-muted hover:text-ink flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 active:scale-95 transition-all"
             title="Resetuj oddech"
           >
             <RotateCcw size={15} strokeWidth={1.75} />

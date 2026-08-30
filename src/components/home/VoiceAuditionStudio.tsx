@@ -103,7 +103,7 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
         </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4" role="region" aria-label="Katalog głosów do wyboru">
         {VOICES.map((v) => {
           const isPlaying = playingVoiceId === v.id;
           const isCurrentChoice = activeVoiceName === v.voiceName;
@@ -112,8 +112,17 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
           return (
             <div
               key={v.id}
+              tabIndex={0}
+              role="button"
+              aria-label={`Głos ${v.name}, ${v.category}. ${isPlaying ? "Trwa odtwarzanie" : "Dotknij, aby odsłuchać"}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleTogglePlay(v);
+                }
+              }}
               onClick={() => handleTogglePlay(v)}
-              className={`p-5 sm:p-6 rounded-2xl border transition-all duration-300 relative group cursor-pointer flex flex-col justify-between ${
+              className={`p-5 sm:p-6 rounded-2xl border transition-all duration-300 relative group cursor-pointer flex flex-col justify-between focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 ${
                 isPlaying
                   ? "bg-white border-warm-amber shadow-quiet-lg ring-2 ring-warm-amber/30"
                   : "bg-paper-surface/90 hover:bg-white border-ink/8 hover:border-warm-amber/30 shadow-quiet-sm"
@@ -139,11 +148,11 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
 
                   {/* Wskaźnik animowanej fali dźwiękowej */}
                   {isPlaying && (
-                    <div className="flex items-center gap-1 h-6 px-3 py-1 rounded-full bg-amber-100/90 border border-amber-300">
-                      <span className="w-1 bg-warm-amber rounded-full animate-[bounce_0.6s_infinite_100ms] h-3" />
-                      <span className="w-1 bg-warm-amber rounded-full animate-[bounce_0.6s_infinite_300ms] h-4" />
-                      <span className="w-1 bg-warm-amber rounded-full animate-[bounce_0.6s_infinite_200ms] h-2.5" />
-                      <span className="w-1 bg-warm-amber rounded-full animate-[bounce_0.6s_infinite_400ms] h-3.5" />
+                    <div className="flex items-center gap-1 h-6 px-3 py-1 rounded-full bg-amber-100/90 border border-amber-300" aria-label="Odtwarzanie dźwięku">
+                      <span className="w-1 bg-warm-amber rounded-full animate-[pulse_0.6s_infinite_100ms] h-3 gpu-layer" />
+                      <span className="w-1 bg-warm-amber rounded-full animate-[pulse_0.6s_infinite_300ms] h-4 gpu-layer" />
+                      <span className="w-1 bg-warm-amber rounded-full animate-[pulse_0.6s_infinite_200ms] h-2.5 gpu-layer" />
+                      <span className="w-1 bg-warm-amber rounded-full animate-[pulse_0.6s_infinite_400ms] h-3.5 gpu-layer" />
                     </div>
                   )}
                 </div>
@@ -152,11 +161,12 @@ export const VoiceAuditionStudio: React.FC<VoiceAuditionStudioProps> = ({
                   {/* Przycisk odtwarzania */}
                   <button
                     type="button"
+                    aria-label={isPlaying ? `Zatrzymaj odsłuchiwanie głosu: ${v.name}` : `Odsłuchaj próbkę głosu: ${v.name}`}
                     onClick={(e) => {
                       e.stopPropagation();
                       handleTogglePlay(v);
                     }}
-                    className={`w-11 h-11 rounded-full flex items-center justify-center transition-transform active:scale-90 shadow-quiet-sm flex-shrink-0 ${
+                    className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center transition-transform active:scale-90 shadow-quiet-sm flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 ${
                       isPlaying
                         ? "bg-gradient-to-r from-amber-500 to-yellow-400 text-stone-950 font-bold"
                         : "bg-paper-dark group-hover:bg-amber-100 text-ink-muted group-hover:text-warm-amber"

@@ -28,9 +28,10 @@ export const LivingPresenceOrb: React.FC<LivingPresenceOrbProps> = ({
 
     let animationFrameId: number;
     let t = 0;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const render = () => {
-      t += 0.025;
+      t += prefersReducedMotion ? 0.008 : 0.025;
       const width = canvas.width;
       const height = canvas.height;
       const centerX = width / 2;
@@ -146,18 +147,27 @@ export const LivingPresenceOrb: React.FC<LivingPresenceOrbProps> = ({
 
   return (
     <div
+      tabIndex={0}
+      role="button"
+      aria-label="Kula obecności przyjaciela - dotknij, aby rozmawiać"
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          if (onClick) onClick();
+        }
+      }}
       onClick={onClick}
-      className={`relative flex items-center justify-center cursor-pointer select-none group ${className}`}
+      className={`relative flex items-center justify-center cursor-pointer select-none group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 rounded-full p-2 ${className}`}
     >
       <canvas
         ref={canvasRef}
         width={320}
         height={320}
-        className="w-52 h-52 sm:w-68 sm:h-68 drop-shadow-2xl transition-transform duration-700 group-hover:scale-105"
+        className="w-52 h-52 sm:w-68 sm:h-68 drop-shadow-2xl transition-transform duration-700 group-hover:scale-105 gpu-layer"
       />
-      <div className="absolute -bottom-2 px-3.5 py-1 rounded-full bg-surface-100/90 backdrop-blur-md border border-white/10 text-xs text-warm-100 shadow-xl flex items-center gap-2 pointer-events-none transition-all">
-        <span className={`w-2 h-2 rounded-full ${isSpeaking ? "bg-amber-400 animate-ping" : isListening ? "bg-emerald-400 animate-pulse" : "bg-warm-400"}`} />
-        <span className="font-medium tracking-wide">
+      <div className="absolute -bottom-2 px-3.5 py-1 rounded-full bg-white/95 backdrop-blur-md border border-warm-amber/25 text-xs text-ink shadow-quiet-md flex items-center gap-2 pointer-events-none transition-all">
+        <span className={`w-2 h-2 rounded-full ${isSpeaking ? "bg-amber-400 animate-ping" : isListening ? "bg-emerald-500 animate-pulse" : "bg-warm-amber"}`} />
+        <span className="font-medium tracking-wide text-[11px] font-sans">
           {isSpeaking ? "Mówi do Ciebie..." : isListening ? "Słucha z uwagą..." : "Obecna przy Tobie"}
         </span>
       </div>
