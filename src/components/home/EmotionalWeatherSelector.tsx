@@ -88,15 +88,18 @@ export const EmotionalWeatherSelector: React.FC<EmotionalWeatherSelectorProps> =
       </div>
 
       {/* 4 interaktywne kafelki nastroju */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3" role="group" aria-label="Wybór stanu emocjonalnego">
         {MOODS.map((m) => {
           const isSelected = selectedMood.key === m.key;
           const Icon = m.icon;
           return (
             <button
               key={m.key}
+              type="button"
               onClick={() => setSelectedMood(m)}
-              className={`p-3.5 sm:p-4 rounded-2xl border text-left flex flex-col justify-between transition-all duration-300 relative group cursor-pointer active:scale-95 ${
+              aria-pressed={isSelected}
+              aria-label={`Nastrój: ${m.label} - ${m.sublabel}`}
+              className={`p-3.5 sm:p-4 min-h-[96px] rounded-2xl border text-left flex flex-col justify-between transition-all duration-300 relative group cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 ${
                 isSelected
                   ? "bg-white/95 border-warm-amber ring-2 ring-warm-amber/30 shadow-quiet-md"
                   : "bg-paper-surface/80 hover:bg-white/90 border-ink/8 hover:border-warm-amber/30 shadow-quiet-sm"
@@ -121,7 +124,7 @@ export const EmotionalWeatherSelector: React.FC<EmotionalWeatherSelectorProps> =
                 <span className="font-serif text-xs sm:text-sm font-medium text-ink block leading-snug mb-0.5">
                   {m.label}
                 </span>
-                <span className="text-[10px] text-ink-muted font-sans line-clamp-1">
+                <span className="text-[11px] text-ink-muted font-sans line-clamp-1">
                   {m.sublabel}
                 </span>
               </div>
@@ -131,44 +134,48 @@ export const EmotionalWeatherSelector: React.FC<EmotionalWeatherSelectorProps> =
       </div>
 
       {/* Dynamiczna, luksusowa odpowiedź i zaproszenie do rozmowy */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={selectedMood.key}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
-          transition={{ duration: 0.25 }}
-          className="bg-white/90 backdrop-blur-xl border border-warm-amber/25 rounded-3xl p-5 sm:p-7 shadow-quiet-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative overflow-hidden"
-        >
-          {/* Delikatna poświata w tle */}
-          <div
-            aria-hidden
-            className="absolute -right-10 -bottom-10 w-48 h-48 rounded-full bg-warm-amber/10 blur-2xl pointer-events-none"
-          />
-
-          <div className="max-w-lg flex-1">
-            <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-warm-amber font-sans">
-              <Sparkles size={13} />
-              <span>{companionName} odpowiada na Twój stan:</span>
-            </div>
-            <p className="font-serif text-base sm:text-lg text-ink italic leading-relaxed mb-1">
-              „{selectedMood.companionResponse}”
-            </p>
-            <p className="font-sans text-xs text-ink-muted leading-relaxed">
-              {selectedMood.actionPrompt}
-            </p>
-          </div>
-
-          <button
-            onClick={() => onSelectMoodAction(selectedMood)}
-            className="presence-btn-primary flex items-center gap-2 font-sans font-medium text-xs sm:text-sm px-6 py-3.5 rounded-full shadow-quiet-md active:scale-95 transition-all whitespace-nowrap flex-shrink-0"
+      <div className="min-h-[160px] sm:min-h-[130px] flex flex-col">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={selectedMood.key}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            className="bg-white/90 backdrop-blur-xl border border-warm-amber/25 rounded-3xl p-5 sm:p-7 shadow-quiet-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative overflow-hidden flex-1"
           >
-            <PhoneCall size={14} className="animate-pulse text-warm-honey" />
-            <span>Porozmawiajmy o tym</span>
-            <ArrowRight size={13} />
-          </button>
-        </motion.div>
-      </AnimatePresence>
+            {/* Delikatna poświata w tle */}
+            <div
+              aria-hidden="true"
+              className="absolute -right-10 -bottom-10 w-48 h-48 rounded-full bg-warm-amber/10 blur-2xl pointer-events-none"
+            />
+
+            <div className="max-w-lg flex-1">
+              <div className="flex items-center gap-2 mb-2 text-xs font-semibold text-warm-amber font-sans">
+                <Sparkles size={13} />
+                <span>{companionName} odpowiada na Twój stan:</span>
+              </div>
+              <p className="font-serif text-base sm:text-lg text-ink italic leading-relaxed mb-1">
+                „{selectedMood.companionResponse}”
+              </p>
+              <p className="font-sans text-xs text-ink-muted leading-relaxed">
+                {selectedMood.actionPrompt}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => onSelectMoodAction(selectedMood)}
+              aria-label={`Rozpocznij rozmowę na temat: ${selectedMood.label}`}
+              className="presence-btn-primary flex items-center justify-center gap-2 font-sans font-medium text-xs sm:text-sm px-6 py-3.5 min-h-[44px] rounded-full shadow-quiet-md active:scale-95 transition-all w-full sm:w-auto flex-shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
+            >
+              <PhoneCall size={14} className="animate-pulse text-warm-honey" />
+              <span>Porozmawiajmy o tym</span>
+              <ArrowRight size={13} />
+            </button>
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 };

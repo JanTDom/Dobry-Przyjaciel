@@ -85,6 +85,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   }, [isOpen]);
 
   const handleCloseModal = useCallback(() => {
+    isOpenRef.current = false;
     voiceEngine.stopLiveDialogue();
     voiceEngine.stopSpeaking();
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
@@ -179,6 +180,8 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       return;
     }
 
+    isOpenRef.current = true;
+
     // Reset stanu
     setCallDuration(0);
     setIsCallEnded(false);
@@ -222,10 +225,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
       currentProfile.companionVoice ||
       (currentProfile.companionGender === "male" ? "echo" : "nova");
 
-    // isOpenRef: chroni przed uruchomieniem mikrofonu jeśli modal już zamknięty
-    // (failsafe timer może odpalić się po wyjściu z modala)
-    isOpenRef.current = true;
-
     // Żądamy dostępu do mikrofonu równolegle z powitaniem —
     // dialog pojawia się natychmiast, a mic jest gotowy gdy powitanie się kończy
     voiceEngine.getOrCreateMediaStream().catch(() => {});
@@ -259,6 +258,7 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
   }, [isOpen]);
 
   const handleEndCallClick = () => {
+    isOpenRef.current = false;
     voiceEngine.stopLiveDialogue();
     voiceEngine.stopSpeaking();
     if (durationTimerRef.current) clearInterval(durationTimerRef.current);
@@ -375,55 +375,6 @@ export const LiveVoiceCallModal: React.FC<LiveVoiceCallModalProps> = ({
                 </div>
               )}
 
-              <div className="mt-5">
-                <button
-                  onClick={() => setShowTranscriptDrawer(!showTranscriptDrawer)}
-                  className="flex items-center gap-2 text-xs text-stone-300 hover:text-white px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 border border-amber-500/20 transition-colors shadow-lg backdrop-blur-md"
-                >
-                  <MessageSquare size={13} strokeWidth={1.75} className="text-amber-400" />
-                  <span>Historia rozmowy</span>
-                  {showTranscriptDrawer ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                </button>
-              </div>
-
-              {showTranscriptDrawer && (
-                <div className="mt-3 w-full max-h-60 overflow-y-auto bg-[#181410]/95 border border-amber-500/25 rounded-2xl p-4 text-left text-xs font-sans text-stone-200 space-y-3 shadow-2xl backdrop-blur-xl">
-                  <div className="text-[10px] uppercase tracking-wider text-amber-400/80 font-semibold border-b border-white/10 pb-1.5">
-                    Rozmowa z {profile.companionName}
-                  </div>
-                  <div className="space-y-2.5 max-h-36 overflow-y-auto pr-1">
-                    {sessionMessages.length === 0 ? (
-                      <p className="text-stone-500 italic">Brak wypowiedzi w tej sesji.</p>
-                    ) : (
-                      sessionMessages.map((m, idx) => (
-                        <div key={idx} className={m.sender === "user" ? "text-right" : "text-left"}>
-                          <span className="font-semibold text-amber-300/80">
-                            {m.sender === "user" ? profile.name : profile.companionName}:
-                          </span>{" "}
-                          <span className="text-[#FBF8F1]">{m.text}</span>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  <form onSubmit={handleDrawerSend} className="flex items-center gap-2 pt-2.5 border-t border-white/10">
-                    <input
-                      type="text"
-                      value={drawerInputText}
-                      onChange={(e) => setDrawerInputText(e.target.value)}
-                      placeholder="Napisz wiadomość..."
-                      className="flex-1 bg-white/5 px-3.5 py-2 rounded-full text-xs font-sans text-white placeholder:text-stone-500 border border-white/10 focus:outline-none focus:border-amber-400"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!drawerInputText.trim()}
-                      className="p-2 rounded-full bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold disabled:opacity-30 transition-all shadow-md"
-                    >
-                      <Send size={13} />
-                    </button>
-                  </form>
-                </div>
-              )}
             </div>
 
             <div className="w-full max-w-md flex items-center justify-center gap-4 pt-4 pb-2 z-10">

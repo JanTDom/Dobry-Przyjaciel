@@ -92,3 +92,47 @@ export interface UserProfile {
 }
 
 export type SoundscapeType = "fireplace" | "rain" | "ocean" | "alpha_waves" | "forest";
+
+export interface ExtractedPersonData {
+  name: string;
+  relation?: string;
+  sentiment?: "supportive" | "neutral" | "complicated" | "stressful";
+  notes?: string;
+}
+
+export interface ExtractedMemoryFactData {
+  title: string;
+  detail?: string;
+  category?: "core_value" | "vulnerability" | "goal" | "struggle" | "routine" | "spark_of_joy" | "relationship";
+}
+
+export interface ExtractedCrisisData {
+  title: string;
+  whatHappened?: string;
+  howYouSurvived?: string;
+  strengthDemonstrated?: string;
+}
+
+export interface ExtractedMemoryPayload {
+  person?: ExtractedPersonData | null;
+  memoryFact?: ExtractedMemoryFactData | null;
+  overcomeCrisis?: ExtractedCrisisData | null;
+}
+
+export interface ChatApiRequest {
+  message: string;
+  profile?: Partial<UserProfile>;
+  history?: Message[];
+  accessCode?: string;
+}
+
+export interface ChatApiResponse {
+  reply: string;
+  moodContext: MoodType;
+  companionNameUpdate?: string | null;
+  userNameUpdate?: string | null;
+  extractedMemory?: ExtractedMemoryPayload | null;
+  error?: string;
+  details?: string;
+}
+

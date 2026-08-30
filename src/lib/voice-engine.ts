@@ -148,7 +148,7 @@ class VoiceEngine {
             if (AudioCtx) this.audioContext = new AudioCtx();
           }
           if (this.audioContext?.state === "suspended") {
-            await this.audioContext.resume();
+            this.audioContext.resume().catch(() => {});
           }
           if (this.audioContext) {
             const source = this.audioContext.createMediaStreamSource(stream);
@@ -537,6 +537,8 @@ class VoiceEngine {
     skipIfBusy = false
   ): Promise<boolean> {
     if (!text?.trim()) return false;
+    
+    if (!this.currentAudio) this.currentAudio = new Audio();
 
     this.isMutedForPlayback = true;
     if (this.isCurrentlyRecording && this.mediaRecorder) {
@@ -563,7 +565,6 @@ class VoiceEngine {
       }
 
       const blob = await res.blob();
-      if (!this.currentAudio) this.currentAudio = new Audio();
 
       const prevUrl = this._currentAudioUrl;
       const audioUrl = URL.createObjectURL(blob);

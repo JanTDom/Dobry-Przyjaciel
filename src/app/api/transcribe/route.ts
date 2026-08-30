@@ -63,12 +63,13 @@ export async function POST(req: NextRequest) {
 
     // Wybór właściwego rozszerzenia pliku dla Whisper w zależności od typu MIME (iOS mp4 vs webm vs wav)
     const mimeType = (file.type || "").toLowerCase();
+    const originalName = ((file as any).name || "").toLowerCase();
     let filename = "audio.webm";
-    if (mimeType.includes("mp4") || mimeType.includes("m4a") || mimeType.includes("aac")) {
+    if (mimeType.includes("mp4") || mimeType.includes("m4a") || mimeType.includes("aac") || originalName.endsWith(".mp4") || originalName.endsWith(".m4a")) {
       filename = "audio.mp4";
-    } else if (mimeType.includes("wav")) {
+    } else if (mimeType.includes("wav") || originalName.endsWith(".wav")) {
       filename = "audio.wav";
-    } else if (mimeType.includes("ogg")) {
+    } else if (mimeType.includes("ogg") || originalName.endsWith(".ogg")) {
       filename = "audio.ogg";
     }
 

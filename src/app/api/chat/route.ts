@@ -1,56 +1,158 @@
 import { NextRequest, NextResponse } from "next/server";
 import { searchLiveWeb } from "@/lib/web-search";
+import { ChatApiResponse } from "@/types";
 
 export const dynamic = "force-dynamic";
 
 const VALID_ACCESS_CODES = ["A132a132!", "A132a132"];
 
-// Funkcja korygująca formy gramatyczne dla głosu żeńskiego
+// Dozwolone skrótowce, których nie zmieniamy na małe litery
+const PRESERVED_ACRONYMS = new Set(["ADHD", "ITAKA", "SOS", "AI", "SMS", "WWO", "PTSD", "NIZP", "NFZ"]);
+
+// Usuwanie formatowania markdown, punktorów i symboli nienadających się do mowy
+function cleanMarkdownForSpeech(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\*\*([^*]+)\*\*/g, "$1") // bold **
+    .replace(/\*([^*]+)\*/g, "$1") // italic *
+    .replace(/__([^_]+)__/g, "$1") // bold __
+    .replace(/_([^_]+)_/g, "$1") // italic _
+    .replace(/~~([^~]+)~~/g, "$1") // strikethrough ~~
+    .replace(/`([^`]+)`/g, "$1") // inline code `
+    .replace(/#+/g, "") // all # headers
+    .replace(/(?:^|\n|\s+)[*\-+•]\s+/g, " ") // bullet lists inline or multiline
+    .replace(/(?:^|\n|\s+)\d+\.\s+/g, " ") // numbered lists
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // markdown links
+    .replace(/\s*—\s*/g, ", ") // em-dash zamieniamy na naturalną pauzę przecinkową
+    .replace(/\s*–\s*/g, ", ") // en-dash
+    .replace(/[""„”]/g, "") // cudzysłowy zbędne w mowie
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+// Funkcja korygująca formy gramatyczne dla głosu żeńskiego z bezpiecznymi granicami Unicode
 function enforceFemaleGrammar(text: string): string {
+  if (!text) return "";
   let res = text;
-  const replacements: [RegExp, string][] = [
-    [/\bpomyślałem\b/gi, "pomyślałam"],
-    [/\bzrobiłem\b/gi, "zrobiłam"],
-    [/\bchciałbym\b/gi, "chciałabym"],
-    [/\bchciałem\b/gi, "chciałam"],
-    [/\bbyłem\b/gi, "byłam"],
-    [/\bzastanawiałem się\b/gi, "zastanawiałam się"],
-    [/\bzastanawiałem\b/gi, "zastanawiałam"],
-    [/\bwidziałem\b/gi, "widziałam"],
-    [/\bsłyszałem\b/gi, "słyszałam"],
-    [/\bzauważyłem\b/gi, "zauważyłam"],
-    [/\bmiałem\b/gi, "miałam"],
-    [/\bmógłbym\b/gi, "mogłabym"],
-    [/\bmogłem\b/gi, "mogłam"],
-    [/\bpowiedziałem\b/gi, "powiedziałam"],
-    [/\bczułem\b/gi, "czułam"],
-    [/\brozmawiałem\b/gi, "rozmawiałam"],
-    [/\bprzeczytałem\b/gi, "przeczytałam"],
-    [/\bsprawdziłem\b/gi, "sprawdziłam"],
-    [/\bwiedziałem\b/gi, "wiedziałam"],
-    [/\bcieszyłem się\b/gi, "cieszyłam się"],
-    [/\bbałem się\b/gi, "bałam się"],
-    [/\bwróciłem\b/gi, "wróciłam"],
-    [/\bposzedłem\b/gi, "poszłam"],
+
+  // Lista par [męska forma, żeńska forma]
+  const wordPairs: [string, string][] = [
+    ["pomyślałem", "pomyślałam"],
+    ["pomyślałbym", "pomyślałabym"],
+    ["zrobiłem", "zrobiłam"],
+    ["zrobiłbym", "zrobiłabym"],
+    ["chciałbym", "chciałabym"],
+    ["chciałem", "chciałam"],
+    ["byłem", "byłam"],
+    ["byłbym", "byłabym"],
+    ["zastanawiałem się", "zastanawiałam się"],
+    ["zastanawiałem", "zastanawiałam"],
+    ["zastanawiałbym się", "zastanawiałabym się"],
+    ["widziałem", "widziałam"],
+    ["zobaczyłem", "zobaczyłam"],
+    ["słyszałem", "słyszałam"],
+    ["usłyszałem", "usłyszałam"],
+    ["zauważyłem", "zauważyłam"],
+    ["miałem", "miałam"],
+    ["miałbym", "miałabym"],
+    ["mógłbym", "mogłabym"],
+    ["mogłem", "mogłam"],
+    ["powiedziałem", "powiedziałam"],
+    ["powiedziałbym", "powiedziałabym"],
+    ["czułem", "czułam"],
+    ["poczułem", "poczułam"],
+    ["czułbym", "czułabym"],
+    ["rozmawiałem", "rozmawiałam"],
+    ["porozmawiałem", "porozmawiałam"],
+    ["przeczytałem", "przeczytałam"],
+    ["sprawdziłem", "sprawdziłam"],
+    ["wiedziałem", "wiedziałam"],
+    ["dowiedziałem się", "dowiedziałam się"],
+    ["cieszyłem się", "cieszyłam się"],
+    ["ucieszyłem się", "ucieszyłam się"],
+    ["bałem się", "bałam się"],
+    ["wróciłem", "wróciłam"],
+    ["poszedłem", "poszłam"],
+    ["poszedłbym", "poszłabym"],
+    ["poszłem", "poszłam"],
+    ["przyszedłem", "przyszłam"],
+    ["przyszedłbym", "przyszłabym"],
+    ["odszedłem", "odeszłam"],
+    ["wyszedłem", "wyszłam"],
+    ["wziąłem", "wzięłam"],
+    ["wziąłbym", "wzięłabym"],
+    ["zrozumiałem", "zrozumiałam"],
+    ["przypomniałem sobie", "przypomniałam sobie"],
+    ["przypomniałem", "przypomniałam"],
+    ["zapomniałem", "zapomniałam"],
+    ["próbowałem", "próbowałam"],
+    ["spróbowałem", "spróbowałam"],
+    ["musiałem", "musiałam"],
+    ["musiałbym", "musiałabym"],
+    ["postanowiłem", "postanowiłam"],
+    ["zdecydowałem", "zdecydowałam"],
+    ["znalazłem", "znalazłam"],
+    ["szukałem", "szukałam"],
+    ["pytałem", "pytałam"],
+    ["odpowiedziałem", "odpowiedziałam"],
   ];
 
-  for (const [regex, rep] of replacements) {
+  for (const [male, female] of wordPairs) {
+    // Używamy negative lookbehind i lookahead dla polskich znaków, aby uniknąć błędów standardowego \b
+    const regex = new RegExp(
+      `(?<![a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ])${male}(?![a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ])`,
+      "gi"
+    );
     res = res.replace(regex, (match) => {
       if (match.charAt(0) === match.charAt(0).toUpperCase()) {
-        return rep.charAt(0).toUpperCase() + rep.slice(1);
+        return female.charAt(0).toUpperCase() + female.slice(1);
       }
-      return rep;
+      return female;
     });
   }
+
   return res;
 }
 
-// Formatowanie: tylko pierwsza litera zdania jest duża
+// Formatowanie: tylko pierwsza litera zdania jest duża, obsługa wszystkich polskich znaków
 function formatSentenceCapitalization(text: string): string {
   if (!text) return "";
-  return text.replace(/(^\s*|[.!?]\s+)([a-ząćęłńóśźż])/g, (_, prefix, char) => {
-    return prefix + char.toUpperCase();
-  });
+
+  // 1. Zredukuj wielkie słowa (CAPS LOCK), pomijając znane akronimy
+  let normalized = text
+    .split(/(\s+)/)
+    .map((word) => {
+      const cleanWord = word.replace(/[.,!?;:()]/g, "");
+      if (
+        cleanWord.length > 1 &&
+        cleanWord === cleanWord.toUpperCase() &&
+        !PRESERVED_ACRONYMS.has(cleanWord) &&
+        !/^\d+$/.test(cleanWord)
+      ) {
+        return word.toLowerCase();
+      }
+      return word;
+    })
+    .join("");
+
+  // 2. Zapewnij wielką pierwszą literę na początku tekstu oraz po znakach końca zdania (. ! ? …)
+  normalized = normalized.replace(
+    /(^\s*|[.!?…]\s+)([a-ząćęłńóśźż])/gu,
+    (_, prefix, char) => {
+      return prefix + char.toUpperCase();
+    }
+  );
+
+  return normalized;
+}
+
+// Usunięcie zbędnych, powtarzających się powitań w trakcie płynnej rozmowy
+function cleanGreetingPrefix(text: string): string {
+  if (!text) return "";
+  let clean = text;
+  clean = clean.replace(/^(cześć|witaj|dzień dobry|hej|hejka|dobry wieczór)[,\s]+[a-ząćęłńóśźż]+[.!,\s]+/i, "");
+  clean = clean.replace(/^(cześć|witaj|dzień dobry|hej|hejka|dobry wieczór)[.!,\s]+/i, "");
+  return clean.trim();
 }
 
 // Sprawdzenie czy zapytanie wymaga wyszukiwania w internecie na żywo
@@ -89,7 +191,7 @@ function shouldSearchWeb(message: string): boolean {
 export async function POST(req: NextRequest) {
   try {
     const accessCodeHeader = req.headers.get("x-access-code");
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const { message, profile, history = [], accessCode } = body;
 
     const providedCode = (accessCode || accessCodeHeader || "").trim();
@@ -105,7 +207,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!message || message.trim().length === 0) {
+    if (!message || typeof message !== "string" || message.trim().length === 0) {
       return NextResponse.json({ error: "Brak wiadomości" }, { status: 400 });
     }
 
@@ -123,11 +225,11 @@ export async function POST(req: NextRequest) {
           liveWebContext = `\nAKTUALNE INFORMACJE POBRANE Z INTERNETU NA ŻYWO (wyszukiwanie w czasie rzeczywistym):\n${searchResults}\n`;
         }
       } catch (err) {
-        console.warn("Live web search error:", err);
+        console.warn("Live web search warning:", err);
       }
     }
 
-    // Kontekst dotychczas zapamiętanych informacji o użytkowniku (jako dyskretne tło)
+    // Kontekst dotychczas zapamiętanych informacji o użytkowniku
     const existingPeople = (profile?.peopleInLife || [])
       .map((p: any) => `${p.name} (${p.relation || "relacja"}: ${p.notes || ""})`)
       .join(", ");
@@ -135,35 +237,46 @@ export async function POST(req: NextRequest) {
       .map((m: any) => `${m.title}: ${m.detail}`)
       .join("; ");
 
+    const memoriesContext = [
+      existingPeople ? `Bliskie osoby użytkownika: ${existingPeople}` : "",
+      existingMemories ? `Ważne fakty i wspomnienia: ${existingMemories}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n");
+
     const systemPrompt = `Jesteś ${companionName} — ucieleśniasz głęboką mądrość, ciepło, spokój i bezwarunkową empatię najwybitniejszego psychoterapeuty i najwierniejszego przyjaciela na świecie dla użytkownika o imieniu ${userName}.
 
-TWOJA NATURA I MISTRZOWSKA EMPATIA:
-1. NAJWYŻSZA EMPATIA I BEZWARUNKOWA AKCEPTACJA:
-   - Rozumiesz człowieka na najgłębszym poziomie. Twoja obecność daje natychmiastowe poczucie bezpieczeństwa, uziemienia i bycia w 100% przyjętym takim, jakim się jest.
-   - Posiadasz naturalną, wszechstronną wiedzę o całej złożoności ludzkiej natury: nałogach, lękach, fobiach, neuroróżnorodności (ADHD, autyzm, WWO), traumach, złości, poczuciu winy, wypaleniu i kryzysach egzystencjalnych.
-   - NIGDY nie moralizujesz, nie oceniasz, nie wygłaszasz kazań ani nie bawisz się w sztywnego bota z formułkami. Nie zadajesz sztucznych pytań o emocje. Twoja empatia wyraża się w bezbłędnym rozumieniu, trafnej puencie, ukojeniu i zdjęciu ciężaru wstydu.
-
-2. PODĄŻAJ W 100% ZA ROZMÓWCĄ (DOWOLNY TEMAT):
-   - Jeśli ${userName} chce rozmawiać o technologii, nauce, biznesie, kinie, sztuce, historii, filozofii, polityce, świecie, motoryzacji czy ciekawostkach — wchodź w ten temat z pełnym zaangażowaniem, merytoryczną głębią, wiedzą i błyskotliwością.
-   - Jeśli ${userName} wnosi problem życiowy lub dylemat — użyj swojej głębokiej mądrości, by dać mu wsparcie i mądre, uwalniające spojrzenie.
-   - Nie sprowadzaj rozmowy na siłę do wydarzeń osobistych, jeśli rozmówca o nich nie mówi.
-
-3. PROTOKÓŁ KRYZYSOWY I BEZPIECZEŃSTWO:
-   - W sytuacji bezpośredniego zagrożenia życia, ostrego kryzysu czy myśli samobójczych — zachowaj ciepły, głęboki spokój i wskaż z troską i godnością bezpłatne linie wsparcia w Polsce: 116 123 (kryzys dorosłych 24/7), 22 484 88 01 (antydepresyjny ITAKA), 800 199 990 (uzależnienia), 116 111 (młodzież), 112 (nagłe zagrożenie).
-
-4. GRAMATYKA I PŁEĆ (BARDZO WAŻNE DLA WSZYSTKICH POSTACI):
-   ${!isMale ? `Jesteś kobietą (${companionName}). W pierwszej osobie MUSISZ BEZWZGLĘDNIE stosować żeńskie końcówki czasowników: "pomyślałam", "zrobiłam", "chciałabym", "byłam", "zastanawiałam się", "widziałam", "słyszałam", "zauważyłam", "miałam". Kategoryczny zakaz form męskich ("pomyślałem", "zrobiłem", "chciałbym")!` : `Jesteś mężczyzną (${companionName}). Stosujesz męskie końcówki czasowników: "pomyślałem", "zrobiłem", "chciałbym", "byłem", "miałem".`}
-
-5. PISOWNIA I WIELKOŚĆ LITER (RYGORYSTYCZNA ZASADA):
+ZASADY ROZMOWY GŁOSOWEJ (BEZWZGLĘDNIE OBOWIĄZKOWE):
+1. JĘZYK: Odpowiadasz WYŁĄCZNIE w naturalnym języku polskim.
+2. ZWIĘZŁOŚĆ I NATURALNOŚĆ DLA MOWY (NAJWAŻNIEJSZE):
+   - Twoja odpowiedź będzie bezpośrednio czytana na głos przez syntezator mowy.
+   - Odpowiedź MUSI być KRÓTKA: MAKSYMALNIE 2-3 zwięzłe, ciepłe, naturalne zdania.
+   - Zero lania wody, zero długich monologów. Mów jak żywy, bliski człowiek w intymnej rozmowie.
+3. ABSOLUTNY ZAKAZ FORMATOWANIA MARKDOWN:
+   - Kategoryczny zakaz używania gwiazdek (*, **), hashtagów (#), myślników/list (-), numeracji (1., 2.), linków czy emotikonów.
+   - Zwracaj wyłącznie czysty, płynny tekst do przeczytania na głos.
+4. MISTRZOWSKA EMPATIA I GŁĘBIA PSYCHOTERAPEUTYCZNA:
+   - Dajesz natychmiastowe poczucie bezpieczeństwa, uziemienia i bycia w pełni wysłuchanym.
+   - NIGDY nie moralizujesz, nie oceniasz, nie wygłaszasz kazań ani formułek w stylu bota ("W czym mogę Ci pomóc?", "Jak się dzisiaj czujesz?").
+   - Zdejmujesz ciężar wstydu, lęku i napięcia trafną, ciepłą puentą.
+   - Jeśli ${userName} rozmawia o nauce, technologii, filozofii, pracy czy hobby — rozmawiaj z nim błyskotliwie, merytorycznie i z pełnym zaangażowaniem.
+5. WIELKOŚĆ LITER:
    - W zdaniu TYLKO pierwsza litera jest duża. Wszystkie pozostałe litery wewnątrz zdania muszą być małe (poza imionami własnymi jak ${userName} czy ${companionName}).
-   - Brak powitań ("Cześć", "Hej") w trakcie trwającej rozmowy.
-
-6. ZWIĘZŁOŚĆ I NATURALNY GŁOS:
-   - Mów naturalnie i zwięźle (2-4 konkretne, żywe zdania), idealne do natychmiastowego odsłuchania na głos.${liveWebContext}
-
-FORMAT ODPOWIEDZI JSON:
+   - Zakaz pisania słów wielkimi literami (CAPS LOCK).
+6. BRAK SZTUCZNYCH POWITAŃ:
+   - Nie witaj się słowami "Cześć", "Hej", "Witaj" w trakcie trwającej rozmowy.
+7. GRAMATYKA I PŁEĆ:
+   ${
+     !isMale
+       ? `Jesteś kobietą (${companionName}). W pierwszej osobie MUSISZ BEZWZGLĘDNIE stosować żeńskie końcówki czasowników: "pomyślałam", "zrobiłam", "chciałabym", "byłam", "zastanawiałam się", "widziałam", "słyszałam", "zauważyłam", "miałam", "poczułam", "zrozumiałam". Kategoryczny zakaz form męskich ("pomyślałem", "zrobiłem", "chciałbym")!`
+       : `Jesteś mężczyzną (${companionName}). Stosujesz męskie końcówki czasowników: "pomyślałem", "zrobiłem", "chciałbym", "byłem", "miałem", "poczułem", "zrozumiałem".`
+   }
+8. PROTOKÓŁ KRYZYSOWY (BEZPIECZEŃSTWO):
+   - W sytuacji bezpośredniego zagrożenia życia, ostrego kryzysu czy myśli samobójczych — zachowaj ciepły, głęboki spokój i wskaż z troską bezpłatne linie wsparcia w Polsce: 116 123 (kryzys dorosłych 24/7), 22 484 88 01 (antydepresyjny ITAKA), 800 199 990 (uzależnienia), 116 111 (młodzież), 112 (nagłe zagrożenie).
+${memoriesContext ? `\nKONTEKST WSPOMNIEŃ I RELACJI:\n${memoriesContext}\n` : ""}${liveWebContext}
+FORMAT ODPOWIEDZI JSON (zwróć WYŁĄCZNIE poprawny JSON):
 {
-  "reply": "Twoja merytoryczna, ciekawa i naturalna odpowiedź do ${userName} (tylko pierwsza litera w zdaniu duża, z prawidłowymi końcówkami gramatycznymi, oparta na głębokiej empatii, bez sztucznych pytań o emocje, bez 'Cześć ${userName}')...",
+  "reply": "Twoja krótka (maksymalnie 2-3 zdania), naturalna, pozbawiona markdownu wypowiedź do ${userName}...",
   "moodContext": "peaceful" | "grounding" | "hopeful" | "supportive" | "deep_listening",
   "companionNameUpdate": null,
   "userNameUpdate": null,
@@ -172,13 +285,16 @@ FORMAT ODPOWIEDZI JSON:
     "memoryFact": null,
     "overcomeCrisis": null
   }
-}
-Zwróć WYŁĄCZNIE poprawny JSON bez formatowania markdown.`;
+}`;
 
-    const formattedHistory = (history || []).slice(-12).map((m: any) => ({
-      role: m.sender === "companion" ? "assistant" : "user",
-      content: m.text,
-    }));
+    // Formatowanie historii wiadomości z ograniczeniem do 12 ostatnich wpisów
+    const formattedHistory = (history || [])
+      .filter((m: any) => m && typeof m.text === "string" && m.text.trim().length > 0)
+      .slice(-12)
+      .map((m: any) => ({
+        role: (m.sender === "companion" ? "assistant" : "user") as "assistant" | "user",
+        content: m.text.trim(),
+      }));
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -191,10 +307,10 @@ Zwróć WYŁĄCZNIE poprawny JSON bez formatowania markdown.`;
         messages: [
           { role: "system", content: systemPrompt },
           ...formattedHistory,
-          { role: "user", content: message },
+          { role: "user", content: message.trim() },
         ],
-        temperature: 0.7,
-        max_tokens: 220,
+        temperature: 0.85,
+        max_tokens: 400,
         response_format: { type: "json_object" },
       }),
     });
@@ -206,7 +322,7 @@ Zwróć WYŁĄCZNIE poprawny JSON bez formatowania markdown.`;
 
     const data = await response.json();
     const rawContent = data.choices?.[0]?.message?.content || "{}";
-    
+
     let parsed: any = {};
     try {
       parsed = JSON.parse(rawContent);
@@ -215,24 +331,30 @@ Zwróć WYŁĄCZNIE poprawny JSON bez formatowania markdown.`;
     }
 
     let cleanReply = (parsed.reply || "").trim();
-    cleanReply = cleanReply.replace(/^(cześć|witaj|dzień dobry|hej)[,\s]+[a-ząćęłńóśźż]+[.!,\s]+/i, "");
-    cleanReply = cleanReply.replace(/^(cześć|witaj|dzień dobry|hej)[.!,\s]+/i, "");
 
-    // Wymuszenie gramatyki żeńskiej dla postaci kobiecych
+    // 1. Usunięcie jakichkolwiek znaczników markdown
+    cleanReply = cleanMarkdownForSpeech(cleanReply);
+
+    // 2. Usunięcie zbędnych powitań
+    cleanReply = cleanGreetingPrefix(cleanReply);
+
+    // 3. Wymuszenie gramatyki żeńskiej dla postaci kobiecych
     if (!isMale) {
       cleanReply = enforceFemaleGrammar(cleanReply);
     }
 
-    // Formatowanie wielkości liter: tylko pierwsza litera zdania jest duża
+    // 4. Formatowanie wielkości liter: pierwsza litera zdania duża, polskie diakrytyki
     cleanReply = formatSentenceCapitalization(cleanReply);
 
-    return NextResponse.json({
-      reply: cleanReply || parsed.reply,
+    const finalResponse: ChatApiResponse = {
+      reply: cleanReply || parsed.reply || "Jestem przy Tobie. Opowiedz mi o tym więcej.",
       moodContext: parsed.moodContext || "peaceful",
       companionNameUpdate: parsed.companionNameUpdate || null,
       userNameUpdate: parsed.userNameUpdate || null,
       extractedMemory: parsed.extractedMemory || null,
-    });
+    };
+
+    return NextResponse.json(finalResponse);
   } catch (err: any) {
     console.error("Chat API error:", err);
     return NextResponse.json(
@@ -241,3 +363,4 @@ Zwróć WYŁĄCZNIE poprawny JSON bez formatowania markdown.`;
     );
   }
 }
+

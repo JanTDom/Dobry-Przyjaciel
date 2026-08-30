@@ -1,10 +1,10 @@
-import { UserProfile, Message, MoodType, PersonInLife, LifeMemoryFact, OvercomeCrisis } from "@/types";
+import { UserProfile, Message, MoodType, PersonInLife, LifeMemoryFact, OvercomeCrisis, ExtractedMemoryPayload, ChatApiResponse } from "@/types";
 import { saveStoredProfile, getStoredProfile } from "./storage";
 
 export interface CompanionReplyResult {
   text: string;
   moodContext: MoodType;
-  extractedMemory?: any;
+  extractedMemory?: ExtractedMemoryPayload | null;
   updatedProfile?: UserProfile;
 }
 
@@ -25,17 +25,17 @@ export async function getCompanionReplyAsync(
     });
 
     if (res.ok) {
-      const data = await res.json();
+      const data: ChatApiResponse = await res.json();
       const currentProfile = getStoredProfile() || profile;
       let hasChanges = false;
 
-      // 1. Zmiana imienia przyjaciela na życzenie użytkownika (np. "Chcę żebyś miała na imię Małgosia")
+      // 1. Zmiana imienia przyjaciela na życzenie użytkownika
       if (data.companionNameUpdate && typeof data.companionNameUpdate === "string" && data.companionNameUpdate.trim().length > 1) {
         currentProfile.companionName = data.companionNameUpdate.trim();
         hasChanges = true;
       }
 
-      // 2. Zmiana imienia użytkownika (np. "Nazywam się Janek")
+      // 2. Zmiana imienia użytkownika
       if (data.userNameUpdate && typeof data.userNameUpdate === "string" && data.userNameUpdate.trim().length > 1) {
         currentProfile.name = data.userNameUpdate.trim();
         hasChanges = true;
@@ -49,15 +49,16 @@ export async function getCompanionReplyAsync(
         if (mem.person && mem.person.name && mem.person.name.trim().length > 0) {
           const p = mem.person;
           const cleanName = p.name.trim();
-          const existingIdx = (currentProfile.peopleInLife || []).findIndex(
+          const people = currentProfile.peopleInLife || [];
+          const existingIdx = people.findIndex(
             (item) => item.name.toLowerCase() === cleanName.toLowerCase()
           );
 
           if (existingIdx >= 0) {
-            currentProfile.peopleInLife[existingIdx].notes = p.notes || currentProfile.peopleInLife[existingIdx].notes;
-            currentProfile.peopleInLife[existingIdx].sentiment = p.sentiment || currentProfile.peopleInLife[existingIdx].sentiment;
-            currentProfile.peopleInLife[existingIdx].relation = p.relation || currentProfile.peopleInLife[existingIdx].relation;
-            currentProfile.peopleInLife[existingIdx].lastMentioned = "Dzisiaj";
+            people[existingIdx].notes = p.notes || people[existingIdx].notes;
+            people[existingIdx].sentiment = p.sentiment || people[existingIdx].sentiment;
+            people[existingIdx].relation = p.relation || people[existingIdx].relation;
+            people[existingIdx].lastMentioned = "Dzisiaj";
           } else {
             const newPerson: PersonInLife = {
               id: "p_" + Date.now(),
@@ -67,7 +68,7 @@ export async function getCompanionReplyAsync(
               notes: p.notes || "",
               lastMentioned: "Dzisiaj",
             };
-            currentProfile.peopleInLife = [newPerson, ...(currentProfile.peopleInLife || [])];
+            currentProfile.peopleInLife = [newPerson, ...people];
           }
           hasChanges = true;
         }
@@ -75,6 +76,7 @@ export async function getCompanionReplyAsync(
         // B. Dodaj fakt pamięci
         if (mem.memoryFact && mem.memoryFact.title && mem.memoryFact.title.trim().length > 0) {
           const f = mem.memoryFact;
+          const memories = currentProfile.memories || [];
           const newFact: LifeMemoryFact = {
             id: "m_" + Date.now(),
             category: f.category || "core_value",
@@ -83,13 +85,14 @@ export async function getCompanionReplyAsync(
             confidence: 0.95,
             extractedAt: "Dzisiaj",
           };
-          currentProfile.memories = [newFact, ...(currentProfile.memories || [])];
+          currentProfile.memories = [newFact, ...memories];
           hasChanges = true;
         }
 
         // C. Dodaj pokonany kryzys
         if (mem.overcomeCrisis && mem.overcomeCrisis.title && mem.overcomeCrisis.title.trim().length > 0) {
           const c = mem.overcomeCrisis;
+          const crises = currentProfile.overcomeCrises || [];
           const newCrisis: OvercomeCrisis = {
             id: "c_" + Date.now(),
             title: c.title.trim(),
@@ -98,7 +101,7 @@ export async function getCompanionReplyAsync(
             howYouSurvived: c.howYouSurvived || "",
             strengthDemonstrated: c.strengthDemonstrated || "Odwaga i spokój",
           };
-          currentProfile.overcomeCrises = [newCrisis, ...(currentProfile.overcomeCrises || [])];
+          currentProfile.overcomeCrises = [newCrisis, ...crises];
           hasChanges = true;
         }
       }
@@ -115,11 +118,12 @@ export async function getCompanionReplyAsync(
       };
     }
   } catch (err) {
-    console.error("Chat API error:", err);
+    console.error("Chat API error in companion personality:", err);
   }
 
   return {
-    text: `Jestem przy Tobie, ${profile.name}. Opowiedz mi o tym więcej.`,
+    text: `Jestem przy Tobie, ${profile.name || "przyjacielu"}. Opowiedz mi o tym więcej.`,
     moodContext: "peaceful",
   };
 }
+

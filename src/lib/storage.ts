@@ -215,11 +215,16 @@ export function getStoredProfile(): UserProfile | null {
 export function saveStoredProfile(profile: UserProfile): void {
   if (typeof window === "undefined") return;
   try {
-    const email = profile.email || getActiveUserEmail() || "jan.domaniewski@multinewsroom.pl";
-    const isJan = email.toLowerCase().includes("jan") || email.toLowerCase().includes("domaniewski");
+    const email = profile.email || getActiveUserEmail() || "";
+    const isJan = email ? (email.toLowerCase().includes("jan") || email.toLowerCase().includes("domaniewski")) : false;
     
     const allRaw = localStorage.getItem(STORAGE_KEY_PROFILES);
-    const profiles: Record<string, UserProfile> = allRaw ? JSON.parse(allRaw) : {};
+    let profiles: Record<string, UserProfile> = {};
+    if (allRaw) {
+      try {
+        profiles = JSON.parse(allRaw);
+      } catch {}
+    }
 
     const cleanCompName = (profile.companionName && profile.companionName !== "Agata")
       ? profile.companionName.trim()
@@ -227,16 +232,18 @@ export function saveStoredProfile(profile: UserProfile): void {
 
     const cleanProfile: UserProfile = {
       ...profile,
-      email,
+      email: email || undefined,
       name: sanitizeName(profile.name, email),
       companionName: cleanCompName,
     };
 
-    profiles[email] = cleanProfile;
+    if (email) {
+      profiles[email] = cleanProfile;
+      localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(profiles));
+      localStorage.setItem(STORAGE_KEY_AUTH_EMAIL, email);
+    }
 
-    localStorage.setItem(STORAGE_KEY_PROFILES, JSON.stringify(profiles));
     localStorage.setItem(STORAGE_KEY_ACTIVE_PROFILE, JSON.stringify(cleanProfile));
-    localStorage.setItem(STORAGE_KEY_AUTH_EMAIL, email);
   } catch (err) {
     console.error("Failed to save profile", err);
   }
@@ -273,11 +280,15 @@ export function getStoredMessages(): Message[] {
     for (const k of messageKeys) {
       const raw = localStorage.getItem(k);
       if (raw) {
-        const msgs = JSON.parse(raw);
-        if (Array.isArray(msgs) && msgs.length > 0) {
-          // Przepisz do aktualnego klucza
-          localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + email, JSON.stringify(msgs));
-          return msgs;
+        try {
+          const msgs = JSON.parse(raw);
+          if (Array.isArray(msgs) && msgs.length > 0) {
+            // Przepisz do aktualnego klucza
+            localStorage.setItem(STORAGE_KEY_MESSAGES_PREFIX + email, JSON.stringify(msgs));
+            return msgs;
+          }
+        } catch {
+          // Ignoruj uszkodzony pojedynczy wpis i kontynuuj sprawdzanie kolejnych kluczy
         }
       }
     }
@@ -358,3 +369,11 @@ export function getDynamicGreeting(profile: UserProfile): { title: string; subti
     };
   }
 }
+
+// Aliases dla wygody i pełnej kompatybilności wstecznej
+export const saveMessage = addStoredMessage;
+export const saveProfile = saveStoredProfile;
+export const getProfile = getStoredProfile;
+export const getMessages = getStoredMessages;
+export const saveMessages = saveStoredMessages;
+
