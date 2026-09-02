@@ -91,10 +91,14 @@ export default function SOSPage() {
         </div>
 
         {/* 4 proste, spokojne wybory */}
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-lg mx-auto">
+        <div className="flex flex-wrap items-center justify-center gap-2 max-w-lg mx-auto" role="tablist" aria-label="Wybór metody ukojenia">
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "breath"}
+            aria-controls="sos-tab-breath"
             onClick={() => setActiveTab("breath")}
-            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
+            className={`px-4 py-2.5 min-h-[44px] rounded-full text-xs font-sans font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 ${
               activeTab === "breath"
                 ? "presence-btn-primary"
                 : "presence-btn-secondary"
@@ -104,8 +108,12 @@ export default function SOSPage() {
           </button>
 
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "ground"}
+            aria-controls="sos-tab-ground"
             onClick={() => setActiveTab("ground")}
-            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
+            className={`px-4 py-2.5 min-h-[44px] rounded-full text-xs font-sans font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 ${
               activeTab === "ground"
                 ? "presence-btn-primary"
                 : "presence-btn-secondary"
@@ -115,8 +123,12 @@ export default function SOSPage() {
           </button>
 
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "voice"}
+            aria-controls="sos-tab-voice"
             onClick={() => setActiveTab("voice")}
-            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
+            className={`px-4 py-2.5 min-h-[44px] rounded-full text-xs font-sans font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 ${
               activeTab === "voice"
                 ? "presence-btn-primary"
                 : "presence-btn-secondary"
@@ -126,8 +138,12 @@ export default function SOSPage() {
           </button>
 
           <button
+            type="button"
+            role="tab"
+            aria-selected={activeTab === "helpline"}
+            aria-controls="sos-tab-helpline"
             onClick={() => setActiveTab("helpline")}
-            className={`px-4 py-2 rounded-full text-xs font-sans font-medium transition-all ${
+            className={`px-4 py-2.5 min-h-[44px] rounded-full text-xs font-sans font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60 ${
               activeTab === "helpline"
                 ? "presence-btn-primary"
                 : "presence-btn-secondary"
@@ -140,26 +156,28 @@ export default function SOSPage() {
         {/* Zawartość wybranego trybu */}
         <div className="w-full">
           {activeTab === "breath" && (
-            <div className="flex flex-col items-center animate-fade-in">
+            <div id="sos-tab-breath" role="tabpanel" className="flex flex-col items-center animate-fade-in">
               <BreathingGuide />
             </div>
           )}
 
           {activeTab === "ground" && (
-            <div className="animate-fade-in">
+            <div id="sos-tab-ground" role="tabpanel" className="animate-fade-in">
               <GroundingExercise />
             </div>
           )}
 
           {activeTab === "voice" && (
-            <div className="quiet-surface rounded-surface p-8 sm:p-12 text-center max-w-lg mx-auto flex flex-col items-center animate-fade-in">
+            <div id="sos-tab-voice" role="tabpanel" className="quiet-surface rounded-surface p-8 sm:p-12 text-center max-w-lg mx-auto flex flex-col items-center animate-fade-in">
               <p className="font-serif text-lg sm:text-xl text-ink leading-relaxed italic mb-8">
                 „Jestem przy Tobie. Oddychaj powoli i spokojnie. Nie musisz teraz niczego rozwiązywać ani udowadniać. Zostańmy w tej chwili przez kilka minut.”
               </p>
 
               <button
+                type="button"
                 onClick={handleToggleCalmVoice}
-                className="presence-btn-primary flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full"
+                aria-label={isPlayingCalmVoice ? "Zatrzymaj odtwarzanie słów ukojenia" : "Odsłuchaj kojące słowa Przyjaciela"}
+                className="presence-btn-primary flex items-center gap-2 text-xs font-sans px-7 py-3.5 min-h-[44px] rounded-full active:scale-95 transition-all shadow-quiet-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
               >
                 {isPlayingCalmVoice ? (
                   <>

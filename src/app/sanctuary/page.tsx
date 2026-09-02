@@ -88,8 +88,10 @@ export default function SanctuaryPage() {
             </p>
 
             <button
+              type="button"
               onClick={() => setIsAuthOpen(true)}
-              className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 rounded-full active:scale-95 shadow-quiet-sm transition-all"
+              aria-label="Spotkaj się z Przyjacielem - stwórz profil i odbierz pierwszy list"
+              className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-7 py-3.5 min-h-[44px] rounded-full active:scale-95 shadow-quiet-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
             >
               <Sparkles size={14} className="text-warm-honey" />
               <span>Spotkaj się z Przyjacielem</span>

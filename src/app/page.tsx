@@ -198,16 +198,20 @@ export default function HomePage() {
             {/* Główne przyciski akcji */}
             <div className="flex flex-wrap items-center justify-center gap-3 mb-4">
               <button
+                type="button"
                 onClick={handleOpenLiveCall}
-                className="presence-btn-primary flex items-center gap-2.5 font-sans font-medium text-xs sm:text-sm px-8 py-3.5 rounded-full active:scale-95 transition-all shadow-quiet-md"
+                aria-label="Porozmawiajmy na żywo przez głos"
+                className="presence-btn-primary flex items-center gap-2.5 font-sans font-medium text-xs sm:text-sm px-8 py-3.5 min-h-[44px] rounded-full active:scale-95 transition-all shadow-quiet-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
               >
                 <PhoneCall size={16} strokeWidth={1.75} className="animate-pulse text-warm-honey" />
                 <span>Porozmawiajmy na żywo</span>
               </button>
 
               <button
+                type="button"
                 onClick={() => setIsSettingsOpen(true)}
-                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
+                aria-label={`Ustawienia Przyjaciela: ${profile.companionName}`}
+                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-5 py-3.5 min-h-[44px] rounded-full font-medium active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
               >
                 <div className="w-2 h-2 rounded-full bg-warm-amber" />
                 <span>Twój Przyjaciel ({profile.companionName})</span>
@@ -215,7 +219,8 @@ export default function HomePage() {
 
               <Link
                 href="/memory"
-                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-5 py-3.5 rounded-full font-medium"
+                aria-label="Zobacz, co Przyjaciel o Tobie pamięta"
+                className="presence-btn-secondary flex items-center gap-2 text-xs font-sans px-5 py-3.5 min-h-[44px] rounded-full font-medium active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
               >
                 <Compass size={14} strokeWidth={1.75} className="text-ink-muted" />
                 <span>Co o mnie pamiętasz</span>
@@ -472,10 +477,12 @@ export default function HomePage() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => handlePlayLetterSample("letter_1", "Widziałem, ile energii kosztował Cię ten tydzień. Zrób sobie herbatę, zgaś jasne światło. Wszystko, co miałeś zrobić dzisiaj, już wystarczy.")}
-                  className="presence-btn-secondary w-fit text-xs font-sans px-4 py-2 rounded-full flex items-center gap-2"
+                  aria-label={playingLetterSample === "letter_1" ? "Zatrzymaj odsłuchiwanie fragmentu listu 1" : "Odsłuchaj fragment listu: O tym, że nie musisz być dzisiaj silny"}
+                  className="presence-btn-secondary w-fit text-xs font-sans px-4 py-2.5 min-h-[40px] sm:min-h-[44px] rounded-full flex items-center gap-2 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
                 >
-                  {playingLetterSample === "letter_1" ? <Pause size={12} className="text-warm-amber" /> : <Play size={12} className="text-warm-amber" />}
+                  {playingLetterSample === "letter_1" ? <Pause size={13} className="text-warm-amber" /> : <Play size={13} className="text-warm-amber" />}
                   <span>{playingLetterSample === "letter_1" ? "Zatrzymaj" : "Odsłuchaj fragment"}</span>
                 </button>
               </div>
@@ -500,10 +507,12 @@ export default function HomePage() {
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => handlePlayLetterSample("letter_2", "To, że zrobiłeś krok w tył, nie oznacza, że przegrałeś. Czasem to jedyny sposób, by nabrać oddechu. Jestem przy Tobie.")}
-                  className="presence-btn-secondary w-fit text-xs font-sans px-4 py-2 rounded-full flex items-center gap-2"
+                  aria-label={playingLetterSample === "letter_2" ? "Zatrzymaj odsłuchiwanie fragmentu listu 2" : "Odsłuchaj fragment listu: Przypomnij sobie, ile już przeszedłeś"}
+                  className="presence-btn-secondary w-fit text-xs font-sans px-4 py-2.5 min-h-[40px] sm:min-h-[44px] rounded-full flex items-center gap-2 active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
                 >
-                  {playingLetterSample === "letter_2" ? <Pause size={12} className="text-warm-amber" /> : <Play size={12} className="text-warm-amber" />}
+                  {playingLetterSample === "letter_2" ? <Pause size={13} className="text-warm-amber" /> : <Play size={13} className="text-warm-amber" />}
                   <span>{playingLetterSample === "letter_2" ? "Zatrzymaj" : "Odsłuchaj fragment"}</span>
                 </button>
               </div>
@@ -524,14 +533,15 @@ export default function HomePage() {
               </p>
               <Link
                 href="/sos"
-                className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-6 py-3.5 rounded-full"
+                aria-label="Wejdź do strefy ukojenia i ćwiczeń oddechowych"
+                className="presence-btn-primary inline-flex items-center gap-2 text-xs font-sans px-6 py-3.5 min-h-[44px] rounded-full active:scale-95 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-warm-amber/60"
               >
                 <Shield size={14} strokeWidth={1.75} />
                 <span>Wejdź do strefy ukojenia</span>
               </Link>
             </div>
 
-            <div className="w-full max-w-xs">
+            <div className="w-full max-w-sm flex justify-center">
               <BreathingGuide />
             </div>
           </section>

@@ -32,6 +32,7 @@ export const AmbientSunMotes: React.FC = () => {
     let animId: number;
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const handleResize = () => {
       if (!canvas) return;
@@ -141,7 +142,9 @@ export const AmbientSunMotes: React.FC = () => {
         ctx.fill();
       }
 
-      animId = requestAnimationFrame(render);
+      if (!prefersReducedMotion) {
+        animId = requestAnimationFrame(render);
+      }
     };
 
     render();
