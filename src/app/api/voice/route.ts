@@ -44,9 +44,9 @@ export async function POST(req: NextRequest) {
               text: cleanText,
               model_id: "eleven_multilingual_v2",
               voice_settings: {
-                stability: 0.68, // Wysoka stabilność zapobiega agresywnym, natarczywym skokom intonacji
-                similarity_boost: 0.85, // Czyste, naturalne brzmienie polskiej wymowy
-                style: 0.10, // Łagodna, spokojna ekspresja
+                stability: 0.42,        // Niżej = więcej naturalnych wahań intonacji, mniej robotycznie
+                similarity_boost: 0.85, // Czyste brzmienie polskiej wymowy
+                style: 0.35,            // Więcej ekspresji i emocji w głosie
                 use_speaker_boost: true,
               },
             }),
